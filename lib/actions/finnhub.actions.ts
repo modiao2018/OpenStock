@@ -242,6 +242,8 @@ export const searchStocks = cache(async (query?: string): Promise<StockWithWatch
             results = Array.isArray(data?.result) ? data.result : [];
         }
 
+        // Finnhub search can return the same symbol multiple times (e.g. across listings); keep the first occurrence
+        const seenSymbols = new Set<string>();
         const mapped: StockWithWatchlistStatus[] = results
             .map((r) => {
                 const upper = (r.symbol || '').toUpperCase();
@@ -257,6 +259,11 @@ export const searchStocks = cache(async (query?: string): Promise<StockWithWatch
                     isInWatchlist: false,
                 };
                 return item;
+            })
+            .filter((item) => {
+                if (!item.symbol || seenSymbols.has(item.symbol)) return false;
+                seenSymbols.add(item.symbol);
+                return true;
             })
             .slice(0, 15);
 
