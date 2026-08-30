@@ -46,27 +46,13 @@ export async function sendBark(barkUrl: string, msg: PushMessage): Promise<void>
   if (!res.ok) throw new Error(`Bark HTTP ${res.status}`);
 }
 
-export async function sendFeishu(webhookUrl: string, msg: PushMessage): Promise<void> {
-  const prefix = msg.urgent ? '🚨' : '📌';
-  const text = `${prefix} ${msg.title}\n${msg.body}`;
-  const res = await fetch(webhookUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ msg_type: 'text', content: { text } }),
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!res.ok) throw new Error(`Feishu HTTP ${res.status}`);
-  const body = (await res.json()) as { code?: number; msg?: string };
-  if (body.code && body.code !== 0) throw new Error(`Feishu code ${body.code}: ${body.msg}`);
-}
-
 /**
- * 推送策略：urgent → Bark(critical) + 飞书；normal → 飞书，无飞书时降级 Bark。
+ * 推送策略：全部走 Bark，urgent 用 critical 级别（绕过静音/勿扰）。
  * 渠道未配置或发送失败只记日志，不中断采集主流程。
  */
 export async function notify(config: MonitorConfig, ev: StoredEvent): Promise<boolean> {
-  const { barkUrl, feishuWebhookUrl } = config.env;
-  if (!barkUrl && !feishuWebhookUrl) {
+  const { barkUrl } = config.env;
+  if (!barkUrl) {
     log('notify', `(未配置推送渠道，仅记录) ${ev.title}`);
     return false;
   }
@@ -78,24 +64,11 @@ export async function notify(config: MonitorConfig, ev: StoredEvent): Promise<bo
     url: ev.url,
   };
 
-  let delivered = false;
-  const useBark = barkUrl && (ev.severity === 'urgent' || !feishuWebhookUrl);
-
-  if (useBark) {
-    try {
-      await sendBark(barkUrl, msg);
-      delivered = true;
-    } catch (err) {
-      logError('notify:bark', err);
-    }
+  try {
+    await sendBark(barkUrl, msg);
+    return true;
+  } catch (err) {
+    logError('notify:bark', err);
+    return false;
   }
-  if (feishuWebhookUrl) {
-    try {
-      await sendFeishu(feishuWebhookUrl, msg);
-      delivered = true;
-    } catch (err) {
-      logError('notify:feishu', err);
-    }
-  }
-  return delivered;
 }

@@ -25,7 +25,6 @@ export interface MonitorConfig {
   };
   env: {
     barkUrl?: string;
-    feishuWebhookUrl?: string;
     edgarContact: string;
   };
 }

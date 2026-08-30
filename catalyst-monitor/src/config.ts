@@ -39,7 +39,6 @@ export function loadConfig(): MonitorConfig {
     },
     env: {
       barkUrl: process.env.BARK_URL || undefined,
-      feishuWebhookUrl: process.env.FEISHU_WEBHOOK_URL || undefined,
       edgarContact: process.env.EDGAR_CONTACT || 'catalyst-monitor@example.com',
     },
   };

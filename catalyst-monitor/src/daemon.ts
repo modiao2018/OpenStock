@@ -70,7 +70,7 @@ async function main(): Promise<void> {
   log(
     'daemon',
     `启动，监控 ${watchItems.map((w) => w.symbol).join(', ') || '（空）'}；` +
-      `推送渠道: ${[config.env.barkUrl && 'Bark', config.env.feishuWebhookUrl && '飞书'].filter(Boolean).join('+') || '未配置'}`
+      `推送渠道: ${config.env.barkUrl ? 'Bark' : '未配置'}`
   );
 
   if (once) {

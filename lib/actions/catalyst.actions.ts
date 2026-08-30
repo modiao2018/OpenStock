@@ -10,7 +10,7 @@ import {
     CatalystTrial,
     CatalystWatchItem,
 } from '@/database/models/catalyst.model';
-import { sendBark, sendFeishu } from '@/catalyst-monitor/src/notify';
+import { sendBark } from '@/catalyst-monitor/src/notify';
 import {
     callAIProviderWithConfig,
     getProviderConfig,
@@ -182,7 +182,7 @@ export interface CollectorStatus {
 
 export interface MonitorStatusData {
     daemonOnline: boolean;
-    channels: { bark: boolean; feishu: boolean; edgarContact: boolean };
+    channels: { bark: boolean; edgarContact: boolean };
     collectors: CollectorStatus[];
 }
 
@@ -222,7 +222,6 @@ export async function getMonitorStatus(): Promise<MonitorStatusData> {
         daemonOnline: collectors.some((c) => c.active),
         channels: {
             bark: Boolean(process.env.BARK_URL),
-            feishu: Boolean(process.env.FEISHU_WEBHOOK_URL),
             edgarContact: Boolean(process.env.EDGAR_CONTACT),
         },
         collectors,
@@ -231,39 +230,23 @@ export async function getMonitorStatus(): Promise<MonitorStatusData> {
 
 export interface TestPushResult {
     bark: 'ok' | 'fail' | 'skipped';
-    feishu: 'ok' | 'fail' | 'skipped';
 }
 
-/** 调试用：向已配置的渠道各发一条测试消息（normal 级别，不响铃） */
+/** 调试用：向 Bark 发一条测试消息（normal 级别，不响铃） */
 export async function sendTestPush(): Promise<TestPushResult> {
-    const msg = {
-        title: 'catalyst-monitor 测试推送',
-        body: `来自网页调试面板 · ${new Date().toISOString()}`,
-        urgent: false,
-    };
-    const result: TestPushResult = { bark: 'skipped', feishu: 'skipped' };
-
     const barkUrl = process.env.BARK_URL;
-    if (barkUrl) {
-        try {
-            await sendBark(barkUrl, msg);
-            result.bark = 'ok';
-        } catch (error) {
-            console.error('Test push to Bark failed:', error);
-            result.bark = 'fail';
-        }
+    if (!barkUrl) return { bark: 'skipped' };
+    try {
+        await sendBark(barkUrl, {
+            title: 'catalyst-monitor 测试推送',
+            body: `来自网页调试面板 · ${new Date().toISOString()}`,
+            urgent: false,
+        });
+        return { bark: 'ok' };
+    } catch (error) {
+        console.error('Test push to Bark failed:', error);
+        return { bark: 'fail' };
     }
-    const feishuUrl = process.env.FEISHU_WEBHOOK_URL;
-    if (feishuUrl) {
-        try {
-            await sendFeishu(feishuUrl, msg);
-            result.feishu = 'ok';
-        } catch (error) {
-            console.error('Test push to Feishu failed:', error);
-            result.feishu = 'fail';
-        }
-    }
-    return result;
 }
 
 // ---- LLM 配置（供 agent 分析场景使用）----

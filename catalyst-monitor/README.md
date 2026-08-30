@@ -11,7 +11,7 @@
 ## 一期范围（当前）
 
 - 采集器：ClinicalTrials.gov API v2 / SEC EDGAR submissions / Nasdaq trade-halts RSS / 通用新闻 RSS（按 watchlist 关键词过滤）
-- 推送：Bark（urgent 用 critical 级别，可绕过静音）+ 飞书群机器人；两者都没配时只记日志
+- 推送：Bark（urgent 用 critical 级别，可绕过静音）；未配置时只记日志
 - 二期计划：Alpaca 分钟行情 + abnormal return / RVOL 异动检测；三期：LLM 结构化解读 + 情景匹配 + 邮件日报
 
 ## 使用
@@ -21,7 +21,6 @@
 ```bash
 # 1. 在根 .env 追加三个变量：
 #    BARK_URL=https://api.day.app/你的设备key
-#    FEISHU_WEBHOOK_URL=https://open.feishu.cn/open-apis/bot/v2/hook/xxxx
 #    EDGAR_CONTACT=你的邮箱（SEC 要求 User-Agent 带联系方式）
 
 # 2. 编辑 catalyst-monitor/config.yaml，配置 watchlist（代码、公司名、NCT 编号、关键词）
@@ -37,7 +36,7 @@ npm run monitor:calendar  # 打印催化剂日历
 
 - **首次快照不推送**：ClinicalTrials 首轮建档只入库；EDGAR/新闻只推 `lookback_days` 内的新申报。避免启动刷屏。
 - **变更检测**：同一实体（NCT/停牌）关键字段哈希变化才产生新事件；EDGAR 申报不可变，每份只推一次。
-- **推送分级**：停牌、8-K、试验终止/结果发布 → urgent（Bark critical + 飞书）；其余 → normal（飞书为主）。
+- **推送分级**：停牌、8-K、试验终止/结果发布 → urgent（Bark critical，绕过静音）；其余 → normal（Bark timeSensitive）。
 - **推送失败不阻塞采集**：渠道报错只记日志，事件仍入库（`notified=false`），可事后补查。
 
 ## 数据存储

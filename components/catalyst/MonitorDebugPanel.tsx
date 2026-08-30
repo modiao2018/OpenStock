@@ -32,8 +32,8 @@ export default function MonitorDebugPanel({ status }: { status: MonitorStatusDat
             const result = await sendTestPush();
             const describe = (r: string) =>
                 r === 'ok' ? t('pushOk') : r === 'fail' ? t('pushFail') : t('notConfigured');
-            const summary = `Bark: ${describe(result.bark)} · ${t('feishu')}: ${describe(result.feishu)}`;
-            if (result.bark === 'ok' || result.feishu === 'ok') toast.success(summary);
+            const summary = `Bark: ${describe(result.bark)}`;
+            if (result.bark === 'ok') toast.success(summary);
             else toast.error(summary);
         } catch {
             toast.error(t('pushFail'));
@@ -82,7 +82,6 @@ export default function MonitorDebugPanel({ status }: { status: MonitorStatusDat
                 <h3 className="text-xs uppercase tracking-wide text-gray-500 mb-2">{t('channels')}</h3>
                 <ul className="space-y-1 text-sm text-gray-300">
                     <li className="flex justify-between"><span>Bark</span>{channelLabel(status.channels.bark)}</li>
-                    <li className="flex justify-between"><span>{t('feishu')}</span>{channelLabel(status.channels.feishu)}</li>
                     <li className="flex justify-between"><span>{t('edgarContact')}</span>{channelLabel(status.channels.edgarContact)}</li>
                 </ul>
             </div>
@@ -91,7 +90,7 @@ export default function MonitorDebugPanel({ status }: { status: MonitorStatusDat
                 size="sm"
                 variant="outline"
                 onClick={handleTestPush}
-                disabled={testing || (!status.channels.bark && !status.channels.feishu)}
+                disabled={testing || !status.channels.bark}
                 className="w-full border-gray-700 text-gray-200"
             >
                 {testing ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <BellRing className="w-4 h-4 mr-1" />}
