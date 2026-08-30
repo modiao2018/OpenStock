@@ -1,8 +1,20 @@
 import React from 'react';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { History } from 'lucide-react';
+import { isRedUpLocale } from '@/lib/utils';
 import type { CatalystEventData } from '@/lib/actions/catalyst.actions';
 import AttributionButton from './AttributionButton';
+
+// 与 catalyst-monitor/src/analyze.ts 的 ACTION_WORDS 保持一致
+const ACTION_RE = /操作建议[：:]\s*(买入|加仓|持有|减仓|卖出|观望)/;
+const BUY_ACTIONS = new Set(['买入', '加仓']);
+const SELL_ACTIONS = new Set(['卖出', '减仓']);
+
+function actionBadgeClass(action: string, redUp: boolean): string {
+    if (BUY_ACTIONS.has(action)) return redUp ? 'bg-red-900/60 text-red-300' : 'bg-green-900/60 text-green-300';
+    if (SELL_ACTIONS.has(action)) return redUp ? 'bg-green-900/60 text-green-300' : 'bg-red-900/60 text-red-300';
+    return 'bg-gray-800 text-gray-300';
+}
 
 const SOURCE_BADGES: Record<string, string> = {
     clinicaltrials: 'bg-blue-900/60 text-blue-300',
@@ -21,6 +33,7 @@ function formatTime(iso: string): string {
 
 export default async function EventTimeline({ events }: { events: CatalystEventData[] }) {
     const t = await getTranslations('catalyst.timeline');
+    const redUp = isRedUpLocale(await getLocale());
 
     return (
         <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5">
@@ -66,6 +79,14 @@ export default async function EventTimeline({ events }: { events: CatalystEventD
                                 </div>
                                 {ev.analysis && (
                                     <p className="text-xs text-teal-300/80 mt-1 leading-relaxed">
+                                        {(() => {
+                                            const action = ev.analysis.match(ACTION_RE)?.[1];
+                                            return action ? (
+                                                <span className={`inline-block px-1.5 py-0.5 rounded mr-1.5 font-medium ${actionBadgeClass(action, redUp)}`}>
+                                                    {action}
+                                                </span>
+                                            ) : null;
+                                        })()}
                                         🤖 {t('analysis')}: {ev.analysis}
                                     </p>
                                 )}

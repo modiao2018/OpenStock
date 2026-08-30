@@ -93,6 +93,18 @@ async function buildMarketContext(ev: StoredEvent): Promise<string> {
   return parts.join('\n');
 }
 
+/** 固定操作评级词表——推送标题和时间线标签据此解析 */
+export const ACTION_WORDS = ['买入', '加仓', '持有', '减仓', '卖出', '观望'] as const;
+export type ActionWord = (typeof ACTION_WORDS)[number];
+export const ACTION_PREFIX = '操作建议：';
+
+/** 从分析文本中提取操作评级（买入/卖出/持有…），没有则返回 null */
+export function extractAction(analysis?: string | null): ActionWord | null {
+  if (!analysis) return null;
+  const m = analysis.match(new RegExp(`操作建议[：:]\\s*(${ACTION_WORDS.join('|')})`));
+  return (m?.[1] as ActionWord) ?? null;
+}
+
 export interface GuidanceCatalyst {
   title: string;
   date: string; // YYYY-MM-DD
@@ -176,7 +188,7 @@ export async function analyzeEvent(config: MonitorConfig, ev: StoredEvent): Prom
   // 用户对该标的的情景预案（如有）纳入分析，让 LLM 直接对档
   const watchItem = config.watchlist.find((w) => w.symbol === ev.symbol);
   const scenarioBlock = watchItem?.scenarioNotes
-    ? `\n用户预设的情景预案：\n${watchItem.scenarioNotes}\n若本事件是数据/审批结果，请指明结果落在哪一档（成功/模糊/失败/无法判断），且"建议动作"必须与该档位预案一致。`
+    ? `\n用户预设的情景预案：\n${watchItem.scenarioNotes}\n若本事件是数据/审批结果，请指明结果落在哪一档（成功/模糊/失败/无法判断），且"${ACTION_PREFIX}"必须与该档位预案一致。`
     : '';
 
   // 盘面异动是"没有新闻的异常"，分析目标是排查原因而不是解读报告
@@ -185,13 +197,13 @@ export async function analyzeEvent(config: MonitorConfig, ev: StoredEvent): Prom
       ? '这是一条盘面异动告警。请用简体中文输出不超过 200 字的异动简报（纯文本，不要 markdown）：' +
         '1) 解读异动方向与力度；2) 结合近期事件与催化剂日历给出最可能的原因假设' +
         '（有公告对应 / 临近催化剂的提前定价 / 无信息对应的可疑资金流——若无对应信息要明确提示警惕未公开消息）；' +
-        '3) 建议动作（如查停牌与新闻 wire、复核仓位、勿盲目追价）。'
+        `3) 最后一行必须是"${ACTION_PREFIX}X"，X 只能从【${ACTION_WORDS.join(' / ')}】中选一个，` +
+        '后接一句执行说明（如先查停牌与新闻 wire、勿盲目追价）。'
       : '请用简体中文分析以下事件，输出不超过 180 字的纯文本（不要使用 markdown 或列表符号）：' +
         '先一句话概括发生了什么；再给出关键数据或条款（如有）；' +
         '然后给出倾向判断（利好/利空/中性/不确定）及一句理由；' +
-        '最后必须以"建议动作："收尾，给一条明确可执行的动作' +
-        '（如按预案加/减仓、观望等待完整数据、核对新闻源与停牌、复核仓位与止损）——' +
-        '若信息不足以支撑操作，也要明确写"建议动作：暂不操作，等待 X"。';
+        `最后一行必须是"${ACTION_PREFIX}X"，X 只能从【${ACTION_WORDS.join(' / ')}】中选一个，` +
+        '后接一句执行说明（时机/仓位/止损）。信息不足时选"观望"并写明等什么信号再动。';
 
   const prompt =
     '你是美股医药催化剂监控助手，用户是中国投资者。' +

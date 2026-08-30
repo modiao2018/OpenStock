@@ -2,7 +2,7 @@ import './env';
 import { loadConfig, log, logError } from './config';
 import { closeStore, getWatchItems, insertEvent, markNotified, seedWatchItems, setEventAnalysis, setKv } from './store';
 import { notify, pushMessage } from './notify';
-import { analyzeEvent } from './analyze';
+import { analyzeEvent, extractAction } from './analyze';
 import { collectClinicalTrials } from './collectors/clinicaltrials';
 import { collectEdgar } from './collectors/edgar';
 import { collectHalts } from './collectors/halts';
@@ -47,8 +47,9 @@ async function runCollector(def: CollectorDef, config: MonitorConfig): Promise<v
         result = await analyzeEvent(config, stored);
         if (result.analysis) {
           await setEventAnalysis(stored.id, result.analysis);
+          const action = extractAction(result.analysis);
           await pushMessage(config.env, {
-            title: `AI 分析｜${stored.title}`,
+            title: `AI 分析${action ? `【${action}】` : ''}｜${stored.title}`,
             body: result.analysis,
             urgent: false,
             url: stored.url,

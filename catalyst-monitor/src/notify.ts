@@ -27,7 +27,7 @@ function toBeijingTime(value: string): string {
 
 // 停牌不走 LLM（时效优先），给固定的操作提示
 const HALT_ADVICE =
-  '建议动作: 停牌大概率预示重大公告；复牌初期点差和波动极大，勿挂市价单追价，等消息落地、价格稳定后按情景预案操作。';
+  '操作建议：观望——停牌大概率预示重大公告；复牌初期点差和波动极大，勿挂市价单追价，等消息落地后按情景预案操作。';
 
 function formatBody(ev: StoredEvent): string {
   const lines = [
