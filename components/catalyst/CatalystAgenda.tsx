@@ -58,8 +58,18 @@ export default function CatalystAgenda({
     const [view, setView] = useState<'calendar' | 'list'>('calendar');
     const [showTrials, setShowTrials] = useState(true);
     const [monthCursor, setMonthCursor] = useState(() => {
-        const d = new Date();
-        return { y: d.getFullYear(), m: d.getMonth() };
+        // 初始定位到第一个有催化剂的月份——停在空月份会像坏了一样
+        const today0 = new Date().toISOString().slice(0, 10);
+        const dates = [
+            ...customEvents.map((c) => c.date),
+            ...trials.map((tr) => {
+                const d = tr.primaryCompletionDate;
+                return d && /^\d{4}-\d{2}$/.test(d) ? `${d}-01` : d;
+            }),
+        ].filter((d): d is string => !!d && d >= today0 && d < '9999');
+        const first = dates.sort()[0];
+        const base = first ? new Date(first + 'T00:00:00') : new Date();
+        return { y: base.getFullYear(), m: base.getMonth() };
     });
     const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
@@ -295,7 +305,7 @@ export default function CatalystAgenda({
                             </div>
                         ))}
                         {grid.map((cell, i) => {
-                            if (!cell) return <div key={`x${i}`} />;
+                            if (!cell) return <div key={`x${i}`} className="h-11" />;
                             const dayEntries = byDate.get(cell.iso) ?? [];
                             const isToday = cell.iso === today;
                             const isPast = cell.iso < today;
@@ -308,7 +318,7 @@ export default function CatalystAgenda({
                                     type="button"
                                     onClick={() => setSelectedDay(selected ? null : cell.iso)}
                                     disabled={dayEntries.length === 0}
-                                    className={`relative aspect-square rounded-lg text-xs tabular-nums flex flex-col items-center justify-center gap-0.5 ${
+                                    className={`relative h-11 rounded-lg text-xs tabular-nums flex flex-col items-center justify-center gap-0.5 ${
                                         selected
                                             ? 'bg-teal-900/50 text-teal-200 ring-1 ring-teal-600'
                                             : dayEntries.length > 0
