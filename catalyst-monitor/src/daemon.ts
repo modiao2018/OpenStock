@@ -27,16 +27,18 @@ async function saveGuidance(
   stored: { symbol?: string },
   result: AnalysisResult
 ): Promise<void> {
-  if (!result.guidance || !stored.symbol) return;
-  const isNew = await upsertCustomEvent({
-    symbol: stored.symbol,
-    title: result.guidance.title,
-    date: result.guidance.date,
-    kind: result.guidance.kind,
-    note: `AI 从公告中抽取（原文: ${result.guidance.dateText}）`,
-    source: 'auto',
-  });
-  if (isNew) log(scope, `日历新增催化剂: ${stored.symbol} ${result.guidance.date} ${result.guidance.title}`);
+  if (!stored.symbol) return;
+  for (const g of result.guidances) {
+    const isNew = await upsertCustomEvent({
+      symbol: stored.symbol,
+      title: g.title,
+      date: g.date,
+      kind: g.kind,
+      note: `AI 从公告中抽取（原文: ${g.dateText}）`,
+      source: 'auto',
+    });
+    if (isNew) log(scope, `日历新增催化剂: ${stored.symbol} ${g.date} ${g.title}`);
+  }
 }
 
 async function runCollector(def: CollectorDef, config: MonitorConfig): Promise<void> {

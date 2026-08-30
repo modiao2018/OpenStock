@@ -5,7 +5,9 @@ import { fetchWithRetry } from './http';
 import { getRecentEvents, listTrials, listUpcomingCustomEvents } from './store';
 import type { MonitorConfig, StoredEvent } from './types';
 
-const MAX_DOC_CHARS = 6000;
+// 正文+附件合计上限：8-K 的新闻稿和幻灯片常见 2 万+ 字符，
+// 时间指引（NEXT STEPS/milestones）往往在末尾，截太短会漏掉
+const MAX_DOC_CHARS = 28_000;
 
 function stripHtml(html: string): string {
   return html
@@ -20,11 +22,41 @@ function stripHtml(html: string): string {
 
 /** EDGAR 申报原文（SEC 要求 User-Agent 带联系方式） */
 async function fetchEdgarDoc(url: string, contact: string): Promise<string> {
-  const res = await fetchWithRetry(url, {
-    headers: { 'User-Agent': `catalyst-monitor/0.1 (${contact})` },
-  });
+  const headers = { 'User-Agent': `catalyst-monitor/0.1 (${contact})` };
+  const res = await fetchWithRetry(url, { headers });
   if (!res.ok) throw new Error(`EDGAR doc HTTP ${res.status}`);
-  return stripHtml(await res.text()).slice(0, MAX_DOC_CHARS);
+  let text = stripHtml(await res.text());
+
+  // 8-K 正文常常只是封面，真正的新闻稿在 Exhibit 99 附件里——时间指引都写在那
+  try {
+    const dir = url.slice(0, url.lastIndexOf('/'));
+    const primaryName = url.slice(url.lastIndexOf('/') + 1).toLowerCase();
+    const idxRes = await fetchWithRetry(`${dir}/index.json`, { headers });
+    if (idxRes.ok) {
+      const idx = (await idxRes.json()) as { directory?: { item?: Array<{ name: string; size?: string }> } };
+      // 附件命名五花八门（ex99 / 公司自定义），按"除正文外最大的 .htm"取——新闻稿必然是大文件
+      const exhibits = (idx.directory?.item ?? [])
+        .filter((i) => {
+          const n = i.name.toLowerCase();
+          return (
+            /\.html?$/.test(n) &&
+            n !== primaryName &&
+            !/^r\d+\.htm/.test(n) &&
+            !n.includes('index') &&
+            !n.includes('report')
+          );
+        })
+        .sort((a, b) => Number(b.size ?? 0) - Number(a.size ?? 0))
+        .slice(0, 2);
+      for (const item of exhibits) {
+        const exRes = await fetchWithRetry(`${dir}/${item.name}`, { headers });
+        if (exRes.ok) text += '\n\n【附件文件】' + stripHtml(await exRes.text());
+      }
+    }
+  } catch (err) {
+    logError('analyze:edgar-exhibit', err);
+  }
+  return text.slice(0, MAX_DOC_CHARS);
 }
 
 /** 按事件类型组装给 LLM 的上下文；返回 null 表示该类型不做分析（如停牌） */
@@ -114,15 +146,16 @@ export interface GuidanceCatalyst {
 
 export interface AnalysisResult {
   analysis: string | null;
-  guidance: GuidanceCatalyst | null;
+  guidances: GuidanceCatalyst[];
 }
 
-/** 从 LLM 回复中提取 JSON（容忍 ```json 围栏和前后废话） */
-function parseJsonReply(reply: string): any | null {
-  const match = reply.match(/\{[\s\S]*\}/);
+/** 从 LLM 回复中提取 JSON 数组（容忍 ```json 围栏和前后废话） */
+function parseJsonArrayReply(reply: string): any[] | null {
+  const match = reply.match(/\[[\s\S]*\]/);
   if (!match) return null;
   try {
-    return JSON.parse(match[0]);
+    const parsed = JSON.parse(match[0]);
+    return Array.isArray(parsed) ? parsed : null;
   } catch {
     return null;
   }
@@ -134,16 +167,18 @@ async function extractGuidance(
   llm: NonNullable<Awaited<ReturnType<typeof resolveLlmConfig>>>,
   ev: StoredEvent,
   context: string
-): Promise<GuidanceCatalyst | null> {
+): Promise<GuidanceCatalyst[]> {
   // 只有申报和新闻里才会出现公司给的时间指引
-  if (ev.source !== 'edgar' && ev.source !== 'rss') return null;
+  if (ev.source !== 'edgar' && ev.source !== 'rss') return [];
 
   const prompt =
-    '判断以下内容中公司是否给出了未来催化剂的时间指引（数据读出/topline、PDUFA 审批日、' +
-    'FDA 咨询委员会、财报日、医学会议展示等）。只输出 JSON，不要任何其他文字：\n' +
-    '{"found": true|false, "title": "简短中文标题（含药物名/事件类型）", ' +
-    '"dateText": "原文时间表述", "isoDate": "YYYY-MM-DD（估计值：季度取中间月的15日，仅月份取15日）", ' +
-    '"kind": "data-readout|pdufa|adcom|earnings|conference|other"}\n\n' +
+    '从以下内容中找出公司给出的所有未来催化剂时间指引（数据读出/topline、后续随访数据、' +
+    'PDUFA 审批日、FDA 咨询委员会、启动新试验、财报日、医学会议展示等）。' +
+    '只输出 JSON 数组（最多 3 项，没有则输出 []），不要任何其他文字：\n' +
+    '[{"title": "简短中文标题（含药物名/事件类型）", "dateText": "原文时间表述", ' +
+    '"isoDate": "YYYY-MM-DD 估计值", "kind": "data-readout|pdufa|adcom|earnings|conference|other"}]\n' +
+    '模糊表述的估计规则：具体日期照抄；仅月份取 15 日；季度取中间月 15 日；' +
+    '"上半年/H1"取 04-15，"下半年/H2"取 10-15；"年内/later this year"取 11-15。\n\n' +
     `${context}`;
 
   try {
@@ -153,19 +188,19 @@ async function extractGuidance(
       baseUrl: llm.baseUrl,
       model: llm.model,
     });
-    const parsed = parseJsonReply(reply);
-    if (!parsed?.found || !parsed.isoDate || !/^\d{4}-\d{2}-\d{2}$/.test(parsed.isoDate)) return null;
-    // 过去的日期不是催化剂
-    if (parsed.isoDate < new Date().toISOString().slice(0, 10)) return null;
-    return {
-      title: String(parsed.title ?? '').slice(0, 120) || '数据读出指引',
-      date: parsed.isoDate,
-      kind: GUIDANCE_KINDS.has(parsed.kind) ? parsed.kind : 'other',
-      dateText: String(parsed.dateText ?? '').slice(0, 200),
-    };
+    const today = new Date().toISOString().slice(0, 10);
+    return (parseJsonArrayReply(reply) ?? [])
+      .filter((g) => g?.isoDate && /^\d{4}-\d{2}-\d{2}$/.test(g.isoDate) && g.isoDate >= today)
+      .slice(0, 3)
+      .map((g) => ({
+        title: String(g.title ?? '').slice(0, 120) || '数据读出指引',
+        date: g.isoDate as string,
+        kind: GUIDANCE_KINDS.has(g.kind) ? g.kind : 'other',
+        dateText: String(g.dateText ?? '').slice(0, 200),
+      }));
   } catch (err) {
     logError('analyze:guidance', err);
-    return null;
+    return [];
   }
 }
 
@@ -175,7 +210,7 @@ async function extractGuidance(
  * LLM 未配置或调用失败返回 null 字段，调用方照常推送，不阻塞。
  */
 export async function analyzeEvent(config: MonitorConfig, ev: StoredEvent): Promise<AnalysisResult> {
-  const none: AnalysisResult = { analysis: null, guidance: null };
+  const none: AnalysisResult = { analysis: null, guidances: [] };
   const context = await buildContext(config, ev);
   if (!context) return none;
 
@@ -227,6 +262,6 @@ export async function analyzeEvent(config: MonitorConfig, ev: StoredEvent): Prom
     logError('analyze', err);
   }
 
-  const guidance = await extractGuidance(llm, ev, context);
-  return { analysis, guidance };
+  const guidances = await extractGuidance(llm, ev, context);
+  return { analysis, guidances };
 }
