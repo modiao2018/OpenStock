@@ -625,7 +625,7 @@ export async function getMarketSnapshot(): Promise<MarketSnapshotData> {
                 symbol: item.symbol,
                 hasData: true,
                 arPct: Number((current.ret * 100).toFixed(2)),
-                z: sigma > 0 ? Number((current.ret / sigma).toFixed(1)) : 0,
+                z: sigma > 0 ? Number((current.ret / sigma).toFixed(1)) || 0 : 0,
                 rvol: volAvg > 0 ? Number((current.vol / volAvg).toFixed(1)) : 0,
                 lastBarAt: new Date(current.t).toISOString(),
                 baselineSamples: baseline.length,
@@ -649,6 +649,106 @@ async function getMarketConfig(): Promise<{ benchmark: string; sigmaThreshold: n
     } catch {
         return { benchmark: 'XBI', sigmaThreshold: 2.5, rvolThreshold: 3 };
     }
+}
+
+// ---- 仪表盘总览（HERO 倒计时 + 标的瓦片） ----
+
+export interface UpcomingCatalyst {
+    symbol: string;
+    title: string;
+    date: string;
+    days: number;
+    kind: string;
+}
+
+export interface SymbolTileData {
+    symbol: string;
+    company: string;
+    lastClose?: number;
+    /** 最近交易日相对前一交易日收盘的涨跌幅（%） */
+    dayChangePct?: number;
+    /** 最近交易日的收盘价序列（降采样，火花线用） */
+    spark: number[];
+    z?: number;
+    nextCatalyst?: UpcomingCatalyst;
+}
+
+export interface DashboardOverview {
+    hero?: UpcomingCatalyst;
+    /** 未来 90 天全部催化剂（跑道图） */
+    runway: UpcomingCatalyst[];
+    tiles: SymbolTileData[];
+}
+
+export async function getDashboardOverview(): Promise<DashboardOverview> {
+    const overview: DashboardOverview = { runway: [], tiles: [] };
+    try {
+        await connectToDatabase();
+        const today = new Date().toISOString().slice(0, 10);
+        const in90d = new Date(Date.now() + 90 * 24 * 3600_000).toISOString().slice(0, 10);
+        const days = (date: string) => Math.ceil((Date.parse(date) - Date.now()) / 86_400_000);
+
+        const watchItems = await CatalystWatchItem.find().sort({ symbol: 1 }).lean();
+        const watched = new Set(watchItems.map((w) => w.symbol));
+
+        // 催化剂跑道：自定义（含 AI 抽取）+ 试验主要完成日期，90 天内
+        const catalysts: UpcomingCatalyst[] = [];
+        for (const c of await CatalystCustomEvent.find({ date: { $gte: today, $lte: in90d } }).lean()) {
+            if (watched.has(c.symbol)) catalysts.push({ symbol: c.symbol, title: c.title, date: c.date, days: days(c.date), kind: c.kind });
+        }
+        for (const t of await CatalystTrial.find().lean()) {
+            const d = t.primaryCompletionDate;
+            const iso = d && /^\d{4}-\d{2}$/.test(d) ? `${d}-01` : d;
+            if (iso && watched.has(t.symbol) && iso >= today && iso <= in90d) {
+                catalysts.push({ symbol: t.symbol, title: `${t.nctId} 主要完成`, date: iso, days: days(iso), kind: 'trial' });
+            }
+        }
+        catalysts.sort((a, b) => a.date.localeCompare(b.date));
+        overview.runway = catalysts;
+        overview.hero = catalysts[0];
+
+        // 标的瓦片：行情来自已存分钟线（最近两个交易时段），σ 来自盘面快照
+        const snapshot = await getMarketSnapshot();
+        const zBySymbol = new Map(snapshot.symbols.filter((s) => s.hasData).map((s) => [s.symbol, s.z]));
+        const nextBySymbol = new Map<string, UpcomingCatalyst>();
+        for (const c of catalysts) if (!nextBySymbol.has(c.symbol)) nextBySymbol.set(c.symbol, c);
+
+        for (const item of watchItems) {
+            const tile: SymbolTileData = {
+                symbol: item.symbol,
+                company: item.company,
+                spark: [],
+                z: zBySymbol.get(item.symbol),
+                nextCatalyst: nextBySymbol.get(item.symbol),
+            };
+            const bars = await CatalystBar.find({ symbol: item.symbol, t: { $gte: new Date(Date.now() - 5 * 24 * 3600_000) } })
+                .sort({ t: 1 })
+                .lean();
+            if (bars.length > 0) {
+                // 按 UTC 日期分交易时段（美股常规时段不跨 UTC 日）
+                const sessions = new Map<string, number[]>();
+                for (const b of bars) {
+                    const day = new Date(b.t).toISOString().slice(0, 10);
+                    if (!sessions.has(day)) sessions.set(day, []);
+                    sessions.get(day)!.push(b.c);
+                }
+                const dayKeys = [...sessions.keys()].sort();
+                const lastCloses = sessions.get(dayKeys[dayKeys.length - 1])!;
+                tile.lastClose = lastCloses[lastCloses.length - 1];
+                if (dayKeys.length >= 2) {
+                    const prevCloses = sessions.get(dayKeys[dayKeys.length - 2])!;
+                    const prev = prevCloses[prevCloses.length - 1];
+                    if (prev > 0) tile.dayChangePct = Number((((tile.lastClose! - prev) / prev) * 100).toFixed(2));
+                }
+                const stride = Math.max(1, Math.ceil(lastCloses.length / 48));
+                tile.spark = lastCloses.filter((_, i) => i % stride === 0 || i === lastCloses.length - 1);
+            }
+            overview.tiles.push(tile);
+        }
+    } catch (error) {
+        console.error('Error building dashboard overview:', error);
+    }
+    return overview;
 }
 
 // ---- 异动归因回放 ----

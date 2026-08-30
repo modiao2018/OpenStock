@@ -367,6 +367,19 @@
       "marketTitle": "Reading market watch",
       "marketBody": "Every 2 minutes during market hours, checks whether your stocks move abnormally (beyond their own history, on heavy volume, not sector-wide). On trigger, your phone rings with an AI briefing — and if there's no public news matching the move, it warns about possible undisclosed information: the real-time catch for \"the price moved early\"."
     },
+    "hero": {
+      "eyebrow": "Next catalyst",
+      "days": "days",
+      "empty": "No catalysts in the next 90 days — add a company or a custom catalyst; the AI also extracts dates from filings",
+      "today": "Today",
+      "runwayLabel": "90-day catalyst runway"
+    },
+    "tiles": {
+      "noData": "Pending",
+      "noCatalyst": "No catalyst in 90d",
+      "zTitle": "Latest 5-min abnormal return (σ)",
+      "sparkTitle": "Latest session"
+    },
     "status": {
       "RECRUITING": "Recruiting",
       "NOT_YET_RECRUITING": "Not yet recruiting",
@@ -386,6 +399,7 @@
       "delete": "Delete",
       "empty": "No entries yet. Click \"Add Company\" to start.",
       "dialogTitle": "Watch Entry",
+      "back": "Back to list",
       "stockSearch": "Find a stock",
       "stockSearchPlaceholder": "Type a ticker or company name, then pick from the dropdown",
       "symbol": "Ticker",
@@ -432,6 +446,8 @@
       "hint": "Custom catalysts above are most reliable (incl. AI-extracted company guidance); registry dates below lag by weeks-months and interim/topline data can come earlier — rough reference only",
       "empty": "No trials archived yet. They appear after the daemon's first run.",
       "trialsTitle": "Trial registry dates",
+      "past": "Past",
+      "undated": "Undated",
       "phase": "Phase {phases}",
       "primaryCompletion": "Primary completion",
       "daysLeft": "in {days} days",
@@ -522,7 +538,9 @@
     },
     "timeline": {
       "title": "Event Timeline",
-      "hint": "Each item records source-published and first-fetched times for post-hoc attribution. \"Archived\" is the initial snapshot; \"Updated\" marks a real change",
+      "hint": "All captured info grouped by Beijing date. \"Archived\" backfill snapshots are hidden by default. Published vs fetched times support post-hoc attribution",
+      "filterAll": "All",
+      "showArchived": "Show archived ({count})",
       "empty": "No events yet",
       "publishedAt": "Published",
       "fetchedAt": "Fetched",
