@@ -47,10 +47,10 @@ export const sendWelcomeEmail = async ({ email, name, intro }: WelcomeEmailData)
             .replace('{{intro}}', intro);
 
         const mailOptions = {
-            from: `"OpenStock 团队" <${process.env.NODEMAILER_EMAIL}>`,
+            from: `"HappyStock 团队" <${process.env.NODEMAILER_EMAIL}>`,
             to: email,
-            subject: `欢迎加入 OpenStock —— 你的开源股票市场工具箱！`,
-            text: '感谢加入 OpenStock（由 Open Dev Society 发起的开源项目）',
+            subject: `欢迎加入 HappyStock —— 你的开源股票市场工具箱！`,
+            text: '感谢加入 HappyStock（由 Open Dev Society 发起的开源项目）',
             html: htmlTemplate,
         };
 
@@ -77,10 +77,10 @@ export const sendNewsSummaryEmail = async (
             .replace('{{newsContent}}', newsContent);
 
         const mailOptions = {
-            from: `"OpenStock 团队" <${process.env.NODEMAILER_EMAIL}>`,
+            from: `"HappyStock 团队" <${process.env.NODEMAILER_EMAIL}>`,
             to: email,
             subject: `📈 今日市场新闻摘要 - ${date}`,
-            text: `来自 OpenStock 的今日市场新闻摘要`,
+            text: `来自 HappyStock 的今日市场新闻摘要`,
             html: htmlTemplate,
         };
 

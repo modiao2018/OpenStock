@@ -13,7 +13,7 @@ async function createTag() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 api_key: KIT_API_KEY,
-                tag: { name: "OpenStock Users" }
+                tag: { name: "HappyStock Users" }
             })
         });
 

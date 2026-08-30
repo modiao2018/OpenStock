@@ -1,18 +1,18 @@
 {
   "metadata": {
-    "title": "OpenStock",
-    "description": "OpenStock 是昂贵行情平台的开源替代品。实时追踪股价、设置个性化提醒、查看详尽的公司信息——开放共建，永久免费。",
+    "title": "HappyStock",
+    "description": "HappyStock 是昂贵行情平台的开源替代品。实时追踪股价、设置个性化提醒、查看详尽的公司信息——开放共建，永久免费。",
     "about": {
-      "title": "关于我们 | OpenStock",
-      "description": "OpenStock 与 Open Dev Society 背后的故事。"
+      "title": "关于我们 | HappyStock",
+      "description": "HappyStock 与 Open Dev Society 背后的故事。"
     },
     "help": {
-      "title": "帮助中心 | OpenStock",
-      "description": "OpenStock 的社区互助支持。没有付费墙，只有帮助。"
+      "title": "帮助中心 | HappyStock",
+      "description": "HappyStock 的社区互助支持。没有付费墙，只有帮助。"
     },
     "apiDocs": {
-      "title": "API 与架构 | OpenStock",
-      "description": "OpenStock 系统架构、AI 集成与后台任务的技术文档。"
+      "title": "API 与架构 | HappyStock",
+      "description": "HappyStock 系统架构、AI 集成与后台任务的技术文档。"
     }
   },
   "common": {
@@ -94,7 +94,7 @@
   },
   "auth": {
     "layout": {
-      "quote": "“对我来说，OpenStock 不只是又一个股票应用。它的意义在于让每个人都能清晰、自主地掌握市场，没有门槛，也无需订阅。”",
+      "quote": "“对我来说，HappyStock 不只是又一个股票应用。它的意义在于让每个人都能清晰、自主地掌握市场，没有门槛，也无需订阅。”",
       "founder": "@opendevsociety 创始人",
       "dashboardAlt": "仪表盘预览"
     },
@@ -217,7 +217,7 @@
   },
   "about": {
     "heroTitle": "让工具属于每一个人。",
-    "heroSubtitle": "我们相信，金融智慧不应被锁在付费墙之后。OpenStock 由社区打造，为社区服务。",
+    "heroSubtitle": "我们相信，金融智慧不应被锁在付费墙之后。HappyStock 由社区打造，为社区服务。",
     "features": [
       {
         "title": "开放使用",
@@ -233,7 +233,7 @@
       }
     ],
     "storyTitle": "Open Dev Society",
-    "storyP1": "OpenStock 源于一个朴素的疑问：强大的金融工具，为什么要卖得这么贵？",
+    "storyP1": "HappyStock 源于一个朴素的疑问：强大的金融工具，为什么要卖得这么贵？",
     "storyP2": "我们是一群开发者、设计师与金融爱好者，共同汇聚在 <ods>Open Dev Society</ods> 的旗帜之下。我们的使命是让软件回归大众：打造高质量的开源产品，替代封闭的专有平台。",
     "githubCta": "访问我们的 GitHub",
     "partnersTitle": "来自优秀伙伴的支持"
@@ -261,7 +261,7 @@
     "faqTitle": "常见问题",
     "faq": [
       {
-        "question": "OpenStock 真的永久免费吗？",
+        "question": "HappyStock 真的永久免费吗？",
         "answer": "是的！我们依靠捐赠和社区贡献运转。核心功能（行情跟踪、提醒、分析）将始终免费。我们相信金融工具不应该是奢侈品。"
       },
       {
@@ -286,7 +286,7 @@
     "contactButton": "联系支持"
   },
   "apiDocs": {
-    "heroTitle": "OpenStock 系统架构",
+    "heroTitle": "HappyStock 系统架构",
     "heroSubtitle": "透明呈现为您的市场洞察提供动力的事件驱动、多供应商系统。",
     "badgeVersion": "v1.0.0 运行中",
     "badgeAi": "Gemini + Siray AI",
@@ -562,7 +562,7 @@
     "logout": "退出登录"
   },
   "footer": {
-    "tagline": "OpenStock 是昂贵行情平台的开源替代品。实时跟踪股价、设置个性化提醒、深入了解公司动态——开放共建，人人可用，永久免费。",
+    "tagline": "HappyStock 是昂贵行情平台的开源替代品。实时跟踪股价、设置个性化提醒、深入了解公司动态——开放共建，人人可用，永久免费。",
     "resources": "资源",
     "apiDocumentation": "API 文档",
     "helpCenter": "帮助中心"

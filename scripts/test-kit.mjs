@@ -20,7 +20,7 @@ async function runTest() {
     const payload = {
         api_key: KIT_API_KEY,
         api_secret: KIT_API_SECRET,
-        subject: "OpenStock Manual Test " + new Date().toISOString(),
+        subject: "HappyStock Manual Test " + new Date().toISOString(),
         content: "<h1>Test Email</h1><p>If you see this, the API connection is working.</p>",
         public: true
     };

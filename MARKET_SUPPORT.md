@@ -1,6 +1,6 @@
 # 🌍 Market Support & Limitations
 
-OpenStock supports stocks from multiple exchanges worldwide, but there are important limitations to be aware of based on our data providers (Finnhub & TradingView).
+HappyStock supports stocks from multiple exchanges worldwide, but there are important limitations to be aware of based on our data providers (Finnhub & TradingView).
 
 ## ✅ Fully Supported Markets
 
@@ -119,7 +119,7 @@ TradingView's free tier embeddable widgets have several restrictions:
 
 ## 🚀 Future Improvements
 
-The OpenStock community is working on:
+The HappyStock community is working on:
 
 - [ ] Fallback chart libraries for unsupported symbols
 - [ ] Market availability checker before displaying widgets
@@ -150,4 +150,4 @@ Please [open an issue](https://github.com/Open-Dev-Society/OpenStock/issues) wit
 
 ---
 
-**Disclaimer**: Nothing here is financial advice. Market data availability depends on provider terms and your subscription tier. Always verify current data before making investment decisions. OpenStock is community-built and not a brokerage.
+**Disclaimer**: Nothing here is financial advice. Market data availability depends on provider terms and your subscription tier. Always verify current data before making investment decisions. HappyStock is community-built and not a brokerage.

@@ -6,7 +6,7 @@
 set -e
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
-LABEL="com.openstock.catalyst-monitor"
+LABEL="com.happystock.catalyst-monitor"
 PLIST_SRC="$REPO/catalyst-monitor/launchd/$LABEL.plist"
 PLIST_DST="$HOME/Library/LaunchAgents/$LABEL.plist"
 

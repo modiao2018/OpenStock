@@ -1,6 +1,6 @@
 # catalyst-monitor
 
-医药股临床催化剂事件监控。OpenStock 项目内的一个后台模块：与主应用共用依赖（根 package.json）、环境变量（根 `.env`）和 MongoDB，但作为独立的常驻进程运行，不参与 Next.js 构建路由。
+医药股临床催化剂事件监控。HappyStock 项目内的一个后台模块：与主应用共用依赖（根 package.json）、环境变量（根 `.env`）和 MongoDB，但作为独立的常驻进程运行，不参与 Next.js 构建路由。
 
 解决的问题见 `../docs/医药股临床数据公布前股价提前反应原因.md`：
 

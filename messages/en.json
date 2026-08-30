@@ -1,18 +1,18 @@
 {
   "metadata": {
-    "title": "OpenStock",
-    "description": "OpenStock is an open-source alternative to expensive market platforms. Track real-time prices, set personalized alerts, and explore detailed company insights — built openly, for everyone, forever free.",
+    "title": "HappyStock",
+    "description": "HappyStock is an open-source alternative to expensive market platforms. Track real-time prices, set personalized alerts, and explore detailed company insights — built openly, for everyone, forever free.",
     "about": {
-      "title": "About Us | OpenStock",
-      "description": "The story behind OpenStock and the Open Dev Society."
+      "title": "About Us | HappyStock",
+      "description": "The story behind HappyStock and the Open Dev Society."
     },
     "help": {
-      "title": "Help Center | OpenStock",
-      "description": "Community-driven support for OpenStock. No paywalls, just help."
+      "title": "Help Center | HappyStock",
+      "description": "Community-driven support for HappyStock. No paywalls, just help."
     },
     "apiDocs": {
-      "title": "API & Architecture | OpenStock",
-      "description": "Technical documentation for OpenStock architecture, AI integrations, and background jobs."
+      "title": "API & Architecture | HappyStock",
+      "description": "Technical documentation for HappyStock architecture, AI integrations, and background jobs."
     }
   },
   "common": {
@@ -94,7 +94,7 @@
   },
   "auth": {
     "layout": {
-      "quote": "“For me, OpenStock isn’t just another stock app. It’s about giving people clarity and control in the market, without barriers or subscriptions.”",
+      "quote": "“For me, HappyStock isn’t just another stock app. It’s about giving people clarity and control in the market, without barriers or subscriptions.”",
       "founder": "Founder @opendevsociety",
       "dashboardAlt": "Dashboard Preview"
     },
@@ -217,7 +217,7 @@
   },
   "about": {
     "heroTitle": "Tools for Everyone.",
-    "heroSubtitle": "We believe financial intelligence shouldn't be locked behind paywalls. OpenStock is built by the community, for the community.",
+    "heroSubtitle": "We believe financial intelligence shouldn't be locked behind paywalls. HappyStock is built by the community, for the community.",
     "features": [
       {
         "title": "Open Access",
@@ -233,7 +233,7 @@
       }
     ],
     "storyTitle": "The Open Dev Society",
-    "storyP1": "OpenStock was born from a simple frustration: why are powerful financial tools so expensive?",
+    "storyP1": "HappyStock was born from a simple frustration: why are powerful financial tools so expensive?",
     "storyP2": "We are a collective of developers, designers, and financial enthusiasts working under the <ods>Open Dev Society</ods> banner. Our mission is to democratize software by building high-quality, open-source alternatives to proprietary platforms.",
     "githubCta": "Visit our GitHub",
     "partnersTitle": "Backed by Amazing Partners"
@@ -261,7 +261,7 @@
     "faqTitle": "Frequently Asked Questions",
     "faq": [
       {
-        "question": "Is OpenStock really free forever?",
+        "question": "Is HappyStock really free forever?",
         "answer": "Yes! We run on donations and community contribution. Core features (tracking, alerts, analysis) will remain free. We believe financial tools shouldn't be luxury items."
       },
       {
@@ -286,7 +286,7 @@
     "contactButton": "Contact Support"
   },
   "apiDocs": {
-    "heroTitle": "OpenStock Architecture",
+    "heroTitle": "HappyStock Architecture",
     "heroSubtitle": "A transparent look at the event-driven, multi-provider system powering your market insights.",
     "badgeVersion": "v1.0.0 Active",
     "badgeAi": "Gemini + Siray AI",
@@ -562,7 +562,7 @@
     "logout": "Logout"
   },
   "footer": {
-    "tagline": "OpenStock is an open-source alternative to expensive market platforms. Track real-time prices, set personalized alerts, and explore detailed company insights — built openly, for everyone, forever free.",
+    "tagline": "HappyStock is an open-source alternative to expensive market platforms. Track real-time prices, set personalized alerts, and explore detailed company insights — built openly, for everyone, forever free.",
     "resources": "Resources",
     "apiDocumentation": "API Documentation",
     "helpCenter": "Help Center"

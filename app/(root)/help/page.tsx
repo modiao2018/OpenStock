@@ -54,7 +54,7 @@ export default async function HelpPage() {
           icon={<Github className="text-white" />}
           title={t('cards.bugs.title')}
           desc={t('cards.bugs.desc')}
-          link="https://github.com/Open-Dev-Society/OpenStock/issues"
+          link="https://github.com/Open-Dev-Society/HappyStock/issues"
           linkText={t('cards.bugs.linkText')}
         />
       </div>

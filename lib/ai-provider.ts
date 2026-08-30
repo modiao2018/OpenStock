@@ -1,5 +1,5 @@
 /**
- * AI Provider abstraction for OpenStock.
+ * AI Provider abstraction for HappyStock.
  *
  * Supports multiple LLM backends via the AI_PROVIDER environment variable:
  *   - "gemini"  (default) – Google Gemini REST API

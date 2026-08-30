@@ -34,7 +34,7 @@ export default async function AboutPage() {
             <section className="text-center space-y-8 pt-16 mb-20">
                 <div className="flex justify-center mb-6">
                     <div className="p-4 rounded-2xl border border-teal-500/20 backdrop-blur-sm">
-                        <img src="/assets/images/logo.png" alt="Open Dev Society" className="h-10 w-auto" />
+                        <img src="/assets/images/logo.svg" alt="Open Dev Society" className="h-10 w-auto" />
                     </div>
                 </div>
 

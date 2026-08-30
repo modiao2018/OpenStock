@@ -25,7 +25,7 @@ export const sendPasswordResetEmail = async (
                     <h1 style="margin:0 0 16px;font-size:28px;">重置密码</h1>
                     <p style="margin:0 0 16px;color:#d4d4d8;">${escapedFirstName}，你好：</p>
                     <p style="margin:0 0 24px;color:#d4d4d8;line-height:1.6;">
-                        我们收到了重置你 OpenStock 账户密码的请求。请点击下方按钮设置新密码。
+                        我们收到了重置你 HappyStock 账户密码的请求。请点击下方按钮设置新密码。
                     </p>
                     <a
                         href="${escapedResetUrl}"
@@ -41,9 +41,9 @@ export const sendPasswordResetEmail = async (
         `;
 
         const info = await transporter.sendMail({
-            from: `"OpenStock 团队" <${process.env.NODEMAILER_EMAIL}>`,
+            from: `"HappyStock 团队" <${process.env.NODEMAILER_EMAIL}>`,
             to: email,
-            subject: '重置你的 OpenStock 密码',
+            subject: '重置你的 HappyStock 密码',
             text: `重置密码链接：${encodeURI(resetUrl)}`,
             html,
         });

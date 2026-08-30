@@ -20,7 +20,7 @@ if (!MONGODB_URI || !KIT_API_KEY || !KIT_WELCOME_FORM_ID) {
 
 // Standalone Kit Add Subscriber Function (Tag Based)
 async function addSubscriberToKit(email, firstName) {
-    const TAG_ID = "15119471"; // OpenStock Users
+    const TAG_ID = "15119471"; // HappyStock Users
     const url = `https://api.convertkit.com/v3/tags/${TAG_ID}/subscribe`;
 
     // Auto-detect first name if missing

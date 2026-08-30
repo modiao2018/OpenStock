@@ -25,7 +25,7 @@ export const sendSignUpEmail = inngest.createFunction(
                 return await callAIProviderWithFallback(prompt);
             } catch (error) {
                 console.error("⚠️ All AI providers failed for welcome email", error);
-                return '感谢加入 OpenStock。从现在起，你可以随时追踪市场行情，做出更明智的投资决策。';
+                return '感谢加入 HappyStock。从现在起，你可以随时追踪市场行情，做出更明智的投资决策。';
             }
         });
 
@@ -114,7 +114,7 @@ export const sendWeeklyNewsSummary = inngest.createFunction(
 
             // --- HTML EMAIL TEMPLATE ---
             // Using inline styles for compatibility. Accent Color: Teal (#20c997)
-            const logoUrl = "https://raw.githubusercontent.com/ravixalgorithm/OpenStock/main/public/assets/images/logo.png";
+            const logoUrl = "https://raw.githubusercontent.com/ravixalgorithm/HappyStock/main/public/assets/images/logo.png";
 
             const content = `
             <!DOCTYPE html>
@@ -140,7 +140,7 @@ export const sendWeeklyNewsSummary = inngest.createFunction(
                                         <tr>
                                             <td style="border-bottom: 1px dashed #333; padding-bottom: 20px;">
                                                  <h2 style="margin: 0; font-size: 24px; font-weight: 700; color: #ffffff; display: flex; align-items: center;">
-                                                    <span style="color: #20c997; margin-right: 10px;">📊</span> OpenStock
+                                                    <span style="color: #20c997; margin-right: 10px;">📊</span> HappyStock
                                                  </h2>
                                             </td>
                                         </tr>
@@ -171,13 +171,13 @@ export const sendWeeklyNewsSummary = inngest.createFunction(
                                     <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 40px; border-top: 1px dashed #333; padding-top: 20px;">
                                         <tr>
                                             <td align="center" style="color: #666666; font-size: 14px; line-height: 1.5;">
-                                                <p style="margin: 0 0 10px 0;">你收到这封邮件，是因为你注册了 OpenStock。</p>
+                                                <p style="margin: 0 0 10px 0;">你收到这封邮件，是因为你注册了 HappyStock。</p>
                                                 <p style="margin: 0;">
                                                     <a href="{{ unsubscribe_url }}" style="color: #20c997; text-decoration: underline;">退订</a>
                                                     <span style="margin: 0 10px;">•</span>
-                                                    <a href="https://openstock-ods.vercel.app" style="color: #20c997; text-decoration: underline;">访问 OpenStock</a>
+                                                    <a href="https://happystock-ods.vercel.app" style="color: #20c997; text-decoration: underline;">访问 HappyStock</a>
                                                 </p>
-                                                <p style="margin: 20px 0 0 0; font-size: 12px;">&copy; ${new Date().getFullYear()} OpenStock</p>
+                                                <p style="margin: 20px 0 0 0; font-size: 12px;">&copy; ${new Date().getFullYear()} HappyStock</p>
                                             </td>
                                         </tr>
                                     </table>
@@ -364,7 +364,7 @@ export const checkInactiveUsers = inngest.createFunction(
                                         
                                         <!-- Logo -->
                                         <h2 style="margin: 0 0 30px 0; font-size: 24px; color: #ffffff; display: flex; align-items: center;">
-                                            <span style="color: #20c997; margin-right: 10px;">📊</span> OpenStock
+                                            <span style="color: #20c997; margin-right: 10px;">📊</span> HappyStock
                                         </h2>
 
                                         <!-- Title -->
@@ -372,7 +372,7 @@ export const checkInactiveUsers = inngest.createFunction(
 
                                         <p style="color: #cccccc; font-size: 16px; line-height: 1.6;">
                                             ${firstName}，你好：<br><br>
-                                            我们注意到你有一段时间没来 OpenStock 了。近期市场波动不断，也许正有一些你不想错过的机会！
+                                            我们注意到你有一段时间没来 HappyStock 了。近期市场波动不断，也许正有一些你不想错过的机会！
                                         </p>
 
                                         <!-- Card -->
@@ -391,17 +391,17 @@ export const checkInactiveUsers = inngest.createFunction(
                                         <table border="0" cellspacing="0" cellpadding="0" width="100%">
                                             <tr>
                                                 <td align="center">
-                                                    <a href="https://openstock.app" style="display: inline-block; background-color: #20c997; color: #000000; font-weight: bold; padding: 14px 30px; text-decoration: none; border-radius: 6px; font-size: 16px;">返回仪表盘</a>
+                                                    <a href="https://happystock.app" style="display: inline-block; background-color: #20c997; color: #000000; font-weight: bold; padding: 14px 30px; text-decoration: none; border-radius: 6px; font-size: 16px;">返回仪表盘</a>
                                                 </td>
                                             </tr>
                                         </table>
 
                                         <p style="margin-top: 40px; color: #666; font-size: 14px;">
-                                            保持敏锐，<br>OpenStock 团队
+                                            保持敏锐，<br>HappyStock 团队
                                         </p>
 
                                         <div style="margin-top: 40px; padding-top: 20px; border-top: 1px dashed #333; text-align: center; font-size: 12px; color: #666;">
-                                            <p>你收到这封邮件，是因为你是 OpenStock 的用户。</p>
+                                            <p>你收到这封邮件，是因为你是 HappyStock 的用户。</p>
                                             <a href="#" style="color: #20c997;">退订</a>
                                         </div>
 

@@ -12,8 +12,8 @@ const Header = async ({ user }: { user: User }) => {
             <div className="container header-wrapper">
                 <Link href="/" className="flex items-center justify-center gap-2">
                     <Image
-                        src="/assets/images/logo.png"
-                        alt="OpenStock"
+                        src="/assets/images/logo.svg"
+                        alt="HappyStock"
                         width={200}
                         height={50}
                     />

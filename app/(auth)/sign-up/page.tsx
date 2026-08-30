@@ -158,10 +158,10 @@ const SignUp = () => {
 
                 <OpenDevSocietyBranding outerClassName="mt-10 flex justify-center" />
                 <div className="mt-5 flex justify-center">
-                    <a href="https://peerlist.io/ravixalgorithm/project/openstock" target="_blank" rel="noreferrer">
+                    <a href="https://peerlist.io/ravixalgorithm/project/happystock" target="_blank" rel="noreferrer">
                         <img
                             src="https://peerlist.io/api/v1/projects/embed/PRJH8OED7MBL9MGB9HRMKAKLM66KNN?showUpvote=true&theme=light"
-                            alt="OpenStock"
+                            alt="HappyStock"
                             style={{ width: 'auto', height: '72px' }}
                         />
                     </a>

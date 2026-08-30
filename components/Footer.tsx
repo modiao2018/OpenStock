@@ -13,8 +13,8 @@ const Footer = async () => {
                     <div className="col-span-1 md:col-span-2">
                         <Link href="/" className="flex items-center gap-2 mb-4">
                             <Image
-                                src="/assets/images/logo.png"
-                                alt="OpenStock"
+                                src="/assets/images/logo.svg"
+                                alt="HappyStock"
                                 width={150}
                                 height={38}
                                 className="brightness-0 invert"

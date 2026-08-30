@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.openstock.catalyst-monitor</string>
+    <string>com.happystock.catalyst-monitor</string>
     <key>ProgramArguments</key>
     <array>
         <string>/bin/zsh</string>

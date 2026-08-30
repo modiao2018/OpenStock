@@ -36,7 +36,7 @@ async function getStandardConnectionString() {
 
         const user = "opendevsociety";
         const pass = "6vIalDn9VhIDu7Fr";
-        const db = "openstock"; // Assuming db name, or just /test
+        const db = "happystock"; // Assuming db name, or just /test
 
         let uri = `mongodb://${user}:${pass}@${hosts}/${db}?ssl=true&authSource=admin`;
         if (replicaSet) {

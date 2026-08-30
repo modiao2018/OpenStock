@@ -31,11 +31,11 @@
   </div>
 </div>
 
-# OpenStock
+# HappyStock
 
-OpenStock is an open-source alternative to expensive market platforms. Track real-time prices, set personalized alerts, and explore detailed company insights — built openly, for everyone, forever free.
+HappyStock is an open-source alternative to expensive market platforms. Track real-time prices, set personalized alerts, and explore detailed company insights — built openly, for everyone, forever free.
 
-Note: OpenStock is community-built and not a brokerage. Market data may be delayed based on provider rules and your configuration. Nothing here is financial advice.
+Note: HappyStock is community-built and not a brokerage. Market data may be delayed based on provider rules and your configuration. Nothing here is financial advice.
 
 ## 📋 Table of Contents
 
@@ -57,7 +57,7 @@ Note: OpenStock is community-built and not a brokerage. Market data may be delay
 
 ## ✨ Introduction <a name="introduction"></a>
 
-OpenStock is a modern stock market app powered by Next.js (App Router), shadcn/ui and Tailwind CSS, Better Auth for authentication, MongoDB for persistence, Finnhub for market data, and TradingView widgets for charts and market views.
+HappyStock is a modern stock market app powered by Next.js (App Router), shadcn/ui and Tailwind CSS, Better Auth for authentication, MongoDB for persistence, Finnhub for market data, and TradingView widgets for charts and market views.
 
 ## 🌍 Open Dev Society Manifesto <a name="manifesto"></a>
 
@@ -179,17 +179,17 @@ Open http://localhost:3000 to view the app.
 
 ## 🐳 Docker Setup <a name="docker-setup"></a>
 
-You can run OpenStock and MongoDB easily with Docker Compose.
+You can run HappyStock and MongoDB easily with Docker Compose.
 
 1) Ensure Docker and Docker Compose are installed.
 
 2) docker-compose.yml includes two services:
-- openstock (this app)
+- happystock (this app)
 - mongodb (MongoDB database with a persistent volume)
 
 3) Create your `.env` (see examples below). For the Docker setup, use a local connection string like:
 ```env
-MONGODB_URI=mongodb://root:example@mongodb:27017/openstock?authSource=admin
+MONGODB_URI=mongodb://root:example@mongodb:27017/happystock?authSource=admin
 ```
 
 4) Start the stack:
@@ -282,7 +282,7 @@ Local (Docker Compose) MongoDB:
 NODE_ENV=development
 
 # Database (Docker)
-MONGODB_URI=mongodb://root:example@mongodb:27017/openstock?authSource=admin
+MONGODB_URI=mongodb://root:example@mongodb:27017/happystock?authSource=admin
 
 # Better Auth
 BETTER_AUTH_SECRET=your_better_auth_secret
@@ -395,7 +395,7 @@ public/assets/images/   # logos and screenshots
 
 ## 🌍 Market Support <a name="market-support"></a>
 
-OpenStock supports **30+ international stock exchanges** including NSE, LSE, TSX, and more. However, please be aware of important limitations based on our data providers.
+HappyStock supports **30+ international stock exchanges** including NSE, LSE, TSX, and more. However, please be aware of important limitations based on our data providers.
 
 **Quick Facts**:
 - ✅ Finnhub supports most global exchanges
@@ -445,7 +445,7 @@ If you discover a vulnerability:
 
 ## 📜 License <a name="license"></a>
 
-OpenStock is and will remain free and open for everyone. This project is licensed under the AGPL-3.0 License - see the LICENSE file for details.
+HappyStock is and will remain free and open for everyone. This project is licensed under the AGPL-3.0 License - see the LICENSE file for details.
 
 ## 🙏 Acknowledgements <a name="acknowledgements"></a>
 
@@ -462,7 +462,7 @@ OpenStock is and will remain free and open for everyone. This project is license
 
 ## Our Honourable Contributors
 - [ravixalgorithm](https://github.com/ravixalgorithm) - Developed the entire application from the ground up, including authentication, UI design, API and AI integration, and deployment.
-- [Priyanshuu00007](https://github.com/Priyanshuu00007) - Created the official OpenStock logo and contributed to the project’s visual identity.
+- [Priyanshuu00007](https://github.com/Priyanshuu00007) - Created the official HappyStock logo and contributed to the project’s visual identity.
 - [chinnsenn](https://github.com/chinnsenn) - Set up Docker configuration for the repository, ensuring a smooth development and deployment process.
 - [koevoet1221](https://github.com/koevoet1221) - Resolved MongoDB Docker build issues, improving the project’s overall stability and reliability.
 - [ettoreciolli1](https://github.com/ettoreciolli1) - updated Readme
@@ -475,10 +475,10 @@ OpenStock is and will remain free and open for everyone. This project is license
   <img src="public/assets/icons/siray.svg" alt="Siray.ai Logo" width="100" />
 </a>
 
-**[Siray.ai](https://www.siray.ai/)** — The robust AI infrastructure backing OpenStock. Siray.ai ensures our market insights never sleep.
+**[Siray.ai](https://www.siray.ai/)** — The robust AI infrastructure backing HappyStock. Siray.ai ensures our market insights never sleep.
 
 ## Special thanks
-Huge thanks to [Adrian Hajdin (JavaScript Mastery)](https://github.com/adrianhajdin) — his excellent Stock Market App tutorial was instrumental in building OpenStock for the open-source community under the Open Dev Society.
+Huge thanks to [Adrian Hajdin (JavaScript Mastery)](https://github.com/adrianhajdin) — his excellent Stock Market App tutorial was instrumental in building HappyStock for the open-source community under the Open Dev Society.
 
 GitHub: [adrianhajdin](https://github.com/adrianhajdin)
 YouTube tutorial: [Stock Market App Tutorial](https://www.youtube.com/watch?v=gu4pafNCXng)
