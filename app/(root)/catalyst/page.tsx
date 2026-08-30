@@ -9,6 +9,7 @@ import {
     getCatalystWatchItems,
     getCustomCatalysts,
     getLlmConfig,
+    getMarketSnapshot,
     getMonitorStatus,
 } from '@/lib/actions/catalyst.actions';
 import CatalystManager from '@/components/catalyst/CatalystManager';
@@ -17,6 +18,7 @@ import EventTimeline from '@/components/catalyst/EventTimeline';
 import MonitorDebugPanel from '@/components/catalyst/MonitorDebugPanel';
 import LlmConfigDialog from '@/components/catalyst/LlmConfigDialog';
 import AutoRefresh from '@/components/catalyst/AutoRefresh';
+import MarketPanel from '@/components/catalyst/MarketPanel';
 
 export default async function CatalystPage() {
     const t = await getTranslations('catalyst.page');
@@ -25,13 +27,14 @@ export default async function CatalystPage() {
         redirect('/sign-in');
     }
 
-    const [watchItems, trials, events, monitorStatus, llmConfig, customEvents] = await Promise.all([
+    const [watchItems, trials, events, monitorStatus, llmConfig, customEvents, marketSnapshot] = await Promise.all([
         getCatalystWatchItems(),
         getCatalystTrials(),
         getCatalystEvents(50),
         getMonitorStatus(),
         getLlmConfig(),
         getCustomCatalysts(),
+        getMarketSnapshot(),
     ]);
 
     return (
@@ -50,6 +53,7 @@ export default async function CatalystPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-8">
                     <CatalystManager initialItems={watchItems} />
+                    <MarketPanel snapshot={marketSnapshot} />
                     <EventTimeline events={events} />
                 </div>
                 <div className="lg:col-span-1 space-y-8">

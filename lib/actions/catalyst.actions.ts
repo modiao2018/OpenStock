@@ -377,6 +377,105 @@ export async function testLlm(): Promise<LlmTestResult> {
     }
 }
 
+// ---- 盘面监控快照（页面展示用，与 market collector 同一套数学） ----
+
+export interface MarketSymbolSnapshot {
+    symbol: string;
+    /** 最新 5 分钟 abnormal return（%，已扣基准） */
+    arPct: number;
+    /** 相对该股历史波动的倍数 */
+    z: number;
+    /** 相对成交量 */
+    rvol: number;
+    lastBarAt: string;
+    baselineSamples: number;
+    /** 最新数据是否在 10 分钟内（盘中实时性判断） */
+    fresh: boolean;
+}
+
+export interface MarketSnapshotData {
+    configured: boolean;
+    marketOpen?: boolean;
+    benchmark: string;
+    sigmaThreshold: number;
+    rvolThreshold: number;
+    symbols: MarketSymbolSnapshot[];
+}
+
+export async function getMarketSnapshot(): Promise<MarketSnapshotData> {
+    const { benchmark, sigmaThreshold, rvolThreshold } = await getMarketConfig();
+    const base: MarketSnapshotData = {
+        configured: Boolean(process.env.ALPACA_API_KEY && process.env.ALPACA_API_SECRET),
+        benchmark,
+        sigmaThreshold,
+        rvolThreshold,
+        symbols: [],
+    };
+    if (!base.configured) return base;
+
+    try {
+        const res = await fetch('https://paper-api.alpaca.markets/v2/clock', {
+            headers: {
+                'APCA-API-KEY-ID': process.env.ALPACA_API_KEY!,
+                'APCA-API-SECRET-KEY': process.env.ALPACA_API_SECRET!,
+            },
+            signal: AbortSignal.timeout(5_000),
+            cache: 'no-store',
+        });
+        if (res.ok) base.marketOpen = ((await res.json()) as { is_open: boolean }).is_open;
+    } catch {
+        // clock 拉不到不影响快照展示
+    }
+
+    try {
+        await connectToDatabase();
+        const watchItems = await CatalystWatchItem.find().lean();
+        const since = new Date(Date.now() - 12 * 24 * 3600_000);
+        const toBar = (d: any) => ({ symbol: d.symbol, t: new Date(d.t), o: d.o, h: d.h, l: d.l, c: d.c, v: d.v });
+
+        const benchDocs = await CatalystBar.find({ symbol: benchmark, t: { $gte: since } }).sort({ t: 1 }).lean();
+        const benchWindows = rollingWindows(benchDocs.map(toBar));
+
+        for (const item of watchItems) {
+            const docs = await CatalystBar.find({ symbol: item.symbol, t: { $gte: since } }).sort({ t: 1 }).lean();
+            if (docs.length === 0) continue;
+            const ars = abnormalSeries(rollingWindows(docs.map(toBar)), benchWindows);
+            if (ars.length < 10) continue;
+
+            const current = ars[ars.length - 1];
+            const baseline = ars.slice(0, -6);
+            const sigma = baseline.length >= 100 ? stddev(baseline.map((w) => w.ret)) : 0;
+            const volAvg = baseline.length ? baseline.reduce((a, w) => a + w.vol, 0) / baseline.length : 0;
+
+            base.symbols.push({
+                symbol: item.symbol,
+                arPct: Number((current.ret * 100).toFixed(2)),
+                z: sigma > 0 ? Number((current.ret / sigma).toFixed(1)) : 0,
+                rvol: volAvg > 0 ? Number((current.vol / volAvg).toFixed(1)) : 0,
+                lastBarAt: new Date(current.t).toISOString(),
+                baselineSamples: baseline.length,
+                fresh: Date.now() - current.t < 10 * 60_000,
+            });
+        }
+    } catch (error) {
+        console.error('Error building market snapshot:', error);
+    }
+    return base;
+}
+
+async function getMarketConfig(): Promise<{ benchmark: string; sigmaThreshold: number; rvolThreshold: number }> {
+    try {
+        const raw = parseYaml(readFileSync(join(process.cwd(), 'catalyst-monitor', 'config.yaml'), 'utf8')) as any;
+        return {
+            benchmark: String(raw?.market?.benchmark ?? 'XBI').toUpperCase(),
+            sigmaThreshold: Number(raw?.market?.sigma_threshold ?? 2.5),
+            rvolThreshold: Number(raw?.market?.rvol_threshold ?? 3),
+        };
+    } catch {
+        return { benchmark: 'XBI', sigmaThreshold: 2.5, rvolThreshold: 3 };
+    }
+}
+
 // ---- 异动归因回放 ----
 
 export interface AttributionData {

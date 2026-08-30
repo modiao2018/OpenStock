@@ -455,6 +455,19 @@
       "testOk": "连接成功 · {model} · {ms}ms",
       "testFail": "连接失败：{error}"
     },
+    "market": {
+      "title": "盘面监控",
+      "open": "开盘中",
+      "closed": "休市",
+      "hint": "每 2 分钟计算各标的 5 分钟异常收益（扣除 {benchmark}）；|σ|≥{sigma} 且量比≥{rvol} 时推送\"疑似事件资金流\"告警",
+      "notConfigured": "未配置 Alpaca API key（.env 的 ALPACA_API_KEY/SECRET），盘面监控未激活",
+      "noData": "暂无行情数据，daemon 在美股盘中运行后自动积累",
+      "symbol": "标的",
+      "ar": "5分钟异常收益",
+      "rvol": "量比",
+      "dataAsOf": "数据截至（北京）",
+      "stale": "非实时（休市或数据延迟）"
+    },
     "attribution": {
       "button": "归因",
       "title": "异动归因回放",
