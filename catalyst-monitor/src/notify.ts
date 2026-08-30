@@ -25,12 +25,17 @@ function toBeijingTime(value: string): string {
   return `北京时间 ${d.getUTCMonth() + 1}月${d.getUTCDate()}日 ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
 }
 
+// 停牌不走 LLM（时效优先），给固定的操作提示
+const HALT_ADVICE =
+  '建议动作: 停牌大概率预示重大公告；复牌初期点差和波动极大，勿挂市价单追价，等消息落地、价格稳定后按情景预案操作。';
+
 function formatBody(ev: StoredEvent): string {
   const lines = [
     ev.symbol ? `标的: ${ev.symbol}` : null,
     ev.publishedAt ? `源发布: ${toBeijingTime(ev.publishedAt)}` : null,
     `抓取: ${toBeijingTime(ev.fetchedAt)}`,
     ev.analysis ? `AI 分析: ${ev.analysis}` : null,
+    ev.source === 'halts' ? HALT_ADVICE : null,
     ev.url ?? null,
   ].filter(Boolean);
   return lines.join('\n');

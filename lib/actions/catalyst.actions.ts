@@ -421,7 +421,8 @@ export async function sendSimulatedAlert(kind: SimulatedKind): Promise<{ deliver
                     url: 'https://clinicaltrials.gov',
                 }),
                 '【模拟分析】试验结果已发布：主终点达成 p=0.008，效应量中等偏上，未见 3 级以上安全事件。' +
-                    '倾向判断：利好。理由：统计显著且安全性干净，符合预设"成功"情景，可按预案执行。'
+                    '倾向判断：利好。理由：统计显著且安全性干净，落在预设"成功"档。' +
+                    '建议动作：按"成功"档预案执行加仓，注意开盘跳空后勿追高，分批建仓。'
             );
         case 'edgar':
             return sendUrgentPair(
@@ -433,7 +434,8 @@ export async function sendSimulatedAlert(kind: SimulatedKind): Promise<{ deliver
                     url: 'https://www.sec.gov',
                 }),
                 '【模拟分析】公司发布季度业绩 8-K：营收 1.2 亿美元超预期 15%，现金储备 8.5 亿美元可支撑至 2028 年。' +
-                    '倾向判断：中性偏利好。理由：财务稳健但未披露管线新进展。'
+                    '倾向判断：中性偏利好。理由：财务稳健但未披露管线新进展。' +
+                    '建议动作：暂不操作，维持现有仓位，等待电话会上的临床进度指引。'
             );
         case 'market':
             return sendUrgentPair(
@@ -471,7 +473,8 @@ export async function sendSimulatedAlert(kind: SimulatedKind): Promise<{ deliver
                         publishedAt: nowIso,
                         analysis:
                             '【模拟分析】公司公布二期中期数据：达到安全性终点，药代动力学支持每月给药。' +
-                            '倾向判断：利好。理由：推进路径清晰，为后续关键数据铺垫。',
+                            '倾向判断：利好。理由：推进路径清晰，为后续关键数据铺垫。' +
+                            '建议动作：暂不加仓，把顶线数据日期加入催化剂日历并预设三档情景。',
                     })
                 ),
             };
