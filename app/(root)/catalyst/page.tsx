@@ -14,7 +14,7 @@ import CatalystManager from '@/components/catalyst/CatalystManager';
 import CatalystCalendar from '@/components/catalyst/CatalystCalendar';
 import EventTimeline from '@/components/catalyst/EventTimeline';
 import MonitorDebugPanel from '@/components/catalyst/MonitorDebugPanel';
-import LlmConfigPanel from '@/components/catalyst/LlmConfigPanel';
+import LlmConfigDialog from '@/components/catalyst/LlmConfigDialog';
 
 export default async function CatalystPage() {
     const t = await getTranslations('catalyst.page');
@@ -33,11 +33,14 @@ export default async function CatalystPage() {
 
     return (
         <div className="min-h-screen bg-black text-gray-100 p-6 md:p-8">
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-500">
-                    {t('title')}
-                </h1>
-                <p className="text-gray-500 mt-1">{t('subtitle')}</p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-500">
+                        {t('title')}
+                    </h1>
+                    <p className="text-gray-500 mt-1">{t('subtitle')}</p>
+                </div>
+                <LlmConfigDialog initial={llmConfig} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -47,7 +50,6 @@ export default async function CatalystPage() {
                 </div>
                 <div className="lg:col-span-1 space-y-8">
                     <MonitorDebugPanel status={monitorStatus} />
-                    <LlmConfigPanel initial={llmConfig} />
                     <CatalystCalendar trials={trials} />
                 </div>
             </div>

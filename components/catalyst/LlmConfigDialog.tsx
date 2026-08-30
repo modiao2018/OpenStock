@@ -4,10 +4,16 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { BrainCircuit, Loader2, PlugZap } from 'lucide-react';
+import { BrainCircuit, Loader2, PlugZap, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { saveLlmConfig, testLlm, type LlmConfigData } from '@/lib/actions/catalyst.actions';
 
 const PROVIDER_DEFAULTS: Record<string, { baseUrl: string; model: string }> = {
@@ -17,10 +23,11 @@ const PROVIDER_DEFAULTS: Record<string, { baseUrl: string; model: string }> = {
     custom: { baseUrl: '', model: '' },
 };
 
-export default function LlmConfigPanel({ initial }: { initial: LlmConfigData }) {
+export default function LlmConfigDialog({ initial }: { initial: LlmConfigData }) {
     const t = useTranslations('catalyst.llm');
     const router = useRouter();
 
+    const [open, setOpen] = useState(false);
     const [provider, setProvider] = useState<string>(initial.provider);
     const [apiKey, setApiKey] = useState('');
     const [baseUrl, setBaseUrl] = useState(initial.baseUrl);
@@ -69,14 +76,28 @@ export default function LlmConfigPanel({ initial }: { initial: LlmConfigData }) 
     };
 
     return (
-        <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5">
-            <h2 className="text-lg font-semibold flex items-center gap-2 mb-1">
-                <BrainCircuit className="w-5 h-5 text-teal-500" />
+        <>
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setOpen(true)}
+                className="border-gray-700 text-gray-200"
+            >
+                <Settings className="w-4 h-4 mr-1" />
                 {t('title')}
-            </h2>
-            <p className="text-xs text-gray-600 mb-4">{initial.fromEnv ? t('fromEnv') : t('fromDb')}</p>
+            </Button>
 
-            <div className="space-y-3">
+            <Dialog open={open} onOpenChange={setOpen}>
+                <DialogContent className="bg-gray-900 border-gray-800 text-gray-100 max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <BrainCircuit className="w-5 h-5 text-teal-500" />
+                            {t('title')}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <p className="text-xs text-gray-600 -mt-2 mb-2">{initial.fromEnv ? t('fromEnv') : t('fromDb')}</p>
+
+                    <div className="space-y-3">
                 <div className="space-y-1.5">
                     <Label htmlFor="llm-provider">{t('provider')}</Label>
                     <select
@@ -148,7 +169,9 @@ export default function LlmConfigPanel({ initial }: { initial: LlmConfigData }) 
                         {t('test')}
                     </Button>
                 </div>
-            </div>
-        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }
