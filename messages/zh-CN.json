@@ -454,6 +454,7 @@
       "legendCustom": "自定义催化剂",
       "legendTrial": "试验日期",
       "legendNear": "7 天内",
+      "monthCount": "本月 {count} 个",
       "phase": "临床 {phases} 期",
       "primaryCompletion": "主要完成",
       "daysLeft": "{days} 天后",

@@ -57,21 +57,24 @@ export default function CatalystAgenda({
 
     const [view, setView] = useState<'calendar' | 'list'>('calendar');
     const [showTrials, setShowTrials] = useState(true);
+
+    // 最早的未来催化剂日：月历初始定位 + 默认展开明细，打开即有内容
+    const today0 = new Date().toISOString().slice(0, 10);
+    const firstUpcoming = [
+        ...customEvents.map((c) => c.date),
+        ...trials.map((tr) => {
+            const d = tr.primaryCompletionDate;
+            return d && /^\d{4}-\d{2}$/.test(d) ? `${d}-01` : d;
+        }),
+    ]
+        .filter((d): d is string => !!d && d >= today0 && d < '9999')
+        .sort()[0];
+
     const [monthCursor, setMonthCursor] = useState(() => {
-        // 初始定位到第一个有催化剂的月份——停在空月份会像坏了一样
-        const today0 = new Date().toISOString().slice(0, 10);
-        const dates = [
-            ...customEvents.map((c) => c.date),
-            ...trials.map((tr) => {
-                const d = tr.primaryCompletionDate;
-                return d && /^\d{4}-\d{2}$/.test(d) ? `${d}-01` : d;
-            }),
-        ].filter((d): d is string => !!d && d >= today0 && d < '9999');
-        const first = dates.sort()[0];
-        const base = first ? new Date(first + 'T00:00:00') : new Date();
+        const base = firstUpcoming ? new Date(firstUpcoming + 'T00:00:00') : new Date();
         return { y: base.getFullYear(), m: base.getMonth() };
     });
-    const [selectedDay, setSelectedDay] = useState<string | null>(null);
+    const [selectedDay, setSelectedDay] = useState<string | null>(firstUpcoming ?? null);
 
     const [open, setOpen] = useState(false);
     const [symbol, setSymbol] = useState('');
@@ -293,7 +296,14 @@ export default function CatalystAgenda({
                         <button type="button" onClick={() => shiftMonth(-1)} className="p-1 text-gray-500 hover:text-gray-200" aria-label="prev">
                             <ChevronLeft className="w-4 h-4" />
                         </button>
-                        <span className="text-sm font-medium text-gray-200">{monthTitle}</span>
+                        <span className="text-sm font-medium text-gray-200">
+                            {monthTitle}
+                            {(() => {
+                                const prefix = `${monthCursor.y}-${String(monthCursor.m + 1).padStart(2, '0')}`;
+                                const n = [...byDate.entries()].filter(([d]) => d.startsWith(prefix)).reduce((a, [, v]) => a + v.length, 0);
+                                return n > 0 ? <span className="ml-2 text-xs text-teal-500">{t('monthCount', { count: n })}</span> : null;
+                            })()}
+                        </span>
                         <button type="button" onClick={() => shiftMonth(1)} className="p-1 text-gray-500 hover:text-gray-200" aria-label="next">
                             <ChevronRight className="w-4 h-4" />
                         </button>
@@ -305,20 +315,22 @@ export default function CatalystAgenda({
                             </div>
                         ))}
                         {grid.map((cell, i) => {
-                            if (!cell) return <div key={`x${i}`} className="h-11" />;
+                            if (!cell) return <div key={`x${i}`} className="h-14" />;
                             const dayEntries = byDate.get(cell.iso) ?? [];
                             const isToday = cell.iso === today;
                             const isPast = cell.iso < today;
                             const hasCustom = dayEntries.some((e) => e.isCustom);
                             const near = !isPast && dayEntries.length > 0 && (Date.parse(cell.iso) - now) / 86_400_000 <= 7;
                             const selected = selectedDay === cell.iso;
+                            const tooltip = dayEntries.map((e) => `${e.symbol} ${e.chip}：${e.title}`).join('\n');
                             return (
                                 <button
                                     key={cell.iso}
                                     type="button"
                                     onClick={() => setSelectedDay(selected ? null : cell.iso)}
                                     disabled={dayEntries.length === 0}
-                                    className={`relative h-11 rounded-lg text-xs tabular-nums flex flex-col items-center justify-center gap-0.5 ${
+                                    title={tooltip || undefined}
+                                    className={`relative h-14 rounded-lg text-xs tabular-nums flex flex-col items-center justify-start pt-1 gap-0.5 ${
                                         selected
                                             ? 'bg-teal-900/50 text-teal-200 ring-1 ring-teal-600'
                                             : dayEntries.length > 0
@@ -327,27 +339,26 @@ export default function CatalystAgenda({
                                     } ${isToday ? 'ring-1 ring-teal-500' : ''} ${isPast && dayEntries.length > 0 ? 'opacity-50' : ''}`}
                                 >
                                     {cell.day}
-                                    {dayEntries.length > 0 && (
-                                        <span className="flex gap-0.5">
-                                            {dayEntries.slice(0, 3).map((e, j) => (
-                                                <span
-                                                    key={j}
-                                                    className={`w-1.5 h-1.5 rounded-full ${
-                                                        near ? 'bg-amber-400' : e.isCustom ? 'bg-teal-400' : 'bg-gray-500'
-                                                    }`}
-                                                />
-                                            ))}
-                                            {dayEntries.length > 3 && <span className="text-[8px] text-gray-500">+{dayEntries.length - 3}</span>}
+                                    {/* 直接显示标的代码——不用点开就知道是谁的事；颜色即类型 */}
+                                    {dayEntries.slice(0, 2).map((e, j) => (
+                                        <span
+                                            key={j}
+                                            className={`text-[9px] leading-none font-medium ${
+                                                near ? 'text-amber-400' : e.isCustom ? 'text-teal-400' : 'text-gray-500'
+                                            }`}
+                                        >
+                                            {e.symbol}
                                         </span>
-                                    )}
+                                    ))}
+                                    {dayEntries.length > 2 && <span className="text-[8px] leading-none text-gray-500">+{dayEntries.length - 2}</span>}
                                 </button>
                             );
                         })}
                     </div>
                     <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-600">
-                        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-teal-400" />{t('legendCustom')}</span>
-                        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-gray-500" />{t('legendTrial')}</span>
-                        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-400" />{t('legendNear')}</span>
+                        <span className="text-teal-400">■</span>{t('legendCustom')}
+                        <span className="text-gray-500">■</span>{t('legendTrial')}
+                        <span className="text-amber-400">■</span>{t('legendNear')}
                     </div>
                     {selectedDay && (
                         <div className="mt-3 border-t border-gray-800 pt-3">

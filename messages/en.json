@@ -454,6 +454,7 @@
       "legendCustom": "Custom catalyst",
       "legendTrial": "Trial date",
       "legendNear": "Within 7 days",
+      "monthCount": "{count} this month",
       "phase": "Phase {phases}",
       "primaryCompletion": "Primary completion",
       "daysLeft": "in {days} days",
