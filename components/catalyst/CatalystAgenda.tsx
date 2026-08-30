@@ -322,36 +322,67 @@ export default function CatalystAgenda({
                             const hasCustom = dayEntries.some((e) => e.isCustom);
                             const near = !isPast && dayEntries.length > 0 && (Date.parse(cell.iso) - now) / 86_400_000 <= 7;
                             const selected = selectedDay === cell.iso;
-                            const tooltip = dayEntries.map((e) => `${e.symbol} ${e.chip}：${e.title}`).join('\n');
+                            // 悬浮卡定位：边缘列贴边、前两行朝下弹，避免溢出
+                            const col = i % 7;
+                            const row = Math.floor(i / 7);
+                            const posX = col <= 1 ? 'left-0' : col >= 5 ? 'right-0' : 'left-1/2 -translate-x-1/2';
+                            const posY = row < 2 ? 'top-full mt-1' : 'bottom-full mb-1';
+                            const daysUntilCell = Math.ceil((Date.parse(cell.iso) - now) / 86_400_000);
                             return (
-                                <button
-                                    key={cell.iso}
-                                    type="button"
-                                    onClick={() => setSelectedDay(selected ? null : cell.iso)}
-                                    disabled={dayEntries.length === 0}
-                                    title={tooltip || undefined}
-                                    className={`relative h-14 rounded-lg text-xs tabular-nums flex flex-col items-center justify-start pt-1 gap-0.5 ${
-                                        selected
-                                            ? 'bg-teal-900/50 text-teal-200 ring-1 ring-teal-600'
-                                            : dayEntries.length > 0
-                                              ? 'bg-gray-800/70 text-gray-200 hover:bg-gray-800 cursor-pointer'
-                                              : 'text-gray-700'
-                                    } ${isToday ? 'ring-1 ring-teal-500' : ''} ${isPast && dayEntries.length > 0 ? 'opacity-50' : ''}`}
-                                >
-                                    {cell.day}
-                                    {/* 直接显示标的代码——不用点开就知道是谁的事；颜色即类型 */}
-                                    {dayEntries.slice(0, 2).map((e, j) => (
-                                        <span
-                                            key={j}
-                                            className={`text-[9px] leading-none font-medium ${
-                                                near ? 'text-amber-400' : e.isCustom ? 'text-teal-400' : 'text-gray-500'
-                                            }`}
+                                <div key={cell.iso} className="relative group">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedDay(selected ? null : cell.iso)}
+                                        disabled={dayEntries.length === 0}
+                                        className={`w-full h-14 rounded-lg text-xs tabular-nums flex flex-col items-center justify-start pt-1 gap-0.5 ${
+                                            selected
+                                                ? 'bg-teal-900/50 text-teal-200 ring-1 ring-teal-600'
+                                                : dayEntries.length > 0
+                                                  ? 'bg-gray-800/70 text-gray-200 hover:bg-gray-800 cursor-pointer'
+                                                  : 'text-gray-700'
+                                        } ${isToday ? 'ring-1 ring-teal-500' : ''} ${isPast && dayEntries.length > 0 ? 'opacity-50' : ''}`}
+                                    >
+                                        {cell.day}
+                                        {/* 直接显示标的代码——不用点开就知道是谁的事；颜色即类型 */}
+                                        {dayEntries.slice(0, 2).map((e, j) => (
+                                            <span
+                                                key={j}
+                                                className={`text-[9px] leading-none font-medium ${
+                                                    near ? 'text-amber-400' : e.isCustom ? 'text-teal-400' : 'text-gray-500'
+                                                }`}
+                                            >
+                                                {e.symbol}
+                                            </span>
+                                        ))}
+                                        {dayEntries.length > 2 && <span className="text-[8px] leading-none text-gray-500">+{dayEntries.length - 2}</span>}
+                                    </button>
+
+                                    {/* 即时悬浮详情卡（替代原生 title 的迟钝纯文本） */}
+                                    {dayEntries.length > 0 && (
+                                        <div
+                                            className={`pointer-events-none invisible group-hover:visible absolute z-30 ${posX} ${posY} w-60 rounded-lg border border-gray-700 bg-gray-900 shadow-xl p-2.5 text-left`}
                                         >
-                                            {e.symbol}
-                                        </span>
-                                    ))}
-                                    {dayEntries.length > 2 && <span className="text-[8px] leading-none text-gray-500">+{dayEntries.length - 2}</span>}
-                                </button>
+                                            <p className="text-[10px] text-gray-500 tabular-nums mb-1.5">
+                                                {cell.iso}
+                                                {!isPast && <span className="ml-1.5 text-amber-400 font-medium">T-{daysUntilCell}</span>}
+                                                {isPast && <span className="ml-1.5 text-gray-600">{t('past')}</span>}
+                                            </p>
+                                            <ul className="space-y-1.5">
+                                                {dayEntries.slice(0, 4).map((e) => (
+                                                    <li key={e.key} className="text-xs leading-snug">
+                                                        <span className={`font-medium ${e.isCustom ? 'text-teal-300' : 'text-gray-300'}`}>{e.symbol}</span>
+                                                        <span className="ml-1.5 text-[10px] px-1 py-px rounded bg-gray-800 text-gray-400">{e.chip}</span>
+                                                        {e.auto && <span className="ml-1 text-[10px] text-teal-500/80">AI</span>}
+                                                        <span className="block text-gray-500 line-clamp-2">{e.title}</span>
+                                                    </li>
+                                                ))}
+                                                {dayEntries.length > 4 && (
+                                                    <li className="text-[10px] text-gray-600">+{dayEntries.length - 4}</li>
+                                                )}
+                                            </ul>
+                                        </div>
+                                    )}
+                                </div>
                             );
                         })}
                     </div>
