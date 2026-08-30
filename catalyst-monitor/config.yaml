@@ -25,7 +25,12 @@ edgar:
 feeds:
   - name: PR Newswire Health
     url: https://www.prnewswire.com/rss/health-latest-news/health-latest-news-list.rss
-  # 可以继续加：GlobeNewswire / Business Wire 的行业 feed、公司 IR 页面的 RSS 等
+  - name: FierceBiotech
+    url: https://www.fiercebiotech.com/rss/xml
+  # GlobeNewswire 的 RSS 国内直连超时；若部署到境外 VPS 可加：
+  # - name: GlobeNewswire Public Companies
+  #   url: https://www.globenewswire.com/RssFeed/orgclass/1/feedTitle/GlobeNewswire%20-%20News%20about%20Public%20Companies
+  # 也可以加目标公司 IR 页的 RSS（最直接的公告源）
 
 # 盘面异动检测（需在 .env 配置 ALPACA_API_KEY/SECRET）
 market:
