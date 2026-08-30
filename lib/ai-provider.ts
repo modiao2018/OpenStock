@@ -146,6 +146,24 @@ async function callOpenAICompatible(
 
 // ── Public API ─────────────────────────────────────────────────────
 
+/** Provider name for explicit-config calls; "custom" = any OpenAI-compatible endpoint */
+export type LlmConfigName = AIProviderName | "custom";
+
+/**
+ * Call an AI provider with an explicit config (instead of env vars).
+ * Used by features whose LLM settings are managed in the database,
+ * e.g. the catalyst monitor's analysis agent.
+ */
+export async function callAIProviderWithConfig(
+  prompt: string,
+  config: { name: LlmConfigName; apiKey: string; baseUrl: string; model: string }
+): Promise<string> {
+  if (config.name === "gemini") {
+    return callGemini(prompt, config as AIProviderConfig);
+  }
+  return callOpenAICompatible(prompt, config as AIProviderConfig);
+}
+
 /**
  * Call the configured (or specified) AI provider and return the model
  * response as a plain string.

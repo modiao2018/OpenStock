@@ -398,6 +398,23 @@
       "pushOk": "成功",
       "pushFail": "失败"
     },
+    "llm": {
+      "title": "LLM 配置",
+      "fromEnv": "当前生效的是 .env 配置；在此保存后将改用此处配置",
+      "fromDb": "当前生效的是此处保存的配置",
+      "provider": "服务商",
+      "custom": "自定义（OpenAI 兼容）",
+      "apiKey": "API Key",
+      "keyPlaceholder": "输入 API Key",
+      "keyKept": "留空保留已存 Key",
+      "model": "模型",
+      "save": "保存",
+      "saved": "已保存",
+      "saveFailed": "保存失败，请重试",
+      "test": "测试连接",
+      "testOk": "连接成功 · {model} · {ms}ms",
+      "testFail": "连接失败：{error}"
+    },
     "timeline": {
       "title": "事件时间线",
       "empty": "暂无事件",

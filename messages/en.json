@@ -398,6 +398,23 @@
       "pushOk": "OK",
       "pushFail": "Failed"
     },
+    "llm": {
+      "title": "LLM Settings",
+      "fromEnv": "Currently using the .env config; saving here overrides it",
+      "fromDb": "Currently using the config saved here",
+      "provider": "Provider",
+      "custom": "Custom (OpenAI-compatible)",
+      "apiKey": "API Key",
+      "keyPlaceholder": "Enter API key",
+      "keyKept": "Leave empty to keep saved key",
+      "model": "Model",
+      "save": "Save",
+      "saved": "Saved",
+      "saveFailed": "Save failed. Please retry.",
+      "test": "Test Connection",
+      "testOk": "Connected · {model} · {ms}ms",
+      "testFail": "Connection failed: {error}"
+    },
     "timeline": {
       "title": "Event Timeline",
       "empty": "No events yet",

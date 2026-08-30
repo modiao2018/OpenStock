@@ -11,6 +11,12 @@ import {
     CatalystWatchItem,
 } from '@/database/models/catalyst.model';
 import { sendBark, sendFeishu } from '@/catalyst-monitor/src/notify';
+import {
+    callAIProviderWithConfig,
+    getProviderConfig,
+    type AIProviderName,
+    type LlmConfigName,
+} from '@/lib/ai-provider';
 import { revalidatePath } from 'next/cache';
 
 export interface CatalystWatchItemData {
@@ -258,6 +264,146 @@ export async function sendTestPush(): Promise<TestPushResult> {
         }
     }
     return result;
+}
+
+// ---- LLM 配置（供 agent 分析场景使用）----
+
+const LLM_KV_KEY = 'llm_config';
+
+const LLM_DEFAULTS: Record<LlmConfigName, { baseUrl: string; model: string }> = {
+    gemini: { baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models', model: 'gemini-2.5-flash-lite' },
+    minimax: { baseUrl: 'https://api.minimax.io/v1', model: 'MiniMax-M3' },
+    siray: { baseUrl: 'https://api.siray.ai/v1', model: 'siray-1.0-ultra' },
+    custom: { baseUrl: '', model: '' },
+};
+
+interface StoredLlmConfig {
+    provider: LlmConfigName;
+    apiKey: string;
+    baseUrl: string;
+    model: string;
+}
+
+/** 内部使用：完整配置（含明文 Key），绝不能直接返回给客户端 */
+async function resolveLlmConfig(): Promise<StoredLlmConfig | null> {
+    await connectToDatabase();
+    const doc = await CatalystKv.findOne({ key: LLM_KV_KEY }).lean();
+    if (doc) {
+        try {
+            return JSON.parse(doc.value) as StoredLlmConfig;
+        } catch {
+            return null;
+        }
+    }
+    // 未在网页保存过 → 回落到 .env（与主应用 ai-provider 一致）
+    const env = getProviderConfig();
+    if (!env.apiKey) return null;
+    return { provider: env.name, apiKey: env.apiKey, baseUrl: env.baseUrl, model: env.model };
+}
+
+export interface LlmConfigData {
+    provider: LlmConfigName;
+    baseUrl: string;
+    model: string;
+    hasApiKey: boolean;
+    /** 只显示尾部 4 位，明文 Key 不出服务端 */
+    apiKeyMasked: string;
+    /** true = 当前生效的是 .env 配置（尚未在网页保存过） */
+    fromEnv: boolean;
+}
+
+export async function getLlmConfig(): Promise<LlmConfigData> {
+    try {
+        await connectToDatabase();
+        const doc = await CatalystKv.findOne({ key: LLM_KV_KEY }).lean();
+        if (doc) {
+            const cfg = JSON.parse(doc.value) as StoredLlmConfig;
+            return {
+                provider: cfg.provider,
+                baseUrl: cfg.baseUrl,
+                model: cfg.model,
+                hasApiKey: Boolean(cfg.apiKey),
+                apiKeyMasked: cfg.apiKey ? `••••${cfg.apiKey.slice(-4)}` : '',
+                fromEnv: false,
+            };
+        }
+    } catch (error) {
+        console.error('Error fetching LLM config:', error);
+    }
+    const env = getProviderConfig();
+    return {
+        provider: env.name as AIProviderName,
+        baseUrl: env.baseUrl,
+        model: env.model,
+        hasApiKey: Boolean(env.apiKey),
+        apiKeyMasked: env.apiKey ? `••••${env.apiKey.slice(-4)}` : '',
+        fromEnv: true,
+    };
+}
+
+export async function saveLlmConfig(input: {
+    provider: LlmConfigName;
+    apiKey?: string;
+    baseUrl?: string;
+    model?: string;
+}) {
+    try {
+        await connectToDatabase();
+        const existing = await resolveLlmConfig();
+        const defaults = LLM_DEFAULTS[input.provider];
+        const cfg: StoredLlmConfig = {
+            provider: input.provider,
+            // 留空 = 保留已保存的 Key（编辑模型时不用重填）
+            apiKey: input.apiKey?.trim() || existing?.apiKey || '',
+            baseUrl: input.baseUrl?.trim() || defaults.baseUrl,
+            model: input.model?.trim() || defaults.model,
+        };
+        await CatalystKv.findOneAndUpdate(
+            { key: LLM_KV_KEY },
+            { $set: { value: JSON.stringify(cfg) } },
+            { upsert: true }
+        );
+        revalidatePath('/catalyst');
+        return { success: true };
+    } catch (error) {
+        console.error('Error saving LLM config:', error);
+        throw new Error('Failed to save LLM config');
+    }
+}
+
+export interface LlmTestResult {
+    ok: boolean;
+    provider?: string;
+    model?: string;
+    latencyMs?: number;
+    reply?: string;
+    error?: string;
+}
+
+/** 调试用：向当前生效的 LLM 发一条极短 prompt 验证连通性 */
+export async function testLlm(): Promise<LlmTestResult> {
+    try {
+        const cfg = await resolveLlmConfig();
+        if (!cfg || !cfg.apiKey) {
+            return { ok: false, error: 'API Key 未配置' };
+        }
+        const start = Date.now();
+        const reply = await callAIProviderWithConfig('请只回复两个字符：OK', {
+            name: cfg.provider,
+            apiKey: cfg.apiKey,
+            baseUrl: cfg.baseUrl,
+            model: cfg.model,
+        });
+        return {
+            ok: true,
+            provider: cfg.provider,
+            model: cfg.model,
+            latencyMs: Date.now() - start,
+            reply: reply.slice(0, 100),
+        };
+    } catch (error) {
+        return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    }
 }
 
 export async function getCatalystTrials(): Promise<CatalystTrialData[]> {
