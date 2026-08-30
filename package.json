@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "monitor": "docker compose up -d --wait mongodb && tsx catalyst-monitor/src/daemon.ts",
     "monitor:once": "docker compose up -d --wait mongodb && tsx catalyst-monitor/src/daemon.ts --once",
-    "monitor:calendar": "docker compose up -d --wait mongodb && tsx catalyst-monitor/src/calendar.ts"
+    "monitor:calendar": "docker compose up -d --wait mongodb && tsx catalyst-monitor/src/calendar.ts",
+    "monitor:report": "docker compose up -d --wait mongodb && tsx catalyst-monitor/src/weekly-cli.ts"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.10",

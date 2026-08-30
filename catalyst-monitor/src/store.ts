@@ -126,6 +126,30 @@ export async function seedWatchItems(items: WatchItem[]): Promise<void> {
   }
 }
 
+export interface RecentEvent {
+  source: string;
+  symbol?: string;
+  title: string;
+  severity: string;
+  fetchedAt: Date;
+  analysis?: string;
+  firstSnapshot: boolean;
+}
+
+export async function getRecentEvents(since: Date): Promise<RecentEvent[]> {
+  await connectToDatabase();
+  const docs = await CatalystEvent.find({ fetchedAt: { $gte: since } }).sort({ fetchedAt: -1 }).lean();
+  return docs.map((d) => ({
+    source: d.source,
+    symbol: d.symbol ?? undefined,
+    title: d.title,
+    severity: d.severity,
+    fetchedAt: new Date(d.fetchedAt),
+    analysis: d.analysis ?? undefined,
+    firstSnapshot: d.firstSnapshot ?? false,
+  }));
+}
+
 export interface CustomEventInput {
   symbol: string;
   title: string;

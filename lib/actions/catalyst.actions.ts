@@ -5,12 +5,14 @@ import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { connectToDatabase } from '@/database/mongoose';
 import {
+    CatalystBar,
     CatalystCustomEvent,
     CatalystEvent,
     CatalystKv,
     CatalystTrial,
     CatalystWatchItem,
 } from '@/database/models/catalyst.model';
+import { abnormalSeries, rollingWindows, stddev } from '@/catalyst-monitor/src/market-math';
 import { sendBark } from '@/catalyst-monitor/src/notify';
 import {
     callAIProviderWithConfig,
@@ -38,6 +40,7 @@ export interface TrialSearchResult {
 }
 
 export interface CatalystEventData {
+    id: string;
     source: string;
     symbol?: string;
     title: string;
@@ -162,6 +165,7 @@ export async function getCatalystEvents(limit = 50): Promise<CatalystEventData[]
         await connectToDatabase();
         const docs = await CatalystEvent.find().sort({ fetchedAt: -1 }).limit(limit).lean();
         return docs.map((d) => ({
+            id: String(d._id),
             source: d.source,
             symbol: d.symbol ?? undefined,
             title: d.title,
@@ -370,6 +374,96 @@ export async function testLlm(): Promise<LlmTestResult> {
         };
     } catch (error) {
         return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    }
+}
+
+// ---- 异动归因回放 ----
+
+export interface AttributionData {
+    available: boolean;
+    /** 不可用时的原因说明 */
+    reason?: string;
+    symbol?: string;
+    publishedAt?: string;
+    fetchedAt?: string;
+    /** 事件前 6 小时内首个 |z|≥2 异动窗口 */
+    firstAbnormalAt?: string;
+    /** 正数 = 价格比公告提前 N 分钟异动；负数 = 公告后才动 */
+    leadMinutes?: number;
+    maxZ?: number;
+    baselineSamples?: number;
+    spikes?: Array<{ t: string; z: number; retPct: number; rvol: number }>;
+}
+
+/**
+ * 事后归因：对一条事件，回放事件前 6 小时的 5 分钟 abnormal return，
+ * 找出第一次异动的时间，与信息源发布时间对比——回答"是谁先动的"。
+ */
+export async function getAttribution(eventId: string): Promise<AttributionData> {
+    try {
+        await connectToDatabase();
+        const ev = await CatalystEvent.findById(eventId).lean();
+        if (!ev?.symbol) return { available: false, reason: 'no_symbol' };
+
+        const t0 = Date.parse(ev.publishedAt ?? '') || new Date(ev.fetchedAt).getTime();
+        const benchmark = await getBenchmarkSymbol();
+
+        const baselineStart = new Date(t0 - 8 * 24 * 3600_000);
+        const replayEnd = new Date(t0 + 60 * 60_000);
+        const [symDocs, benchDocs] = await Promise.all([
+            CatalystBar.find({ symbol: ev.symbol, t: { $gte: baselineStart, $lte: replayEnd } }).sort({ t: 1 }).lean(),
+            CatalystBar.find({ symbol: benchmark, t: { $gte: baselineStart, $lte: replayEnd } }).sort({ t: 1 }).lean(),
+        ]);
+        if (symDocs.length === 0) return { available: false, reason: 'no_bars', symbol: ev.symbol };
+
+        const toBar = (d: any) => ({ symbol: d.symbol, t: new Date(d.t), o: d.o, h: d.h, l: d.l, c: d.c, v: d.v });
+        const ars = abnormalSeries(rollingWindows(symDocs.map(toBar)), rollingWindows(benchDocs.map(toBar)));
+
+        const replayStart = t0 - 6 * 3600_000;
+        const baseline = ars.filter((w) => w.t < replayStart);
+        if (baseline.length < 100) {
+            return { available: false, reason: 'insufficient_baseline', symbol: ev.symbol, baselineSamples: baseline.length };
+        }
+        const sigma = stddev(baseline.map((w) => w.ret));
+        const volAvg = baseline.reduce((a, w) => a + w.vol, 0) / baseline.length;
+        if (sigma === 0) return { available: false, reason: 'insufficient_baseline', symbol: ev.symbol };
+
+        const replay = ars.filter((w) => w.t >= replayStart && w.t <= t0 + 60 * 60_000);
+        const spikes = replay
+            .map((w) => ({ t: new Date(w.t).toISOString(), z: w.ret / sigma, retPct: w.ret * 100, rvol: volAvg > 0 ? w.vol / volAvg : 0, ms: w.t }))
+            .filter((s) => Math.abs(s.z) >= 2);
+
+        const firstPre = spikes.find((s) => s.ms <= t0);
+        const maxZ = replay.length ? Math.max(...replay.map((w) => Math.abs(w.ret / sigma))) : 0;
+
+        return {
+            available: true,
+            symbol: ev.symbol,
+            publishedAt: ev.publishedAt ?? undefined,
+            fetchedAt: new Date(ev.fetchedAt).toISOString(),
+            firstAbnormalAt: firstPre ? firstPre.t : undefined,
+            leadMinutes: firstPre ? Math.round((t0 - firstPre.ms) / 60_000) : undefined,
+            maxZ: Number(maxZ.toFixed(1)),
+            baselineSamples: baseline.length,
+            spikes: spikes.slice(0, 12).map(({ t, z, retPct, rvol }) => ({
+                t,
+                z: Number(z.toFixed(1)),
+                retPct: Number(retPct.toFixed(2)),
+                rvol: Number(rvol.toFixed(1)),
+            })),
+        };
+    } catch (error) {
+        console.error('Error computing attribution:', error);
+        return { available: false, reason: 'error' };
+    }
+}
+
+async function getBenchmarkSymbol(): Promise<string> {
+    try {
+        const raw = parseYaml(readFileSync(join(process.cwd(), 'catalyst-monitor', 'config.yaml'), 'utf8')) as any;
+        return String(raw?.market?.benchmark ?? 'XBI').toUpperCase();
+    } catch {
+        return 'XBI';
     }
 }
 

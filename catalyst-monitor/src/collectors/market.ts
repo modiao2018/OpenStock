@@ -1,11 +1,11 @@
 import { log, logError } from '../config';
 import { fetchWithRetry } from '../http';
 import { getBars, getKv, getLatestBarTime, insertBars, setKv, sha256, type Bar } from '../store';
+import { abnormalSeries, rollingWindows, stddev, WINDOW_MS, type WindowSample } from '../market-math';
 import type { MonitorConfig, NewEvent } from '../types';
 
 const DATA_BASE = 'https://data.alpaca.markets/v2/stocks/bars';
 const CLOCK_URL = 'https://paper-api.alpaca.markets/v2/clock';
-const WINDOW_MS = 5 * 60_000; // 5 分钟异动窗口
 const BASELINE_DAYS = 12; // 基线回看自然日（约 8 个交易日）
 const MIN_BASELINE_SAMPLES = 300; // 基线样本不足时不触发，避免冷启动误报
 const COOLDOWN_MS = 30 * 60_000; // 同一标的告警冷却
@@ -25,7 +25,7 @@ async function isMarketOpen(config: MonitorConfig): Promise<boolean> {
 }
 
 /** 增量拉取分钟线（首轮回补基线天数），多标的一次请求，翻页取完 */
-async function syncBars(config: MonitorConfig, symbols: string[]): Promise<void> {
+export async function syncBars(config: MonitorConfig, symbols: string[]): Promise<void> {
   const latest = await Promise.all(symbols.map((s) => getLatestBarTime(s)));
   const oldest = latest.reduce<Date | null>((min, d) => (d && (!min || d < min) ? d : min), null);
   const bootstrap = latest.some((d) => d === null);
@@ -57,39 +57,6 @@ async function syncBars(config: MonitorConfig, symbols: string[]): Promise<void>
     if (!pageToken) break;
   }
   if (total > 0) log('market', `bars 入库 ${total} 条${bootstrap ? '（首轮回补基线）' : ''}`);
-}
-
-interface WindowSample {
-  t: number;
-  ret: number;
-  vol: number;
-}
-
-/** 由分钟线构造滚动 5 分钟收益/成交量序列 */
-function rollingWindows(bars: Bar[]): WindowSample[] {
-  const out: WindowSample[] = [];
-  let j = 0;
-  let volSum = 0;
-  for (let i = 0; i < bars.length; i++) {
-    const tEnd = bars[i].t.getTime();
-    volSum += bars[i].v;
-    while (bars[j].t.getTime() <= tEnd - WINDOW_MS) {
-      volSum -= bars[j].v;
-      j++;
-    }
-    if (j === 0) continue; // 窗口尚未填满
-    const base = bars[j - 1];
-    // 隔夜/跨午休的窗口不计入（前收盘距今超过 15 分钟视为断档）
-    if (tEnd - base.t.getTime() > 15 * 60_000) continue;
-    out.push({ t: tEnd, ret: bars[i].c / base.c - 1, vol: volSum });
-  }
-  return out;
-}
-
-function stddev(values: number[]): number {
-  const mean = values.reduce((a, b) => a + b, 0) / values.length;
-  const variance = values.reduce((a, b) => a + (b - mean) ** 2, 0) / values.length;
-  return Math.sqrt(variance);
 }
 
 /**

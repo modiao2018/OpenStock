@@ -9,6 +9,7 @@ import { collectHalts } from './collectors/halts';
 import { collectRss } from './collectors/rss';
 import { collectMarket } from './collectors/market';
 import { collectReminders } from './collectors/reminders';
+import { collectWeekly } from './collectors/weekly';
 import { upsertCustomEvent } from './store';
 import type { AnalysisResult } from './analyze';
 import type { MonitorConfig, NewEvent } from './types';
@@ -99,6 +100,7 @@ async function main(): Promise<void> {
     { name: 'rss', intervalMinutes: config.poll.rssMinutes, run: collectRss },
     { name: 'clinicaltrials', intervalMinutes: config.poll.clinicaltrialsMinutes, run: collectClinicalTrials },
     { name: 'reminders', intervalMinutes: 360, run: collectReminders },
+    { name: 'weekly', intervalMinutes: 60, run: collectWeekly },
   ];
 
   // 首次运行：把 config.yaml 里的条目迁移入库，此后以数据库（网页端管理）为准

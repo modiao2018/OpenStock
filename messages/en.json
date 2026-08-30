@@ -455,6 +455,25 @@
       "testOk": "Connected · {model} · {ms}ms",
       "testFail": "Connection failed: {error}"
     },
+    "attribution": {
+      "button": "Attribution",
+      "title": "Move Attribution Replay",
+      "reason": {
+        "no_symbol": "This event has no associated symbol",
+        "no_bars": "No market data. Configure Alpaca keys in .env and let the daemon accumulate minute bars during market hours",
+        "insufficient_baseline": "Not enough baseline samples yet; try after a few more trading days",
+        "error": "Computation failed. Please retry"
+      },
+      "verdictLead": "⚠️ Price started moving {minutes} min before the announcement — pre-pricing or possible leak",
+      "verdictNoLead": "The move only started at announcement time; no early reaction",
+      "verdictClean": "No significant move (|z|≥2) in the 6h before the announcement",
+      "publishedAt": "Published",
+      "fetchedAt": "First fetched",
+      "firstAbnormal": "First abnormal window",
+      "maxZ": "Max move",
+      "baseline": "Baseline samples",
+      "spikes": "Abnormal windows (Beijing time · σ · 5-min return · RVOL)"
+    },
     "timeline": {
       "title": "Event Timeline",
       "hint": "Each item records source-published and first-fetched times for post-hoc attribution. \"Archived\" is the initial snapshot; \"Updated\" marks a real change",

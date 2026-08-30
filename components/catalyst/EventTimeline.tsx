@@ -2,6 +2,7 @@ import React from 'react';
 import { getTranslations } from 'next-intl/server';
 import { History } from 'lucide-react';
 import type { CatalystEventData } from '@/lib/actions/catalyst.actions';
+import AttributionButton from './AttributionButton';
 
 const SOURCE_BADGES: Record<string, string> = {
     clinicaltrials: 'bg-blue-900/60 text-blue-300',
@@ -33,8 +34,8 @@ export default async function EventTimeline({ events }: { events: CatalystEventD
                 <p className="text-gray-500 text-sm">{t('empty')}</p>
             ) : (
                 <ul className="space-y-3">
-                    {events.map((ev, i) => (
-                        <li key={i} className="flex items-start gap-3 border-b border-gray-800 pb-3 last:border-0 last:pb-0">
+                    {events.map((ev) => (
+                        <li key={ev.id} className="flex items-start gap-3 border-b border-gray-800 pb-3 last:border-0 last:pb-0">
                             <span className={`shrink-0 mt-0.5 px-2 py-0.5 rounded text-xs ${SOURCE_BADGES[ev.source] ?? 'bg-gray-800 text-gray-300'}`}>
                                 {t(`source.${ev.source}`)}
                             </span>
@@ -68,15 +69,16 @@ export default async function EventTimeline({ events }: { events: CatalystEventD
                                         🤖 {t('analysis')}: {ev.analysis}
                                     </p>
                                 )}
-                                <div className="text-xs text-gray-600 mt-0.5">
+                                <div className="text-xs text-gray-600 mt-0.5 flex items-center gap-3">
                                     {ev.publishedAt && (
-                                        <span className="mr-3">
+                                        <span>
                                             {t('publishedAt')}: {ev.publishedAt}
                                         </span>
                                     )}
                                     <span>
                                         {t('fetchedAt')}: {formatTime(ev.fetchedAt)}
                                     </span>
+                                    {ev.symbol && <AttributionButton eventId={ev.id} />}
                                 </div>
                             </div>
                         </li>

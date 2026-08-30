@@ -455,6 +455,25 @@
       "testOk": "连接成功 · {model} · {ms}ms",
       "testFail": "连接失败：{error}"
     },
+    "attribution": {
+      "button": "归因",
+      "title": "异动归因回放",
+      "reason": {
+        "no_symbol": "该事件无关联标的",
+        "no_bars": "无行情数据。需在 .env 配置 Alpaca key，并让监控在美股盘中积累分钟线后才能归因",
+        "insufficient_baseline": "行情基线样本不足，积累几个交易日后再试",
+        "error": "计算失败，请稍后重试"
+      },
+      "verdictLead": "⚠️ 价格在公告前 {minutes} 分钟已开始异动——可能是提前定价或信息泄露",
+      "verdictNoLead": "公告发布时刻才出现异动，事前无提前反应迹象",
+      "verdictClean": "公告前 6 小时未检测到显著异动（|z|≥2），事前无泄露迹象",
+      "publishedAt": "源发布",
+      "fetchedAt": "首次抓取",
+      "firstAbnormal": "首个异动窗口",
+      "maxZ": "最大异动",
+      "baseline": "基线样本",
+      "spikes": "异动窗口明细（北京时间 · σ · 5分钟涨跌 · 量比）"
+    },
     "timeline": {
       "title": "事件时间线",
       "hint": "每条信息记录\"源发布时间\"与\"首次抓取时间\"，事后可回查市场是否在公告前提前反应。\"建档\"是首次收录的现状快照，\"更新\"才是真实变更",
