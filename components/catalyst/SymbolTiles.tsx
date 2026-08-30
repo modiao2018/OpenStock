@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { isRedUpLocale } from '@/lib/utils';
 import type { SymbolTileData } from '@/lib/actions/catalyst.actions';
@@ -43,7 +44,11 @@ export default async function SymbolTiles({ tiles }: { tiles: SymbolTileData[] }
                           ? 'text-red-400'
                           : 'text-green-400';
                 return (
-                    <div key={tile.symbol} className="bg-gray-900/50 border border-gray-800 rounded-xl p-4">
+                    <Link
+                        key={tile.symbol}
+                        href={`/stocks/${tile.symbol}`}
+                        className="block bg-gray-900/50 border border-gray-800 rounded-xl p-4 transition-colors hover:border-teal-800 hover:bg-gray-900/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal-500"
+                    >
                         <div className="flex items-baseline justify-between">
                             <div className="min-w-0">
                                 <span className="font-semibold text-gray-100">{tile.symbol}</span>
@@ -99,7 +104,7 @@ export default async function SymbolTiles({ tiles }: { tiles: SymbolTileData[] }
                                 <span className="text-gray-700">{t('noCatalyst')}</span>
                             )}
                         </div>
-                    </div>
+                    </Link>
                 );
             })}
         </div>
