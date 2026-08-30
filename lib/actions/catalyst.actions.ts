@@ -13,6 +13,7 @@ import {
     CatalystWatchItem,
 } from '@/database/models/catalyst.model';
 import { abnormalSeries, rollingWindows, stddev } from '@/catalyst-monitor/src/market-math';
+import { extractAction } from '@/catalyst-monitor/src/analyze';
 import { notify, pushMessage, sendBark, type PushEnv } from '@/catalyst-monitor/src/notify';
 import { sendWeeklyReport } from '@/catalyst-monitor/src/collectors/weekly';
 import type { StoredEvent } from '@/catalyst-monitor/src/types';
@@ -403,10 +404,16 @@ export async function sendSimulatedAlert(kind: SimulatedKind): Promise<{ deliver
         ...partial,
     });
 
-    // urgent 事件按真实流程发两条：告警 + AI 分析跟进
+    // urgent 事件按真实流程发两条：告警 + AI 分析跟进（标题带操作评级）
     const sendUrgentPair = async (ev: StoredEvent, cannedAnalysis: string) => {
         const delivered = await notify(env, ev);
-        await pushMessage(env, { title: `AI 分析｜${ev.title}`, body: cannedAnalysis, urgent: false, url: ev.url });
+        const action = extractAction(cannedAnalysis);
+        await pushMessage(env, {
+            title: `AI 分析${action ? `【${action}】` : ''}｜${ev.title}`,
+            body: cannedAnalysis,
+            urgent: false,
+            url: ev.url,
+        });
         return { delivered };
     };
 
