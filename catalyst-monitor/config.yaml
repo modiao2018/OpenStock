@@ -1,0 +1,35 @@
+# 催化剂监控清单
+# 每个条目：股票代码、公司名、关注的临床试验 NCT 编号、新闻匹配关键词
+# keywords 会用于 RSS 新闻标题/摘要的匹配（不区分大小写），
+# 建议同时放：药物代号、通用名、靶点、适应症、合作方名称
+watchlist:
+  # 示例条目（Sarepta，随便选的医药股示例）——替换成你实际关注的公司
+  - symbol: SRPT
+    company: Sarepta Therapeutics
+    nct_ids:
+      - NCT05096221
+    keywords:
+      - Sarepta
+      - Elevidys
+      - SRP-9001
+
+# EDGAR 监控的申报类型（8-K 重大事件公告；外国公司用 6-K）
+edgar:
+  forms:
+    - 8-K
+    - 6-K
+  # 只看最近多少天内的申报（首次运行时避免拉出陈年旧账）
+  lookback_days: 7
+
+# 新闻 RSS 源（条目会先按 watchlist 关键词过滤，只推匹配的）
+feeds:
+  - name: PR Newswire Health
+    url: https://www.prnewswire.com/rss/health-latest-news/health-latest-news-list.rss
+  # 可以继续加：GlobeNewswire / Business Wire 的行业 feed、公司 IR 页面的 RSS 等
+
+# 各采集器轮询间隔（分钟）
+poll:
+  clinicaltrials_minutes: 15
+  edgar_minutes: 5
+  halts_minutes: 2
+  rss_minutes: 5
