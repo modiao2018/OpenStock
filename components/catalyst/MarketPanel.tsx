@@ -56,6 +56,19 @@ export default async function MarketPanel({ snapshot }: { snapshot: MarketSnapsh
                     </thead>
                     <tbody>
                         {snapshot.symbols.map((s) => {
+                            if (!s.hasData) {
+                                return (
+                                    <tr key={s.symbol} className="border-t border-gray-800">
+                                        <td className="py-2 font-medium text-gray-100">
+                                            <span className="inline-block w-1.5 h-1.5 rounded-full mr-2 bg-gray-600" />
+                                            {s.symbol}
+                                        </td>
+                                        <td colSpan={4} className="py-2 text-right text-xs text-gray-600">
+                                            {t('pending')}
+                                        </td>
+                                    </tr>
+                                );
+                            }
                             const hot = Math.abs(s.z) >= snapshot.sigmaThreshold && s.rvol >= snapshot.rvolThreshold;
                             const warm = Math.abs(s.z) >= snapshot.sigmaThreshold * 0.6;
                             return (

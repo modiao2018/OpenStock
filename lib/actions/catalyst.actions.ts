@@ -536,6 +536,8 @@ export async function sendSimulatedAlert(kind: SimulatedKind): Promise<{ deliver
 
 export interface MarketSymbolSnapshot {
     symbol: string;
+    /** false = 尚无行情数据（新加入的标的要等盘中采集积累） */
+    hasData: boolean;
     /** 最新 5 分钟 abnormal return（%，已扣基准） */
     arPct: number;
     /** 相对该股历史波动的倍数 */
@@ -591,11 +593,28 @@ export async function getMarketSnapshot(): Promise<MarketSnapshotData> {
         const benchDocs = await CatalystBar.find({ symbol: benchmark, t: { $gte: since } }).sort({ t: 1 }).lean();
         const benchWindows = rollingWindows(benchDocs.map(toBar));
 
+        const noData = (symbol: string): MarketSymbolSnapshot => ({
+            symbol,
+            hasData: false,
+            arPct: 0,
+            z: 0,
+            rvol: 0,
+            lastBarAt: '',
+            baselineSamples: 0,
+            fresh: false,
+        });
+
         for (const item of watchItems) {
             const docs = await CatalystBar.find({ symbol: item.symbol, t: { $gte: since } }).sort({ t: 1 }).lean();
-            if (docs.length === 0) continue;
+            if (docs.length === 0) {
+                base.symbols.push(noData(item.symbol));
+                continue;
+            }
             const ars = abnormalSeries(rollingWindows(docs.map(toBar)), benchWindows);
-            if (ars.length < 10) continue;
+            if (ars.length < 10) {
+                base.symbols.push(noData(item.symbol));
+                continue;
+            }
 
             const current = ars[ars.length - 1];
             const baseline = ars.slice(0, -6);
@@ -604,6 +623,7 @@ export async function getMarketSnapshot(): Promise<MarketSnapshotData> {
 
             base.symbols.push({
                 symbol: item.symbol,
+                hasData: true,
                 arPct: Number((current.ret * 100).toFixed(2)),
                 z: sigma > 0 ? Number((current.ret / sigma).toFixed(1)) : 0,
                 rvol: volAvg > 0 ? Number((current.vol / volAvg).toFixed(1)) : 0,

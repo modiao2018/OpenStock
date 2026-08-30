@@ -498,7 +498,8 @@
       "ar": "5-min abn. return",
       "rvol": "RVOL",
       "dataAsOf": "Data as of (BJT)",
-      "stale": "Not live (market closed or delayed)"
+      "stale": "Not live (market closed or delayed)",
+      "pending": "Awaiting bar data (starts at next market open)"
     },
     "attribution": {
       "button": "Attribution",
