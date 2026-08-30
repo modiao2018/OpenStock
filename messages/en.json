@@ -419,6 +419,7 @@
       "empty": "No events yet",
       "publishedAt": "Published",
       "fetchedAt": "Fetched",
+      "analysis": "AI Analysis",
       "source": {
         "clinicaltrials": "Clinical Trial",
         "edgar": "SEC Filing",

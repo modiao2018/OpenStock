@@ -54,4 +54,6 @@ export interface StoredEvent extends NewEvent {
   fetchedAt: string;
   /** 首次见到该 externalId（首轮建档快照，不推送，避免启动时刷屏） */
   isFirstSnapshot: boolean;
+  /** LLM 生成的中文分析（报告类事件），推送和时间线展示用 */
+  analysis?: string;
 }

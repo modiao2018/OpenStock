@@ -17,6 +17,7 @@ import {
     type AIProviderName,
     type LlmConfigName,
 } from '@/lib/ai-provider';
+import { LLM_KV_KEY, resolveLlmConfig, type ResolvedLlmConfig } from '@/lib/llm-config';
 import { revalidatePath } from 'next/cache';
 
 export interface CatalystWatchItemData {
@@ -43,6 +44,7 @@ export interface CatalystEventData {
     fetchedAt: string;
     severity: string;
     notified: boolean;
+    analysis?: string;
 }
 
 export interface CatalystTrialData {
@@ -163,6 +165,7 @@ export async function getCatalystEvents(limit = 50): Promise<CatalystEventData[]
             fetchedAt: new Date(d.fetchedAt).toISOString(),
             severity: d.severity,
             notified: d.notified,
+            analysis: d.analysis ?? undefined,
         }));
     } catch (error) {
         console.error('Error fetching catalyst events:', error);
@@ -251,38 +254,12 @@ export async function sendTestPush(): Promise<TestPushResult> {
 
 // ---- LLM 配置（供 agent 分析场景使用）----
 
-const LLM_KV_KEY = 'llm_config';
-
 const LLM_DEFAULTS: Record<LlmConfigName, { baseUrl: string; model: string }> = {
     gemini: { baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models', model: 'gemini-2.5-flash-lite' },
     minimax: { baseUrl: 'https://api.minimax.io/v1', model: 'MiniMax-M3' },
     siray: { baseUrl: 'https://api.siray.ai/v1', model: 'siray-1.0-ultra' },
     custom: { baseUrl: '', model: '' },
 };
-
-interface StoredLlmConfig {
-    provider: LlmConfigName;
-    apiKey: string;
-    baseUrl: string;
-    model: string;
-}
-
-/** 内部使用：完整配置（含明文 Key），绝不能直接返回给客户端 */
-async function resolveLlmConfig(): Promise<StoredLlmConfig | null> {
-    await connectToDatabase();
-    const doc = await CatalystKv.findOne({ key: LLM_KV_KEY }).lean();
-    if (doc) {
-        try {
-            return JSON.parse(doc.value) as StoredLlmConfig;
-        } catch {
-            return null;
-        }
-    }
-    // 未在网页保存过 → 回落到 .env（与主应用 ai-provider 一致）
-    const env = getProviderConfig();
-    if (!env.apiKey) return null;
-    return { provider: env.name, apiKey: env.apiKey, baseUrl: env.baseUrl, model: env.model };
-}
 
 export interface LlmConfigData {
     provider: LlmConfigName;
@@ -300,7 +277,7 @@ export async function getLlmConfig(): Promise<LlmConfigData> {
         await connectToDatabase();
         const doc = await CatalystKv.findOne({ key: LLM_KV_KEY }).lean();
         if (doc) {
-            const cfg = JSON.parse(doc.value) as StoredLlmConfig;
+            const cfg = JSON.parse(doc.value) as ResolvedLlmConfig;
             return {
                 provider: cfg.provider,
                 baseUrl: cfg.baseUrl,
@@ -334,7 +311,7 @@ export async function saveLlmConfig(input: {
         await connectToDatabase();
         const existing = await resolveLlmConfig();
         const defaults = LLM_DEFAULTS[input.provider];
-        const cfg: StoredLlmConfig = {
+        const cfg: ResolvedLlmConfig = {
             provider: input.provider,
             // 留空 = 保留已保存的 Key（编辑模型时不用重填）
             apiKey: input.apiKey?.trim() || existing?.apiKey || '',

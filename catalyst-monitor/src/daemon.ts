@@ -1,7 +1,8 @@
 import './env';
 import { loadConfig, log, logError } from './config';
-import { closeStore, getWatchItems, insertEvent, markNotified, seedWatchItems, setKv } from './store';
+import { closeStore, getWatchItems, insertEvent, markNotified, seedWatchItems, setEventAnalysis, setKv } from './store';
 import { notify } from './notify';
+import { analyzeEvent } from './analyze';
 import { collectClinicalTrials } from './collectors/clinicaltrials';
 import { collectEdgar } from './collectors/edgar';
 import { collectHalts } from './collectors/halts';
@@ -33,6 +34,12 @@ async function runCollector(def: CollectorDef, config: MonitorConfig): Promise<v
         continue;
       }
       log(def.name, `新事件: ${stored.title}`);
+      // 报告类事件先做 LLM 中文分析（失败/未配置则跳过，不阻塞推送）
+      const analysis = await analyzeEvent(config, stored);
+      if (analysis) {
+        stored.analysis = analysis;
+        await setEventAnalysis(stored.id, analysis);
+      }
       const delivered = await notify(config, stored);
       if (delivered) await markNotified(stored.id);
     }

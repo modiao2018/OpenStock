@@ -20,6 +20,8 @@ export interface ICatalystEvent extends Document {
     severity: 'urgent' | 'normal';
     raw: unknown;
     notified: boolean;
+    /** LLM 生成的中文分析（报告类事件） */
+    analysis?: string;
 }
 
 const CatalystEventSchema = new Schema<ICatalystEvent>(
@@ -35,6 +37,7 @@ const CatalystEventSchema = new Schema<ICatalystEvent>(
         severity: { type: String, enum: ['urgent', 'normal'], required: true },
         raw: { type: Schema.Types.Mixed },
         notified: { type: Boolean, default: false },
+        analysis: { type: String },
     },
     { timestamps: true }
 );

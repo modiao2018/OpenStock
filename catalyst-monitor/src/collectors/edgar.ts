@@ -9,6 +9,36 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+// 8-K 常见 item 代码的中文含义（完整清单见 SEC 8-K 表格说明）
+const ITEM_ZH: Record<string, string> = {
+  '1.01': '签订重大协议',
+  '1.02': '终止重大协议',
+  '1.03': '破产或接管',
+  '2.01': '完成收购或资产处置',
+  '2.02': '业绩发布',
+  '2.05': '重组/裁员计划',
+  '3.01': '退市或不符合上市规则通知',
+  '4.01': '更换会计师',
+  '4.02': '财报不可依赖（重述）',
+  '5.02': '董事或高管变动',
+  '5.03': '章程修订',
+  '5.07': '股东投票结果',
+  '7.01': 'Reg FD 披露',
+  '8.01': '其他重大事件',
+  '9.01': '财务报表及附件',
+};
+
+function itemsZh(items: string): string {
+  if (!items) return '';
+  return items
+    .split(',')
+    .map((code) => {
+      const c = code.trim();
+      return ITEM_ZH[c] ? `${ITEM_ZH[c]}(${c})` : c;
+    })
+    .join('、');
+}
+
 function edgarHeaders(contact: string): Record<string, string> {
   // SEC 要求 User-Agent 里带可联系方式，否则可能被封
   return { 'User-Agent': `catalyst-monitor/0.1 (${contact})`, Accept: 'application/json' };
@@ -72,7 +102,7 @@ export async function collectEdgar(config: MonitorConfig): Promise<NewEvent[]> {
           source: 'edgar',
           externalId: accession,
           symbol: item.symbol,
-          title: `${item.symbol} 提交 ${forms[i]}${items ? `（items: ${items}）` : ''}`,
+          title: `${item.symbol} 提交 ${forms[i]}${items ? `：${itemsZh(items)}` : ''}`,
           url: primaryDoc
             ? `https://www.sec.gov/Archives/edgar/data/${cik}/${accessionPlain}/${primaryDoc}`
             : `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${cik10}&type=${forms[i]}`,

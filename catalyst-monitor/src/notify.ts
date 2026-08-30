@@ -8,11 +8,22 @@ const SOURCE_LABEL: Record<string, string> = {
   rss: '新闻',
 };
 
+/** ISO 时间转北京时间显示；纯日期（如 2026-06-15）原样返回 */
+function toBeijingTime(value: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const t = Date.parse(value);
+  if (Number.isNaN(t)) return value;
+  const d = new Date(t + 8 * 3600_000);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `北京时间 ${d.getUTCMonth() + 1}月${d.getUTCDate()}日 ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+}
+
 function formatBody(ev: StoredEvent): string {
   const lines = [
     ev.symbol ? `标的: ${ev.symbol}` : null,
-    ev.publishedAt ? `源发布: ${ev.publishedAt}` : null,
-    `抓取于: ${ev.fetchedAt}`,
+    ev.publishedAt ? `源发布: ${toBeijingTime(ev.publishedAt)}` : null,
+    `抓取: ${toBeijingTime(ev.fetchedAt)}`,
+    ev.analysis ? `AI 分析: ${ev.analysis}` : null,
     ev.url ?? null,
   ].filter(Boolean);
   return lines.join('\n');

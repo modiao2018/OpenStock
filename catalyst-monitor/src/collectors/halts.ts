@@ -10,6 +10,30 @@ function toArray<T>(v: T | T[] | undefined): T[] {
   return Array.isArray(v) ? v : [v];
 }
 
+// Nasdaq 停牌原因码的中文含义（对医药股最关键的是 T1/T2：公告前后的停牌）
+const REASON_ZH: Record<string, string> = {
+  T1: '消息待发布',
+  T2: '消息已发布',
+  T5: '个股价格异动暂停',
+  T6: '异常市场活动',
+  T8: 'ETF 相关暂停',
+  T12: '等待公司补充信息',
+  H4: '未满足持续上市要求',
+  H9: '未按要求披露',
+  H10: 'SEC 暂停交易',
+  H11: '监管机构要求暂停',
+  LUDP: '波动性暂停（涨跌限制）',
+  LUDS: '波动性暂停（单边报价）',
+  MWC1: '全市场熔断（一级）',
+  MWC2: '全市场熔断（二级）',
+  MWC3: '全市场熔断（三级）',
+  IPO1: 'IPO 待开盘',
+};
+
+function reasonZh(code: string): string {
+  return REASON_ZH[code] ? `${REASON_ZH[code]}(${code})` : code;
+}
+
 /**
  * Nasdaq 全市场停牌 RSS。T1 (News Pending) / T2 (News Released) 对
  * 临床数据公告是最强的"官方即将发布"信号——只推 watchlist 内的标的。
@@ -52,7 +76,7 @@ export async function collectHalts(config: MonitorConfig): Promise<NewEvent[]> {
       source: 'halts',
       externalId: `${symbol}-${haltDate}-${haltTime}`,
       symbol,
-      title: `${symbol} 停牌 [${reason}] ${haltDate} ${haltTime}${resumption.tradeTime ? `，恢复交易 ${resumption.tradeTime}` : ''}`,
+      title: `${symbol} 停牌：${reasonZh(reason)} ${haltDate} ${haltTime}(美东)${resumption.tradeTime ? `，恢复交易 ${resumption.tradeTime}(美东)` : ''}`,
       url: 'https://www.nasdaqtrader.com/trader.aspx?id=TradeHalts',
       publishedAt,
       // 恢复交易时间更新时哈希变化 → 停牌和复牌各推一次

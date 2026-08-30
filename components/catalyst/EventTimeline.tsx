@@ -52,6 +52,11 @@ export default async function EventTimeline({ events }: { events: CatalystEventD
                                         <span className="text-sm text-gray-200 truncate">{ev.title}</span>
                                     )}
                                 </div>
+                                {ev.analysis && (
+                                    <p className="text-xs text-teal-300/80 mt-1 leading-relaxed">
+                                        🤖 {t('analysis')}: {ev.analysis}
+                                    </p>
+                                )}
                                 <div className="text-xs text-gray-600 mt-0.5">
                                     {ev.publishedAt && (
                                         <span className="mr-3">

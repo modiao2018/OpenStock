@@ -60,6 +60,10 @@ export async function markNotified(id: string): Promise<void> {
   await CatalystEvent.updateOne({ _id: id }, { $set: { notified: true } });
 }
 
+export async function setEventAnalysis(id: string, analysis: string): Promise<void> {
+  await CatalystEvent.updateOne({ _id: id }, { $set: { analysis } });
+}
+
 export async function upsertTrial(t: TrialSnapshot): Promise<void> {
   await connectToDatabase();
   await CatalystTrial.findOneAndUpdate({ nctId: t.nctId }, { $set: t }, { upsert: true });

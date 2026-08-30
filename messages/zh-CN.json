@@ -419,6 +419,7 @@
       "empty": "暂无事件",
       "publishedAt": "源发布",
       "fetchedAt": "抓取",
+      "analysis": "AI 分析",
       "source": {
         "clinicaltrials": "临床试验",
         "edgar": "SEC 申报",
