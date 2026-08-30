@@ -539,7 +539,7 @@
     },
     "timeline": {
       "title": "Event Timeline",
-      "hint": "All captured info grouped by Beijing date. \"Archived\" backfill snapshots are hidden by default. Published vs fetched times support post-hoc attribution",
+      "hint": "All captured info grouped by Beijing date; toggle to hide \"Archived\" backfill snapshots. Published vs fetched times support post-hoc attribution",
       "filterAll": "All",
       "showArchived": "Show archived ({count})",
       "empty": "No events yet",

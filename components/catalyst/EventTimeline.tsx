@@ -55,7 +55,7 @@ export default function EventTimeline({ events }: { events: CatalystEventData[] 
     const redUp = isRedUpLocale(locale);
 
     const [sourceFilter, setSourceFilter] = useState<string | null>(null);
-    const [showArchived, setShowArchived] = useState(false);
+    const [showArchived, setShowArchived] = useState(true);
 
     const groups = useMemo(() => {
         const filtered = events.filter(
