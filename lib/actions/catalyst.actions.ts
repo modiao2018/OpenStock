@@ -194,10 +194,15 @@ export interface CollectorStatus {
     lastRun?: string;
     /** 上次运行时间在 3 倍轮询间隔内视为活跃 */
     active: boolean;
+    /** 连续失败次数（成功后清零） */
+    consecutiveErrors: number;
+    lastError?: { time: string; message: string };
 }
 
 export interface MonitorStatusData {
     daemonOnline: boolean;
+    /** 有采集器处于连续失败状态 */
+    hasErrors: boolean;
     channels: { bark: boolean; edgarContact: boolean };
     collectors: CollectorStatus[];
 }
@@ -220,10 +225,24 @@ export async function getMonitorStatus(): Promise<MonitorStatusData> {
     }
 
     let lastRuns: Record<string, string> = {};
+    let errorCounts: Record<string, number> = {};
+    let lastErrors: Record<string, { time: string; message: string }> = {};
     try {
         await connectToDatabase();
-        const docs = await CatalystKv.find({ key: /^collector_last_run:/ }).lean();
-        lastRuns = Object.fromEntries(docs.map((d) => [d.key.replace('collector_last_run:', ''), d.value]));
+        const docs = await CatalystKv.find({ key: /^collector_(last_run|error_count|last_error):/ }).lean();
+        for (const d of docs) {
+            if (d.key.startsWith('collector_last_run:')) {
+                lastRuns[d.key.slice('collector_last_run:'.length)] = d.value;
+            } else if (d.key.startsWith('collector_error_count:')) {
+                errorCounts[d.key.slice('collector_error_count:'.length)] = Number(d.value) || 0;
+            } else if (d.key.startsWith('collector_last_error:') && d.value) {
+                try {
+                    lastErrors[d.key.slice('collector_last_error:'.length)] = JSON.parse(d.value);
+                } catch {
+                    // 忽略损坏的错误记录
+                }
+            }
+        }
     } catch (error) {
         console.error('Error fetching collector heartbeats:', error);
     }
@@ -232,11 +251,20 @@ export async function getMonitorStatus(): Promise<MonitorStatusData> {
     const collectors: CollectorStatus[] = Object.entries(intervals).map(([name, intervalMinutes]) => {
         const lastRun = lastRuns[name];
         const active = !!lastRun && now - Date.parse(lastRun) < intervalMinutes * 3 * 60_000;
-        return { name, intervalMinutes, lastRun, active };
+        const consecutiveErrors = errorCounts[name] ?? 0;
+        return {
+            name,
+            intervalMinutes,
+            lastRun,
+            active,
+            consecutiveErrors,
+            lastError: consecutiveErrors > 0 ? lastErrors[name] : undefined,
+        };
     });
 
     return {
         daemonOnline: collectors.some((c) => c.active),
+        hasErrors: collectors.some((c) => c.active && c.consecutiveErrors > 0),
         channels: {
             bark: Boolean(process.env.BARK_URL),
             edgarContact: Boolean(process.env.EDGAR_CONTACT),

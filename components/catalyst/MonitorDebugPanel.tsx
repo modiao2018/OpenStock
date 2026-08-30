@@ -72,10 +72,14 @@ export default function MonitorDebugPanel({ status }: { status: MonitorStatusDat
                 </h2>
                 <span
                     className={`text-xs px-2 py-0.5 rounded-full ${
-                        status.daemonOnline ? 'bg-teal-900/60 text-teal-300' : 'bg-red-900/50 text-red-300'
+                        !status.daemonOnline
+                            ? 'bg-red-900/50 text-red-300'
+                            : status.hasErrors
+                              ? 'bg-amber-900/50 text-amber-300'
+                              : 'bg-teal-900/60 text-teal-300'
                     }`}
                 >
-                    ● {status.daemonOnline ? t('online') : t('offline')}
+                    ● {!status.daemonOnline ? t('offline') : status.hasErrors ? t('onlineWithErrors') : t('online')}
                 </span>
             </div>
 
@@ -84,15 +88,29 @@ export default function MonitorDebugPanel({ status }: { status: MonitorStatusDat
                 <h3 className="text-xs uppercase tracking-wide text-gray-500 mb-2">{t('collectors')}</h3>
                 <ul className="space-y-1.5">
                     {status.collectors.map((c) => (
-                        <li key={c.name} className="flex items-center justify-between text-sm">
-                            <span className="flex items-center gap-2">
-                                <span className={`w-1.5 h-1.5 rounded-full ${c.active ? 'bg-teal-400' : 'bg-gray-600'}`} />
-                                <span className="text-gray-300">{tSource(c.name)}</span>
-                                <span className="text-xs text-gray-600">{t('every', { minutes: c.intervalMinutes })}</span>
-                            </span>
-                            <span className="text-xs text-gray-500" title={t('lastRun')}>
-                                {c.lastRun ? formatTime(c.lastRun) : t('never')}
-                            </span>
+                        <li key={c.name} className="text-sm">
+                            <div className="flex items-center justify-between">
+                                <span className="flex items-center gap-2">
+                                    <span
+                                        className={`w-1.5 h-1.5 rounded-full ${
+                                            c.consecutiveErrors > 0 ? 'bg-red-400' : c.active ? 'bg-teal-400' : 'bg-gray-600'
+                                        }`}
+                                    />
+                                    <span className="text-gray-300">{tSource(c.name)}</span>
+                                    <span className="text-xs text-gray-600">{t('every', { minutes: c.intervalMinutes })}</span>
+                                    {c.consecutiveErrors > 0 && (
+                                        <span className="text-xs text-red-400">{t('errorCount', { count: c.consecutiveErrors })}</span>
+                                    )}
+                                </span>
+                                <span className="text-xs text-gray-500" title={t('lastRun')}>
+                                    {c.lastRun ? formatTime(c.lastRun) : t('never')}
+                                </span>
+                            </div>
+                            {c.lastError && (
+                                <p className="text-xs text-red-400/70 pl-3.5 mt-0.5 truncate" title={c.lastError.message}>
+                                    {c.lastError.message}
+                                </p>
+                            )}
                         </li>
                     ))}
                 </ul>

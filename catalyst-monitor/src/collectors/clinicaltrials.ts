@@ -31,9 +31,13 @@ function statusZh(status: string): string {
  */
 export async function collectClinicalTrials(config: MonitorConfig): Promise<NewEvent[]> {
   const events: NewEvent[] = [];
+  let attempted = 0;
+  let failed = 0;
+  let lastError: unknown = null;
 
   for (const item of config.watchlist) {
     for (const nctId of item.nctIds) {
+      attempted++;
       try {
         const res = await fetchWithRetry(`${API_BASE}/${nctId}`, {
           headers: { Accept: 'application/json' },
@@ -86,8 +90,15 @@ export async function collectClinicalTrials(config: MonitorConfig): Promise<NewE
         });
       } catch (err) {
         logError('clinicaltrials', err);
+        failed++;
+        lastError = err;
       }
     }
+  }
+
+  // 个别试验失败只记日志；全军覆没说明源整体不可用，抛给 daemon 的错误追踪
+  if (attempted > 0 && failed === attempted) {
+    throw new Error(`全部 ${attempted} 个试验查询失败，最近错误: ${lastError instanceof Error ? lastError.message : lastError}`);
   }
 
   log('clinicaltrials', `checked ${events.length} trials`);

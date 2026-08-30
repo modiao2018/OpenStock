@@ -441,7 +441,9 @@
     "debug": {
       "title": "Status & Debug",
       "online": "Online",
+      "onlineWithErrors": "Online · errors",
       "offline": "Offline",
+      "errorCount": "{count} consecutive failures",
       "collectors": "Collector intervals",
       "every": "every {minutes} min",
       "lastRun": "Last run",

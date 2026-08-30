@@ -441,7 +441,9 @@
     "debug": {
       "title": "运行状态与调试",
       "online": "在线",
+      "onlineWithErrors": "在线·有异常",
       "offline": "离线",
+      "errorCount": "连续失败 {count} 次",
       "collectors": "采集器频率",
       "every": "每 {minutes} 分钟",
       "lastRun": "上次运行",

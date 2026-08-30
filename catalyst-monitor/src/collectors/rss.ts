@@ -34,6 +34,8 @@ function matchWatchItem(text: string, watchlist: WatchItem[]): WatchItem | null 
 export async function collectRss(config: MonitorConfig): Promise<NewEvent[]> {
   const events: NewEvent[] = [];
   const parser = new XMLParser({ ignoreAttributes: true, removeNSPrefix: true });
+  let failed = 0;
+  let lastError: unknown = null;
 
   for (const feed of config.feeds) {
     try {
@@ -75,7 +77,14 @@ export async function collectRss(config: MonitorConfig): Promise<NewEvent[]> {
       }
     } catch (err) {
       logError(`rss:${feed.name}`, err);
+      failed++;
+      lastError = err;
     }
+  }
+
+  // 单个 feed 失败只记日志；全部失败抛给 daemon 的错误追踪
+  if (config.feeds.length > 0 && failed === config.feeds.length) {
+    throw new Error(`全部 ${failed} 个新闻源拉取失败，最近错误: ${lastError instanceof Error ? lastError.message : lastError}`);
   }
 
   log('rss', `${events.length} matched items across ${config.feeds.length} feeds`);

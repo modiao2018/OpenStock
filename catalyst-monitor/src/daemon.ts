@@ -1,6 +1,6 @@
 import './env';
 import { loadConfig, log, logError } from './config';
-import { closeStore, getWatchItems, insertEvent, markNotified, seedWatchItems, setEventAnalysis, setKv } from './store';
+import { closeStore, getKv, getWatchItems, insertEvent, markNotified, seedWatchItems, setEventAnalysis, setKv } from './store';
 import { notify, pushMessage } from './notify';
 import { analyzeEvent, extractAction } from './analyze';
 import { collectClinicalTrials } from './collectors/clinicaltrials';
@@ -21,6 +21,7 @@ interface CollectorDef {
 }
 
 async function runCollector(def: CollectorDef, config: MonitorConfig): Promise<void> {
+  let errorMsg: string | null = null;
   try {
     // 每轮都从数据库取最新监控清单——网页端改动无需重启 daemon
     const watchlist = await getWatchItems();
@@ -80,12 +81,40 @@ async function runCollector(def: CollectorDef, config: MonitorConfig): Promise<v
     }
   } catch (err) {
     logError(def.name, err);
+    errorMsg = err instanceof Error ? err.message : String(err);
   } finally {
-    // 心跳：网页端"运行状态"面板据此判断 daemon 是否在线、各采集器上次运行时间
+    // 心跳 + 错误追踪：网页端"运行状态"面板据此显示在线/异常，
+    // 连续失败 3 次推送"监控异常"，恢复后推送"已恢复"
     try {
       await setKv(`collector_last_run:${def.name}`, new Date().toISOString());
+      const prevCount = Number((await getKv(`collector_error_count:${def.name}`)) ?? '0');
+      if (errorMsg) {
+        const count = prevCount + 1;
+        await setKv(`collector_error_count:${def.name}`, String(count));
+        await setKv(
+          `collector_last_error:${def.name}`,
+          JSON.stringify({ time: new Date().toISOString(), message: errorMsg.slice(0, 300) })
+        );
+        if (count === 3) {
+          await pushMessage(config.env, {
+            title: `监控异常｜${def.name} 连续 ${count} 次失败`,
+            body: `最近错误: ${errorMsg.slice(0, 300)}\n采集会继续重试；请检查网络或密钥配置，详情见页面"运行状态"面板`,
+            urgent: false,
+          });
+        }
+      } else {
+        if (prevCount >= 3) {
+          await pushMessage(config.env, {
+            title: `监控恢复｜${def.name} 已恢复正常`,
+            body: `此前连续失败 ${prevCount} 次，本轮已成功`,
+            urgent: false,
+          });
+        }
+        if (prevCount > 0) await setKv(`collector_error_count:${def.name}`, '0');
+        await setKv(`collector_last_error:${def.name}`, '');
+      }
     } catch {
-      // 数据库不可用时上面已报过错，心跳失败不再刷屏
+      // 数据库不可用时上面已报过错，追踪失败不再刷屏
     }
   }
 }
