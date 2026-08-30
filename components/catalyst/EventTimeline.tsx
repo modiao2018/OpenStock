@@ -61,6 +61,11 @@ export default async function EventTimeline({ events }: { events: CatalystEventD
                                     {ev.firstSnapshot ? t('archived') : t('updated')}
                                 </span>
                             )}
+                            {ev.source === 'edgar' && ev.firstSnapshot && (
+                                <span className="shrink-0 mt-0.5 px-2 py-0.5 rounded text-xs bg-gray-800/80 text-gray-500">
+                                    {t('archived')}
+                                </span>
+                            )}
                             <div className="min-w-0">
                                 <div className="flex items-center gap-2">
                                     {ev.severity === 'urgent' && <span className="text-red-400 text-xs">●</span>}

@@ -49,7 +49,8 @@ export async function insertEvent(ev: NewEvent): Promise<StoredEvent | null> {
       contentHash: ev.contentHash,
       severity: ev.severity,
       raw: ev.raw,
-      firstSnapshot: !seenBefore,
+      // archival 显式指定时以它为准（回补的旧申报标记为建档、实时申报不标记）
+      firstSnapshot: ev.archival ?? !seenBefore,
     });
     return {
       ...ev,

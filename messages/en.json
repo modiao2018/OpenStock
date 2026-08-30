@@ -429,7 +429,7 @@
     },
     "calendar": {
       "title": "Catalyst Calendar",
-      "hint": "Countdown to each trial's primary completion date; topline data usually follows weeks to months later",
+      "hint": "Custom catalysts above are most reliable (incl. AI-extracted company guidance); registry dates below lag by weeks-months and interim/topline data can come earlier — rough reference only",
       "empty": "No trials archived yet. They appear after the daemon's first run.",
       "trialsTitle": "Trial registry dates",
       "phase": "Phase {phases}",

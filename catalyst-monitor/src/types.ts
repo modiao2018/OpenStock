@@ -61,6 +61,8 @@ export interface NewEvent {
   contentHash: string;
   raw: unknown;
   severity: Severity;
+  /** 历史回补的存量记录：入库并分析，但不推送（如新增标的时回看的旧 8-K） */
+  archival?: boolean;
 }
 
 /** 入库后的事件（含首次抓取时间与是否为该实体的首个快照） */

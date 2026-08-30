@@ -18,8 +18,8 @@ edgar:
   forms:
     - 8-K
     - 6-K
-  # 只看最近多少天内的申报（首次运行时避免拉出陈年旧账）
-  lookback_days: 7
+  # 回看窗口：3 天内的申报实时告警，3~30 天的作为历史建档（入库+AI 分析，不推送）
+  lookback_days: 30
 
 # 新闻 RSS 源（条目会先按 watchlist 关键词过滤，只推匹配的）
 feeds:

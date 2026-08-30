@@ -21,6 +21,24 @@ interface CollectorDef {
   run: (config: MonitorConfig) => Promise<NewEvent[]>;
 }
 
+/** 公告里给了催化剂时间指引 → 自动补进催化剂日历 */
+async function saveGuidance(
+  scope: string,
+  stored: { symbol?: string },
+  result: AnalysisResult
+): Promise<void> {
+  if (!result.guidance || !stored.symbol) return;
+  const isNew = await upsertCustomEvent({
+    symbol: stored.symbol,
+    title: result.guidance.title,
+    date: result.guidance.date,
+    kind: result.guidance.kind,
+    note: `AI 从公告中抽取（原文: ${result.guidance.dateText}）`,
+    source: 'auto',
+  });
+  if (isNew) log(scope, `日历新增催化剂: ${stored.symbol} ${result.guidance.date} ${result.guidance.title}`);
+}
+
 async function runCollector(def: CollectorDef, config: MonitorConfig): Promise<void> {
   let errorMsg: string | null = null;
   try {
@@ -38,6 +56,14 @@ async function runCollector(def: CollectorDef, config: MonitorConfig): Promise<v
       if (stored.isFirstSnapshot && stored.source === 'clinicaltrials') {
         // 试验首次建档只是把现状存下来，不是"发生了什么"，不推送
         log(def.name, `建档（不推送）: ${stored.title}`);
+        continue;
+      }
+      if (stored.archival) {
+        // 历史回补：分析入库、抽取催化剂指引，但不打扰用户
+        log(def.name, `历史建档: ${stored.title}`);
+        const archResult = await analyzeEvent(config, stored);
+        if (archResult.analysis) await setEventAnalysis(stored.id, archResult.analysis);
+        await saveGuidance(def.name, stored, archResult);
         continue;
       }
       log(def.name, `新事件: ${stored.title}`);
@@ -67,18 +93,7 @@ async function runCollector(def: CollectorDef, config: MonitorConfig): Promise<v
         const delivered = await notify(config.env, stored);
         if (delivered) await markNotified(stored.id);
       }
-      // 公告里给了催化剂时间指引 → 自动补进催化剂日历
-      if (result.guidance && stored.symbol) {
-        const isNew = await upsertCustomEvent({
-          symbol: stored.symbol,
-          title: result.guidance.title,
-          date: result.guidance.date,
-          kind: result.guidance.kind,
-          note: `AI 从公告中抽取（原文: ${result.guidance.dateText}）`,
-          source: 'auto',
-        });
-        if (isNew) log(def.name, `日历新增催化剂: ${stored.symbol} ${result.guidance.date} ${result.guidance.title}`);
-      }
+      await saveGuidance(def.name, stored, result);
     }
   } catch (err) {
     logError(def.name, err);

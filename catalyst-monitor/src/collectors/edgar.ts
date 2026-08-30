@@ -92,6 +92,8 @@ export async function collectEdgar(config: MonitorConfig): Promise<NewEvent[]> {
         if (!config.edgar.forms.includes(forms[i])) continue;
         if (Date.parse(recent.filingDate[i]) < cutoff) continue;
 
+        // 3 天以上的旧申报按"建档"处理：入库+分析，不推送——避免新增标的时被历史公告刷屏
+        const isArchival = Date.now() - Date.parse(recent.filingDate[i]) > 3 * 24 * 3600_000;
         const accession: string = recent.accessionNumber[i];
         const accessionPlain = accession.replace(/-/g, '');
         const primaryDoc: string = recent.primaryDocument?.[i] ?? '';
@@ -110,6 +112,7 @@ export async function collectEdgar(config: MonitorConfig): Promise<NewEvent[]> {
           contentHash: sha256(accession),
           raw: { form: forms[i], accession, filingDate: recent.filingDate[i], items },
           severity: 'urgent',
+          archival: isArchival,
         });
       }
       await sleep(150); // SEC 限速 10 req/s，保守一点
