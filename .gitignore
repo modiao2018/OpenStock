@@ -33,6 +33,13 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# 部署配置模板不含密钥，需要进 git
+!deploy/.env.production.example
+
+# deploy 发版记录（服务器本地状态）、本机部署目标配置、增量传输基底
+/deploy/releases.log
+/deploy/local.env
+/deploy/images.tar
 
 # vercel
 .vercel

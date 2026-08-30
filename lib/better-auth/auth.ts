@@ -49,4 +49,19 @@ export const getAuth = async () => {
     return authInstance;
 }
 
-export const auth = await getAuth();
+// 不能在模块顶层 `await getAuth()`：那会在 import 时就连 MongoDB，
+// 使得没有数据库的环境（Docker 镜像构建里的 next build）直接失败。
+// 惰性代理：首次调用 auth.api.* 时才真正初始化连接。
+type AuthApi = Awaited<ReturnType<typeof getAuth>>["api"];
+
+export const auth = {
+    api: new Proxy({} as AuthApi, {
+        get(_target, prop) {
+            return async (...args: unknown[]) => {
+                const instance = await getAuth();
+                const method = instance.api[prop as keyof AuthApi] as (...a: unknown[]) => unknown;
+                return method.apply(instance.api, args);
+            };
+        },
+    }),
+};

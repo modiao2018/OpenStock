@@ -1,0 +1,27 @@
+# 构建上下文排除项：没有这个文件，COPY . . 会把 mac 本地的
+# node_modules（含原生二进制）覆盖进 Linux 镜像，直接跑不起来
+node_modules
+.next
+.next-verify
+out
+build
+coverage
+
+.git
+.github
+.vscode
+.idea
+.DS_Store
+
+# 密钥绝不进镜像，运行时通过 env_file 注入
+.env*
+
+npm-debug.log*
+*.tsbuildinfo
+
+# 部署脚本与文档不参与构建
+deploy/*.sh
+deploy/*.md
+deploy/*.example
+docs
+__tests__

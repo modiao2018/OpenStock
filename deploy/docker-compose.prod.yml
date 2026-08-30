@@ -1,0 +1,91 @@
+# 生产环境编排：由 deploy/*.sh 脚本调用，不要直接 docker compose up 本文件
+# （脚本会带上 --project-directory、--env-file 和镜像 TAG，缺了会用错配置）。
+# 变量来自仓库根目录的 .env.production（compose --env-file 注入）。
+#
+# 针对 2C4G 且与其他项目共存的服务器：
+#   每个容器都设了内存/CPU 硬上限（合计 ≤1.7G，给系统和其他项目留余量），
+#   MongoDB 缓存封顶 256M（默认会吃掉一半内存！），日志轮转防止塞满磁盘。
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  web:
+    image: happystock-web:${TAG:-latest}
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      target: web
+      args:
+        NEXT_PUBLIC_FINNHUB_API_KEY: ${NEXT_PUBLIC_FINNHUB_API_KEY:-}
+    env_file:
+      - .env.production
+    environment:
+      NODE_ENV: production
+      # 容器内通过服务名 mongodb 访问数据库，覆盖 env 文件里的本机地址
+      MONGODB_URI: mongodb://root:${MONGO_ROOT_PASSWORD}@mongodb:27017/openstock?authSource=admin
+    ports:
+      # 默认只绑 127.0.0.1：公网流量统一走宿主机 nginx 反代，3000 不直接暴露。
+      # 没有 nginx 想直连时，在 .env.production 里设 WEB_BIND=0.0.0.0
+      - "${WEB_BIND:-127.0.0.1}:${WEB_PORT:-3000}:3000"
+    restart: unless-stopped
+    mem_limit: 768m
+    cpus: 1.5
+    logging: *default-logging
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/sign-in"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # 催化剂监控守护进程，可选：.env.production 里 MONITOR_ENABLED=true 时脚本才会启用
+  monitor:
+    profiles: ["monitor"]
+    image: happystock-monitor:${TAG:-latest}
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      target: monitor
+    env_file:
+      - .env.production
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: mongodb://root:${MONGO_ROOT_PASSWORD}@mongodb:27017/openstock?authSource=admin
+    restart: unless-stopped
+    mem_limit: 384m
+    cpus: 0.5
+    logging: *default-logging
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  mongodb:
+    image: mongo:7
+    # WiredTiger 缓存默认取 (内存-1G)/2 ≈ 1.5G，小内存机器必须显式封顶
+    command: ["mongod", "--wiredTigerCacheSizeGB", "0.25"]
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 1
+    logging: *default-logging
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    # 生产环境不把 27017 暴露到宿主机，仅容器网络内可达；
+    # 需要临时连库排查时用：docker compose exec mongodb mongosh -u root -p
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mongo-data:

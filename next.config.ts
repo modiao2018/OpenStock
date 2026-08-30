@@ -4,6 +4,9 @@ import createNextIntlPlugin from "next-intl/plugin";
 const withNextIntl = createNextIntlPlugin();
 
 const nextConfig: NextConfig = {
+    // 生产镜像用 standalone 输出（只打包用到的依赖，跑 node server.js），
+    // 小内存服务器上镜像体积和运行时占用都小得多；dev 模式不受影响
+    output: 'standalone',
     // Lets verification builds write elsewhere (NEXT_DIST_DIR=.next-verify) so
     // they don't clobber the .next dir a running dev server depends on
     distDir: process.env.NEXT_DIST_DIR || '.next',

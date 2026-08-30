@@ -1,0 +1,37 @@
+# HappyStock 的 nginx 站点配置（Ubuntu sites-available 布局，服务器已装 nginx 1.18）
+#
+# 服务器上的安装步骤：
+#   1. sudo cp deploy/nginx.conf.example /etc/nginx/sites-available/happystock
+#   2. sudo ln -s /etc/nginx/sites-available/happystock /etc/nginx/sites-enabled/
+#   3. sudo rm /etc/nginx/sites-enabled/default        # 去掉默认欢迎页，让本站接管 80
+#   4. sudo nginx -t && sudo systemctl reload nginx
+#   5. 确认 .env.production 里 BETTER_AUTH_URL=http://152.53.176.254（不带端口），
+#      改过的话执行 bash deploy/update.sh --no-pull 重启生效
+#
+# 以后上域名 + HTTPS：把 server_name 换成域名，然后
+#   sudo apt install certbot python3-certbot-nginx && sudo certbot --nginx -d 你的域名
+# 并把 BETTER_AUTH_URL 改成 https://你的域名。
+#
+# 同机部署其他项目时：每个项目复制一份本文件，改 server_name（按域名区分）
+# 和 proxy_pass 端口即可，default_server 只能有一个。
+
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name 152.53.176.254;
+
+    # 上传接口预留；行情/AI 响应偏慢，超时放宽
+    client_max_body_size 10m;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;   # .env.production 的 WEB_PORT 改过的话这里同步改
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 120s;
+    }
+}
