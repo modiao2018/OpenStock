@@ -36,6 +36,7 @@ export default function CatalystManager({ initialItems }: { initialItems: Cataly
     const [symbol, setSymbol] = useState('');
     const [company, setCompany] = useState('');
     const [keywords, setKeywords] = useState('');
+    const [scenarioNotes, setScenarioNotes] = useState('');
     const [trialResults, setTrialResults] = useState<TrialSearchResult[]>([]);
     const [selectedNctIds, setSelectedNctIds] = useState<Set<string>>(new Set());
     const [searching, setSearching] = useState(false);
@@ -74,6 +75,7 @@ export default function CatalystManager({ initialItems }: { initialItems: Cataly
         setSymbol('');
         setCompany('');
         setKeywords('');
+        setScenarioNotes('');
         setTrialResults([]);
         setSelectedNctIds(new Set());
         setSearched(false);
@@ -86,6 +88,7 @@ export default function CatalystManager({ initialItems }: { initialItems: Cataly
         setSymbol(item.symbol);
         setCompany(item.company);
         setKeywords(item.keywords.join(', '));
+        setScenarioNotes(item.scenarioNotes ?? '');
         // 已选试验先以"仅编号"形式展示，搜索后会合并出完整标题
         setTrialResults(
             item.nctIds.map((nctId) => ({ nctId, title: nctId, overallStatus: '', phase: '' }))
@@ -129,6 +132,7 @@ export default function CatalystManager({ initialItems }: { initialItems: Cataly
                 company: company.trim(),
                 nctIds: Array.from(selectedNctIds),
                 keywords: keywords.split(/[,，]/).map((k) => k.trim()).filter(Boolean),
+                scenarioNotes: scenarioNotes.trim() || undefined,
             });
             setDialogOpen(false);
             router.refresh();
@@ -316,6 +320,18 @@ export default function CatalystManager({ initialItems }: { initialItems: Cataly
                             <p className="text-sm text-gray-500">{t('noTrials')}</p>
                         )}
                         <p className="text-xs text-gray-600">{t('trialsSelected', { count: selectedNctIds.size })}</p>
+
+                        <div className="space-y-1.5">
+                            <Label htmlFor="catalyst-scenarios">{t('scenarios')}</Label>
+                            <textarea
+                                id="catalyst-scenarios"
+                                value={scenarioNotes}
+                                onChange={(e) => setScenarioNotes(e.target.value)}
+                                placeholder={t('scenariosPlaceholder')}
+                                rows={4}
+                                className="w-full rounded-md bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-gray-100 placeholder:text-gray-600"
+                            />
+                        </div>
                     </div>
 
                     <DialogFooter>

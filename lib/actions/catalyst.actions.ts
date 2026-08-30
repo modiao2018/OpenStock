@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { connectToDatabase } from '@/database/mongoose';
 import {
+    CatalystCustomEvent,
     CatalystEvent,
     CatalystKv,
     CatalystTrial,
@@ -25,6 +26,7 @@ export interface CatalystWatchItemData {
     company: string;
     nctIds: string[];
     keywords: string[];
+    scenarioNotes?: string;
 }
 
 export interface TrialSearchResult {
@@ -69,6 +71,7 @@ export async function getCatalystWatchItems(): Promise<CatalystWatchItemData[]> 
             company: d.company,
             nctIds: d.nctIds ?? [],
             keywords: d.keywords ?? [],
+            scenarioNotes: d.scenarioNotes ?? undefined,
         }));
     } catch (error) {
         console.error('Error fetching catalyst watch items:', error);
@@ -88,6 +91,7 @@ export async function saveCatalystWatchItem(item: CatalystWatchItemData) {
                 company: item.company.trim(),
                 nctIds,
                 keywords: item.keywords.map((k) => k.trim()).filter(Boolean),
+                scenarioNotes: item.scenarioNotes?.trim() || undefined,
             },
             { upsert: true }
         );
@@ -366,6 +370,73 @@ export async function testLlm(): Promise<LlmTestResult> {
         };
     } catch (error) {
         return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    }
+}
+
+// ---- 自定义催化剂（手动 + AI 自动抽取）----
+
+export type CustomCatalystKind = 'data-readout' | 'pdufa' | 'adcom' | 'earnings' | 'conference' | 'other';
+
+export interface CustomCatalystData {
+    id: string;
+    symbol: string;
+    title: string;
+    date: string;
+    kind: CustomCatalystKind;
+    note?: string;
+    source: 'manual' | 'auto';
+}
+
+export async function getCustomCatalysts(): Promise<CustomCatalystData[]> {
+    try {
+        await connectToDatabase();
+        const docs = await CatalystCustomEvent.find().sort({ date: 1 }).lean();
+        return docs.map((d) => ({
+            id: String(d._id),
+            symbol: d.symbol,
+            title: d.title,
+            date: d.date,
+            kind: d.kind,
+            note: d.note ?? undefined,
+            source: d.source,
+        }));
+    } catch (error) {
+        console.error('Error fetching custom catalysts:', error);
+        return [];
+    }
+}
+
+export async function addCustomCatalyst(input: {
+    symbol: string;
+    title: string;
+    date: string;
+    kind: CustomCatalystKind;
+}) {
+    try {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) throw new Error('date must be YYYY-MM-DD');
+        await connectToDatabase();
+        await CatalystCustomEvent.findOneAndUpdate(
+            { symbol: input.symbol.toUpperCase().trim(), title: input.title.trim(), date: input.date },
+            { $setOnInsert: { kind: input.kind, source: 'manual' } },
+            { upsert: true }
+        );
+        revalidatePath('/catalyst');
+        return { success: true };
+    } catch (error) {
+        console.error('Error adding custom catalyst:', error);
+        throw new Error('Failed to add custom catalyst');
+    }
+}
+
+export async function deleteCustomCatalyst(id: string) {
+    try {
+        await connectToDatabase();
+        await CatalystCustomEvent.findByIdAndDelete(id);
+        revalidatePath('/catalyst');
+        return { success: true };
+    } catch (error) {
+        console.error('Error deleting custom catalyst:', error);
+        throw new Error('Failed to delete custom catalyst');
     }
 }
 

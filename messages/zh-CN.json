@@ -382,12 +382,39 @@
       "save": "保存",
       "cancel": "取消",
       "saveFailed": "保存失败，请重试",
-      "deleteConfirm": "确定移除 {symbol}？历史事件会保留，但不再监控。"
+      "deleteConfirm": "确定移除 {symbol}？历史事件会保留，但不再监控。",
+      "scenarios": "情景预案（可选）",
+      "scenariosPlaceholder": "预设成功/模糊/失败三档判据，如：\n成功：主终点 p<0.05 且无 3 级以上安全事件 → 加仓\n模糊：达标但效应量弱或靠亚组 → 观望\n失败：未达标或出现安全红线 → 清仓\n数据公布时 AI 会据此判断结果落在哪一档"
+    },
+    "custom": {
+      "title": "自定义催化剂",
+      "add": "添加",
+      "empty": "暂无。可手动添加 PDUFA/财报/会议日期；AI 也会从公告中自动抽取公司给的时间指引",
+      "auto": "AI 抽取",
+      "daysLeft": "{days} 天后",
+      "dialogTitle": "添加催化剂",
+      "symbol": "股票代码",
+      "date": "日期",
+      "kindLabel": "类型",
+      "eventTitle": "事件描述",
+      "titlePlaceholder": "如：ABCL635 二期顶线数据",
+      "kind": {
+        "data-readout": "数据读出",
+        "pdufa": "PDUFA 审批",
+        "adcom": "FDA 咨询委员会",
+        "earnings": "财报",
+        "conference": "会议",
+        "other": "其他"
+      },
+      "save": "保存",
+      "cancel": "取消",
+      "addFailed": "添加失败，请重试"
     },
     "calendar": {
       "title": "催化剂日历",
       "hint": "按试验\"主要完成日期\"倒计时——数据收集完成的时点，顶线数据通常在其后数周至数月公布",
       "empty": "暂无试验建档，daemon 运行一轮后出现",
+      "trialsTitle": "试验注册日期",
       "phase": "临床 {phases} 期",
       "primaryCompletion": "主要完成",
       "daysLeft": "{days} 天后",

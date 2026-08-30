@@ -1,7 +1,8 @@
 import React from 'react';
 import { getTranslations } from 'next-intl/server';
 import { CalendarClock } from 'lucide-react';
-import type { CatalystTrialData } from '@/lib/actions/catalyst.actions';
+import type { CatalystTrialData, CustomCatalystData } from '@/lib/actions/catalyst.actions';
+import CustomCatalystSection from './CustomCatalystSection';
 
 const STATUS_COLORS: Record<string, string> = {
     RECRUITING: 'text-teal-400',
@@ -21,7 +22,13 @@ function phaseDigits(phase: string): string {
     return digits.join('/') || phase;
 }
 
-export default async function CatalystCalendar({ trials }: { trials: CatalystTrialData[] }) {
+export default async function CatalystCalendar({
+    trials,
+    customEvents,
+}: {
+    trials: CatalystTrialData[];
+    customEvents: CustomCatalystData[];
+}) {
     const t = await getTranslations('catalyst.calendar');
     const tStatus = await getTranslations('catalyst.status');
     const now = Date.now();
@@ -34,6 +41,9 @@ export default async function CatalystCalendar({ trials }: { trials: CatalystTri
             </h2>
             <p className="text-xs text-gray-600 mb-4">{t('hint')}</p>
 
+            <CustomCatalystSection items={customEvents} />
+
+            <h3 className="text-xs uppercase tracking-wide text-gray-500 mb-2">{t('trialsTitle')}</h3>
             {trials.length === 0 ? (
                 <p className="text-gray-500 text-sm">{t('empty')}</p>
             ) : (

@@ -54,27 +54,102 @@ async function buildContext(config: MonitorConfig, ev: StoredEvent): Promise<str
   }
 }
 
+export interface GuidanceCatalyst {
+  title: string;
+  date: string; // YYYY-MM-DD
+  kind: 'data-readout' | 'pdufa' | 'adcom' | 'earnings' | 'conference' | 'other';
+  dateText: string;
+}
+
+export interface AnalysisResult {
+  analysis: string | null;
+  guidance: GuidanceCatalyst | null;
+}
+
+/** 从 LLM 回复中提取 JSON（容忍 ```json 围栏和前后废话） */
+function parseJsonReply(reply: string): any | null {
+  const match = reply.match(/\{[\s\S]*\}/);
+  if (!match) return null;
+  try {
+    return JSON.parse(match[0]);
+  } catch {
+    return null;
+  }
+}
+
+const GUIDANCE_KINDS = new Set(['data-readout', 'pdufa', 'adcom', 'earnings', 'conference', 'other']);
+
+async function extractGuidance(
+  llm: NonNullable<Awaited<ReturnType<typeof resolveLlmConfig>>>,
+  ev: StoredEvent,
+  context: string
+): Promise<GuidanceCatalyst | null> {
+  // 只有申报和新闻里才会出现公司给的时间指引
+  if (ev.source !== 'edgar' && ev.source !== 'rss') return null;
+
+  const prompt =
+    '判断以下内容中公司是否给出了未来催化剂的时间指引（数据读出/topline、PDUFA 审批日、' +
+    'FDA 咨询委员会、财报日、医学会议展示等）。只输出 JSON，不要任何其他文字：\n' +
+    '{"found": true|false, "title": "简短中文标题（含药物名/事件类型）", ' +
+    '"dateText": "原文时间表述", "isoDate": "YYYY-MM-DD（估计值：季度取中间月的15日，仅月份取15日）", ' +
+    '"kind": "data-readout|pdufa|adcom|earnings|conference|other"}\n\n' +
+    `${context}`;
+
+  try {
+    const reply = await callAIProviderWithConfig(prompt, {
+      name: llm.provider,
+      apiKey: llm.apiKey,
+      baseUrl: llm.baseUrl,
+      model: llm.model,
+    });
+    const parsed = parseJsonReply(reply);
+    if (!parsed?.found || !parsed.isoDate || !/^\d{4}-\d{2}-\d{2}$/.test(parsed.isoDate)) return null;
+    // 过去的日期不是催化剂
+    if (parsed.isoDate < new Date().toISOString().slice(0, 10)) return null;
+    return {
+      title: String(parsed.title ?? '').slice(0, 120) || '数据读出指引',
+      date: parsed.isoDate,
+      kind: GUIDANCE_KINDS.has(parsed.kind) ? parsed.kind : 'other',
+      dateText: String(parsed.dateText ?? '').slice(0, 200),
+    };
+  } catch (err) {
+    logError('analyze:guidance', err);
+    return null;
+  }
+}
+
 /**
- * 对报告类事件生成简体中文分析（概要 + 关键信息 + 倾向判断）。
- * LLM 未配置或调用失败返回 null，调用方照常推送，不阻塞。
+ * 对报告类事件生成简体中文分析（概要 + 关键信息 + 倾向判断），
+ * 并顺带抽取公司给出的催化剂时间指引（自动补进催化剂日历）。
+ * LLM 未配置或调用失败返回 null 字段，调用方照常推送，不阻塞。
  */
-export async function analyzeEvent(config: MonitorConfig, ev: StoredEvent): Promise<string | null> {
+export async function analyzeEvent(config: MonitorConfig, ev: StoredEvent): Promise<AnalysisResult> {
+  const none: AnalysisResult = { analysis: null, guidance: null };
   const context = await buildContext(config, ev);
-  if (!context) return null;
+  if (!context) return none;
 
   const llm = await resolveLlmConfig();
   if (!llm) {
     log('analyze', 'LLM 未配置，跳过分析');
-    return null;
+    return none;
   }
+
+  // 用户对该标的的情景预案（如有）纳入分析，让 LLM 直接对档
+  const watchItem = config.watchlist.find((w) => w.symbol === ev.symbol);
+  const scenarioBlock = watchItem?.scenarioNotes
+    ? `\n用户预设的情景预案：\n${watchItem.scenarioNotes}\n若本事件是数据/审批结果，请在最后指明结果落在哪一档（成功/模糊/失败/无法判断）。`
+    : '';
 
   const prompt =
     '你是美股医药催化剂监控助手，用户是中国投资者。请用简体中文分析以下事件，' +
     '输出不超过 150 字的纯文本（不要使用 markdown 或列表符号）：' +
     '先一句话概括发生了什么；再给出关键数据或条款（如有）；' +
-    '最后给出倾向判断（利好/利空/中性/不确定）及一句理由。\n\n' +
+    '最后给出倾向判断（利好/利空/中性/不确定）及一句理由。' +
+    scenarioBlock +
+    '\n\n' +
     `监控标的: ${ev.symbol ?? '未知'}\n事件标题: ${ev.title}\n${context}`;
 
+  let analysis: string | null = null;
   try {
     const start = Date.now();
     const reply = await callAIProviderWithConfig(prompt, {
@@ -83,10 +158,12 @@ export async function analyzeEvent(config: MonitorConfig, ev: StoredEvent): Prom
       baseUrl: llm.baseUrl,
       model: llm.model,
     });
+    analysis = reply.trim().slice(0, 500);
     log('analyze', `${ev.externalId} 分析完成（${Date.now() - start}ms）`);
-    return reply.trim().slice(0, 500);
   } catch (err) {
     logError('analyze', err);
-    return null;
   }
+
+  const guidance = await extractGuidance(llm, ev, context);
+  return { analysis, guidance };
 }

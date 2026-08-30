@@ -382,12 +382,39 @@
       "save": "Save",
       "cancel": "Cancel",
       "saveFailed": "Save failed. Please retry.",
-      "deleteConfirm": "Remove {symbol}? Historical events are kept, but it will no longer be monitored."
+      "deleteConfirm": "Remove {symbol}? Historical events are kept, but it will no longer be monitored.",
+      "scenarios": "Scenario plan (optional)",
+      "scenariosPlaceholder": "Pre-set success/mixed/failure criteria, e.g.:\nSuccess: primary endpoint p<0.05, no grade ≥3 safety events → add\nMixed: met but weak effect size or subgroup-driven → hold\nFailure: missed endpoint or safety red flag → exit\nThe AI will map results to a scenario when data drops"
+    },
+    "custom": {
+      "title": "Custom Catalysts",
+      "add": "Add",
+      "empty": "None yet. Add PDUFA/earnings/conference dates manually; the AI also extracts guided dates from filings",
+      "auto": "AI",
+      "daysLeft": "in {days}d",
+      "dialogTitle": "Add Catalyst",
+      "symbol": "Ticker",
+      "date": "Date",
+      "kindLabel": "Type",
+      "eventTitle": "Description",
+      "titlePlaceholder": "e.g. ABCL635 Phase 2 topline data",
+      "kind": {
+        "data-readout": "Data readout",
+        "pdufa": "PDUFA",
+        "adcom": "FDA AdCom",
+        "earnings": "Earnings",
+        "conference": "Conference",
+        "other": "Other"
+      },
+      "save": "Save",
+      "cancel": "Cancel",
+      "addFailed": "Failed to add. Please retry."
     },
     "calendar": {
       "title": "Catalyst Calendar",
       "hint": "Countdown to each trial's primary completion date; topline data usually follows weeks to months later",
       "empty": "No trials archived yet. They appear after the daemon's first run.",
+      "trialsTitle": "Trial registry dates",
       "phase": "Phase {phases}",
       "primaryCompletion": "Primary completion",
       "daysLeft": "in {days} days",

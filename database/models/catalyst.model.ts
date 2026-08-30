@@ -81,6 +81,8 @@ export interface ICatalystWatchItem extends Document {
     company: string;
     nctIds: string[];
     keywords: string[];
+    /** 情景预案：成功/模糊/失败的判据，事件落地时 AI 对档用 */
+    scenarioNotes?: string;
 }
 
 const CatalystWatchItemSchema = new Schema<ICatalystWatchItem>(
@@ -89,9 +91,38 @@ const CatalystWatchItemSchema = new Schema<ICatalystWatchItem>(
         company: { type: String, required: true, trim: true },
         nctIds: { type: [String], default: [] },
         keywords: { type: [String], default: [] },
+        scenarioNotes: { type: String },
     },
     { timestamps: true }
 );
+
+/** 自定义催化剂：手动添加或由 AI 从公告中抽取的时间指引（PDUFA、数据读出等） */
+export interface ICatalystCustomEvent extends Document {
+    symbol: string;
+    title: string;
+    /** YYYY-MM-DD */
+    date: string;
+    kind: 'data-readout' | 'pdufa' | 'adcom' | 'earnings' | 'conference' | 'other';
+    note?: string;
+    source: 'manual' | 'auto';
+}
+
+const CatalystCustomEventSchema = new Schema<ICatalystCustomEvent>(
+    {
+        symbol: { type: String, required: true, uppercase: true, trim: true },
+        title: { type: String, required: true, trim: true },
+        date: { type: String, required: true },
+        kind: {
+            type: String,
+            enum: ['data-readout', 'pdufa', 'adcom', 'earnings', 'conference', 'other'],
+            default: 'other',
+        },
+        note: { type: String },
+        source: { type: String, enum: ['manual', 'auto'], default: 'manual' },
+    },
+    { timestamps: true }
+);
+CatalystCustomEventSchema.index({ symbol: 1, title: 1, date: 1 }, { unique: true });
 
 /** 分钟 K 线（Alpaca IEX），异动检测的基线与实时数据 */
 export interface ICatalystBar extends Document {
@@ -135,6 +166,9 @@ export const CatalystTrial: Model<ICatalystTrial> =
     (models?.CatalystTrial as Model<ICatalystTrial>) || model<ICatalystTrial>('CatalystTrial', CatalystTrialSchema);
 export const CatalystKv: Model<ICatalystKv> =
     (models?.CatalystKv as Model<ICatalystKv>) || model<ICatalystKv>('CatalystKv', CatalystKvSchema);
+export const CatalystCustomEvent: Model<ICatalystCustomEvent> =
+    (models?.CatalystCustomEvent as Model<ICatalystCustomEvent>) ||
+    model<ICatalystCustomEvent>('CatalystCustomEvent', CatalystCustomEventSchema);
 export const CatalystBar: Model<ICatalystBar> =
     (models?.CatalystBar as Model<ICatalystBar>) || model<ICatalystBar>('CatalystBar', CatalystBarSchema);
 export const CatalystWatchItem: Model<ICatalystWatchItem> =

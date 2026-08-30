@@ -3,6 +3,8 @@ export interface WatchItem {
   company: string;
   nctIds: string[];
   keywords: string[];
+  /** 情景预案（成功/模糊/失败判据），事件分析时 LLM 据此对档 */
+  scenarioNotes?: string;
 }
 
 export interface FeedConfig {

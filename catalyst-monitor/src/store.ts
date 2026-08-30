@@ -1,7 +1,14 @@
 import { createHash } from 'node:crypto';
 import mongoose from 'mongoose';
 import { connectToDatabase } from '@/database/mongoose';
-import { CatalystBar, CatalystEvent, CatalystTrial, CatalystKv, CatalystWatchItem } from '@/database/models/catalyst.model';
+import {
+  CatalystBar,
+  CatalystCustomEvent,
+  CatalystEvent,
+  CatalystTrial,
+  CatalystKv,
+  CatalystWatchItem,
+} from '@/database/models/catalyst.model';
 import { log } from './config';
 import type { NewEvent, StoredEvent, WatchItem } from './types';
 
@@ -108,6 +115,7 @@ export async function getWatchItems(): Promise<WatchItem[]> {
     company: d.company,
     nctIds: d.nctIds ?? [],
     keywords: d.keywords ?? [],
+    scenarioNotes: d.scenarioNotes ?? undefined,
   }));
 }
 
@@ -116,6 +124,41 @@ export async function seedWatchItems(items: WatchItem[]): Promise<void> {
   for (const item of items) {
     await CatalystWatchItem.findOneAndUpdate({ symbol: item.symbol }, { $set: item }, { upsert: true });
   }
+}
+
+export interface CustomEventInput {
+  symbol: string;
+  title: string;
+  date: string;
+  kind: 'data-readout' | 'pdufa' | 'adcom' | 'earnings' | 'conference' | 'other';
+  note?: string;
+  source: 'manual' | 'auto';
+}
+
+/** 幂等：同 (symbol, title, date) 只存一条；返回是否为新增 */
+export async function upsertCustomEvent(ev: CustomEventInput): Promise<boolean> {
+  await connectToDatabase();
+  const res = await CatalystCustomEvent.findOneAndUpdate(
+    { symbol: ev.symbol, title: ev.title, date: ev.date },
+    { $setOnInsert: ev },
+    { upsert: true, includeResultMetadata: true }
+  );
+  return !res.value;
+}
+
+export async function listUpcomingCustomEvents(): Promise<Array<CustomEventInput & { id: string }>> {
+  await connectToDatabase();
+  const today = new Date().toISOString().slice(0, 10);
+  const docs = await CatalystCustomEvent.find({ date: { $gte: today } }).sort({ date: 1 }).lean();
+  return docs.map((d) => ({
+    id: String(d._id),
+    symbol: d.symbol,
+    title: d.title,
+    date: d.date,
+    kind: d.kind,
+    note: d.note ?? undefined,
+    source: d.source,
+  }));
 }
 
 export interface Bar {

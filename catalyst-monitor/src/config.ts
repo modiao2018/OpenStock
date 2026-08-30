@@ -21,6 +21,7 @@ export function loadConfig(): MonitorConfig {
       company: String(item.company),
       nctIds: (item.nct_ids ?? []).map((n: string) => String(n).toUpperCase()),
       keywords: (item.keywords ?? []).map(String),
+      scenarioNotes: item.scenario_notes ? String(item.scenario_notes) : undefined,
     };
   });
 

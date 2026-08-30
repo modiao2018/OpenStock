@@ -7,6 +7,7 @@ import {
     getCatalystEvents,
     getCatalystTrials,
     getCatalystWatchItems,
+    getCustomCatalysts,
     getLlmConfig,
     getMonitorStatus,
 } from '@/lib/actions/catalyst.actions';
@@ -23,12 +24,13 @@ export default async function CatalystPage() {
         redirect('/sign-in');
     }
 
-    const [watchItems, trials, events, monitorStatus, llmConfig] = await Promise.all([
+    const [watchItems, trials, events, monitorStatus, llmConfig, customEvents] = await Promise.all([
         getCatalystWatchItems(),
         getCatalystTrials(),
         getCatalystEvents(50),
         getMonitorStatus(),
         getLlmConfig(),
+        getCustomCatalysts(),
     ]);
 
     return (
@@ -50,7 +52,7 @@ export default async function CatalystPage() {
                 </div>
                 <div className="lg:col-span-1 space-y-8">
                     <MonitorDebugPanel status={monitorStatus} />
-                    <CatalystCalendar trials={trials} />
+                    <CatalystCalendar trials={trials} customEvents={customEvents} />
                 </div>
             </div>
         </div>

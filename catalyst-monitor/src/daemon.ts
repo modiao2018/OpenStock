@@ -8,6 +8,9 @@ import { collectEdgar } from './collectors/edgar';
 import { collectHalts } from './collectors/halts';
 import { collectRss } from './collectors/rss';
 import { collectMarket } from './collectors/market';
+import { collectReminders } from './collectors/reminders';
+import { upsertCustomEvent } from './store';
+import type { AnalysisResult } from './analyze';
 import type { MonitorConfig, NewEvent } from './types';
 
 interface CollectorDef {
@@ -35,29 +38,42 @@ async function runCollector(def: CollectorDef, config: MonitorConfig): Promise<v
         continue;
       }
       log(def.name, `新事件: ${stored.title}`);
+      let result: AnalysisResult;
       if (stored.severity === 'urgent') {
         // 紧急事件：先推送再分析——LLM 的秒级延迟不能拖慢告警
         const delivered = await notify(config, stored);
         if (delivered) await markNotified(stored.id);
-        const analysis = await analyzeEvent(config, stored);
-        if (analysis) {
-          await setEventAnalysis(stored.id, analysis);
+        result = await analyzeEvent(config, stored);
+        if (result.analysis) {
+          await setEventAnalysis(stored.id, result.analysis);
           await pushMessage(config, {
             title: `AI 分析｜${stored.title}`,
-            body: analysis,
+            body: result.analysis,
             urgent: false,
             url: stored.url,
           });
         }
       } else {
         // 普通事件时效性要求低，分析随首条推送一起发，避免打扰两次
-        const analysis = await analyzeEvent(config, stored);
-        if (analysis) {
-          stored.analysis = analysis;
-          await setEventAnalysis(stored.id, analysis);
+        result = await analyzeEvent(config, stored);
+        if (result.analysis) {
+          stored.analysis = result.analysis;
+          await setEventAnalysis(stored.id, result.analysis);
         }
         const delivered = await notify(config, stored);
         if (delivered) await markNotified(stored.id);
+      }
+      // 公告里给了催化剂时间指引 → 自动补进催化剂日历
+      if (result.guidance && stored.symbol) {
+        const isNew = await upsertCustomEvent({
+          symbol: stored.symbol,
+          title: result.guidance.title,
+          date: result.guidance.date,
+          kind: result.guidance.kind,
+          note: `AI 从公告中抽取（原文: ${result.guidance.dateText}）`,
+          source: 'auto',
+        });
+        if (isNew) log(def.name, `日历新增催化剂: ${stored.symbol} ${result.guidance.date} ${result.guidance.title}`);
       }
     }
   } catch (err) {
@@ -82,6 +98,7 @@ async function main(): Promise<void> {
     { name: 'edgar', intervalMinutes: config.poll.edgarMinutes, run: collectEdgar },
     { name: 'rss', intervalMinutes: config.poll.rssMinutes, run: collectRss },
     { name: 'clinicaltrials', intervalMinutes: config.poll.clinicaltrialsMinutes, run: collectClinicalTrials },
+    { name: 'reminders', intervalMinutes: 360, run: collectReminders },
   ];
 
   // 首次运行：把 config.yaml 里的条目迁移入库，此后以数据库（网页端管理）为准
