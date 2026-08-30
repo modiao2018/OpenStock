@@ -436,7 +436,20 @@
       "notConfigured": "未配置",
       "testPush": "发送测试推送",
       "pushOk": "成功",
-      "pushFail": "失败"
+      "pushFail": "失败",
+      "simTitle": "模拟场景推送",
+      "simNote": "发送带【模拟】标记的样例通知，不写入事件时间线；紧急类会按真实流程响铃并跟发 AI 分析",
+      "simSent": "已发送模拟推送：{kind}",
+      "simFailed": "发送失败，检查推送渠道",
+      "sim": {
+        "market": "盘面异动",
+        "halts": "停牌",
+        "edgar": "8-K 申报",
+        "clinicaltrials": "临床结果",
+        "rss": "新闻",
+        "reminder": "催化剂提醒",
+        "weekly": "周报"
+      }
     },
     "llm": {
       "title": "LLM 配置",

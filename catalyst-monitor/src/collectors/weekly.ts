@@ -3,8 +3,14 @@ import { callAIProviderWithConfig } from '@/lib/ai-provider';
 import { resolveLlmConfig } from '@/lib/llm-config';
 import { log, logError } from '../config';
 import { getKv, getRecentEvents, listTrials, listUpcomingCustomEvents, setKv } from '../store';
-import { pushMessage } from '../notify';
+import { pushMessage, type PushEnv } from '../notify';
 import type { MonitorConfig, NewEvent } from '../types';
+
+/** 周报只需要监控清单和推送渠道——网页端模拟发送也用这个入口 */
+export interface WeeklyContext {
+  watchlist: Array<{ symbol: string }>;
+  env: PushEnv;
+}
 
 const SOURCE_ZH: Record<string, string> = {
   clinicaltrials: '临床试验',
@@ -27,7 +33,7 @@ function isoWeek(d: Date): string {
 }
 
 /** 组装周报正文（复盘 + 前瞻），供定时任务和手动 CLI 共用 */
-export async function composeWeeklyReport(config: MonitorConfig): Promise<{ subject: string; text: string }> {
+export async function composeWeeklyReport(config: WeeklyContext): Promise<{ subject: string; text: string }> {
   const since = new Date(Date.now() - 7 * 24 * 3600_000);
   const events = (await getRecentEvents(since)).filter((e) => !e.firstSnapshot);
 
@@ -83,7 +89,7 @@ export async function composeWeeklyReport(config: MonitorConfig): Promise<{ subj
 }
 
 /** 优先邮件（完整正文），无邮件配置时降级 Bark 推送（截断） */
-export async function sendWeeklyReport(config: MonitorConfig): Promise<boolean> {
+export async function sendWeeklyReport(config: WeeklyContext): Promise<boolean> {
   const report = await composeWeeklyReport(config);
   const to = process.env.ALERT_EMAIL || process.env.NODEMAILER_EMAIL;
 
@@ -101,7 +107,7 @@ export async function sendWeeklyReport(config: MonitorConfig): Promise<boolean> 
       logError('weekly:email', err);
     }
   }
-  return pushMessage(config, { title: report.subject, body: report.text, urgent: false });
+  return pushMessage(config.env, { title: report.subject, body: report.text, urgent: false });
 }
 
 /**

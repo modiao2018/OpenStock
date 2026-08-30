@@ -13,7 +13,9 @@ import {
     CatalystWatchItem,
 } from '@/database/models/catalyst.model';
 import { abnormalSeries, rollingWindows, stddev } from '@/catalyst-monitor/src/market-math';
-import { sendBark } from '@/catalyst-monitor/src/notify';
+import { notify, pushMessage, sendBark, type PushEnv } from '@/catalyst-monitor/src/notify';
+import { sendWeeklyReport } from '@/catalyst-monitor/src/collectors/weekly';
+import type { StoredEvent } from '@/catalyst-monitor/src/types';
 import {
     callAIProviderWithConfig,
     getProviderConfig,
@@ -374,6 +376,117 @@ export async function testLlm(): Promise<LlmTestResult> {
         };
     } catch (error) {
         return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    }
+}
+
+// ---- 模拟推送测试：每种监控场景各发一条带【模拟】标记的样例通知 ----
+
+export type SimulatedKind = 'clinicaltrials' | 'edgar' | 'halts' | 'rss' | 'market' | 'reminder' | 'weekly';
+
+export async function sendSimulatedAlert(kind: SimulatedKind): Promise<{ delivered: boolean }> {
+    const env: PushEnv = { barkUrl: process.env.BARK_URL || undefined };
+    await connectToDatabase();
+    const sym = (await CatalystWatchItem.findOne().lean())?.symbol ?? 'DEMO';
+    const nowIso = new Date().toISOString();
+
+    const mkEvent = (partial: Partial<StoredEvent>): StoredEvent => ({
+        id: 'sim',
+        source: 'rss',
+        externalId: 'sim',
+        symbol: sym,
+        title: '',
+        contentHash: 'sim',
+        raw: {},
+        severity: 'normal',
+        fetchedAt: nowIso,
+        isFirstSnapshot: false,
+        ...partial,
+    });
+
+    // urgent 事件按真实流程发两条：告警 + AI 分析跟进
+    const sendUrgentPair = async (ev: StoredEvent, cannedAnalysis: string) => {
+        const delivered = await notify(env, ev);
+        await pushMessage(env, { title: `AI 分析｜${ev.title}`, body: cannedAnalysis, urgent: false, url: ev.url });
+        return { delivered };
+    };
+
+    switch (kind) {
+        case 'clinicaltrials':
+            return sendUrgentPair(
+                mkEvent({
+                    source: 'clinicaltrials',
+                    severity: 'urgent',
+                    title: `${sym} NCT01234567 已完成（已发布结果）【模拟】`,
+                    publishedAt: nowIso,
+                    url: 'https://clinicaltrials.gov',
+                }),
+                '【模拟分析】试验结果已发布：主终点达成 p=0.008，效应量中等偏上，未见 3 级以上安全事件。' +
+                    '倾向判断：利好。理由：统计显著且安全性干净，符合预设"成功"情景，可按预案执行。'
+            );
+        case 'edgar':
+            return sendUrgentPair(
+                mkEvent({
+                    source: 'edgar',
+                    severity: 'urgent',
+                    title: `${sym} 提交 8-K：业绩发布(2.02)、财务报表及附件(9.01)【模拟】`,
+                    publishedAt: nowIso,
+                    url: 'https://www.sec.gov',
+                }),
+                '【模拟分析】公司发布季度业绩 8-K：营收 1.2 亿美元超预期 15%，现金储备 8.5 亿美元可支撑至 2028 年。' +
+                    '倾向判断：中性偏利好。理由：财务稳健但未披露管线新进展。'
+            );
+        case 'market':
+            return sendUrgentPair(
+                mkEvent({
+                    source: 'market',
+                    severity: 'urgent',
+                    title: `${sym} 疑似事件资金流：5分钟异常拉升 4.20%（3.8σ），量比 6.2，同期 XBI 0.15%【模拟】`,
+                    publishedAt: nowIso,
+                }),
+                '【模拟简报】5 分钟急拉 4.2%（3.8σ）且量比 6.2，显著强于 XBI，属事件驱动型放量异动。' +
+                    '近 48 小时无公告对应、未来 30 天无已知催化剂——警惕未公开消息。' +
+                    '建议：查停牌与新闻 wire，复核仓位，勿盲目追价。'
+            );
+        case 'halts':
+            return {
+                delivered: await notify(
+                    env,
+                    mkEvent({
+                        source: 'halts',
+                        severity: 'urgent',
+                        title: `${sym} 停牌：消息待发布(T1) 09:31:00(美东)【模拟】`,
+                        publishedAt: nowIso,
+                        url: 'https://www.nasdaqtrader.com/trader.aspx?id=TradeHalts',
+                    })
+                ),
+            };
+        case 'rss':
+            return {
+                delivered: await notify(
+                    env,
+                    mkEvent({
+                        source: 'rss',
+                        severity: 'normal',
+                        title: `${sym} 相关新闻: Company Announces Positive Phase 2 Interim Data【模拟】`,
+                        publishedAt: nowIso,
+                        analysis:
+                            '【模拟分析】公司公布二期中期数据：达到安全性终点，药代动力学支持每月给药。' +
+                            '倾向判断：利好。理由：推进路径清晰，为后续关键数据铺垫。',
+                    })
+                ),
+            };
+        case 'reminder':
+            return {
+                delivered: await pushMessage(env, {
+                    title: `催化剂提醒｜${sym} 7 天后【模拟】`,
+                    body: `数据读出：${sym} 二期顶线数据（模拟）\n日期: ${new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10)}\n事件前请核对情景预案与仓位（二元事件注意 gap 风险）`,
+                    urgent: false,
+                }),
+            };
+        case 'weekly': {
+            const watchlist = (await CatalystWatchItem.find().lean()).map((d) => ({ symbol: d.symbol }));
+            return { delivered: await sendWeeklyReport({ watchlist, env }) };
+        }
     }
 }
 

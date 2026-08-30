@@ -5,7 +5,14 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Activity, BellRing, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { sendTestPush, type MonitorStatusData } from '@/lib/actions/catalyst.actions';
+import {
+    sendSimulatedAlert,
+    sendTestPush,
+    type MonitorStatusData,
+    type SimulatedKind,
+} from '@/lib/actions/catalyst.actions';
+
+const SIM_KINDS: SimulatedKind[] = ['market', 'halts', 'edgar', 'clinicaltrials', 'rss', 'reminder', 'weekly'];
 
 function formatTime(iso?: string): string {
     if (!iso) return '—';
@@ -19,6 +26,20 @@ export default function MonitorDebugPanel({ status }: { status: MonitorStatusDat
     const t = useTranslations('catalyst.debug');
     const tSource = useTranslations('catalyst.timeline.source');
     const [testing, setTesting] = useState(false);
+    const [simulating, setSimulating] = useState<SimulatedKind | null>(null);
+
+    const handleSimulate = async (kind: SimulatedKind) => {
+        setSimulating(kind);
+        try {
+            const result = await sendSimulatedAlert(kind);
+            if (result.delivered) toast.success(t('simSent', { kind: t(`sim.${kind}`) }));
+            else toast.error(t('simFailed'));
+        } catch {
+            toast.error(t('simFailed'));
+        } finally {
+            setSimulating(null);
+        }
+    };
 
     const channelLabel = (configured: boolean) => (
         <span className={configured ? 'text-teal-400' : 'text-gray-600'}>
@@ -96,6 +117,29 @@ export default function MonitorDebugPanel({ status }: { status: MonitorStatusDat
                 {testing ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <BellRing className="w-4 h-4 mr-1" />}
                 {t('testPush')}
             </Button>
+
+            {/* 每种监控场景的模拟发送——预览各类告警在手机上的样子 */}
+            <div className="mt-4">
+                <h3 className="text-xs uppercase tracking-wide text-gray-500 mb-1">{t('simTitle')}</h3>
+                <p className="text-xs text-gray-600 mb-2">{t('simNote')}</p>
+                <div className="grid grid-cols-2 gap-1.5">
+                    {SIM_KINDS.map((kind) => (
+                        <Button
+                            key={kind}
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleSimulate(kind)}
+                            disabled={simulating !== null || !status.channels.bark}
+                            className="border-gray-700 text-gray-300 h-7 text-xs justify-start"
+                        >
+                            {simulating === kind ? (
+                                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                            ) : null}
+                            {t(`sim.${kind}`)}
+                        </Button>
+                    ))}
+                </div>
+            </div>
         </div>
     );
 }

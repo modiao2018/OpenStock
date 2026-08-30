@@ -42,12 +42,12 @@ async function runCollector(def: CollectorDef, config: MonitorConfig): Promise<v
       let result: AnalysisResult;
       if (stored.severity === 'urgent') {
         // 紧急事件：先推送再分析——LLM 的秒级延迟不能拖慢告警
-        const delivered = await notify(config, stored);
+        const delivered = await notify(config.env, stored);
         if (delivered) await markNotified(stored.id);
         result = await analyzeEvent(config, stored);
         if (result.analysis) {
           await setEventAnalysis(stored.id, result.analysis);
-          await pushMessage(config, {
+          await pushMessage(config.env, {
             title: `AI 分析｜${stored.title}`,
             body: result.analysis,
             urgent: false,
@@ -61,7 +61,7 @@ async function runCollector(def: CollectorDef, config: MonitorConfig): Promise<v
           stored.analysis = result.analysis;
           await setEventAnalysis(stored.id, result.analysis);
         }
-        const delivered = await notify(config, stored);
+        const delivered = await notify(config.env, stored);
         if (delivered) await markNotified(stored.id);
       }
       // 公告里给了催化剂时间指引 → 自动补进催化剂日历

@@ -1,11 +1,13 @@
 // 手动触发周报（不受周一时间窗和去重限制）：npm run monitor:report
 import './env';
 import { loadConfig, log } from './config';
-import { closeStore } from './store';
+import { closeStore, getWatchItems } from './store';
 import { sendWeeklyReport, composeWeeklyReport } from './collectors/weekly';
 
 async function main(): Promise<void> {
-  const config = loadConfig();
+  const base = loadConfig();
+  // 清单以数据库为准（与 daemon 一致）
+  const config = { watchlist: await getWatchItems(), env: base.env };
   if (process.argv.includes('--dry-run')) {
     const report = await composeWeeklyReport(config);
     console.log(`\n${report.subject}\n${'—'.repeat(40)}\n${report.text}\n`);

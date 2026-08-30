@@ -1,6 +1,11 @@
 import { transporter } from '@/lib/nodemailer';
 import { log, logError } from './config';
-import type { MonitorConfig, StoredEvent } from './types';
+import type { StoredEvent } from './types';
+
+/** 推送只依赖渠道配置，daemon 传 config.env，网页端可直接用 process.env 构造 */
+export interface PushEnv {
+  barkUrl?: string;
+}
 
 const SOURCE_LABEL: Record<string, string> = {
   clinicaltrials: '临床试验',
@@ -86,8 +91,8 @@ async function emailFallback(msg: PushMessage): Promise<boolean> {
  * 推送一条消息：Bark 重试 3 次（1.5s/3s 退避），
  * 仍失败且为紧急消息时走邮件兜底。返回是否成功送达任一渠道。
  */
-export async function pushMessage(config: MonitorConfig, msg: PushMessage): Promise<boolean> {
-  const { barkUrl } = config.env;
+export async function pushMessage(env: PushEnv, msg: PushMessage): Promise<boolean> {
+  const { barkUrl } = env;
   if (!barkUrl) {
     log('notify', `(未配置推送渠道，仅记录) ${msg.title}`);
     return false;
@@ -106,8 +111,8 @@ export async function pushMessage(config: MonitorConfig, msg: PushMessage): Prom
   return false;
 }
 
-export async function notify(config: MonitorConfig, ev: StoredEvent): Promise<boolean> {
-  return pushMessage(config, {
+export async function notify(env: PushEnv, ev: StoredEvent): Promise<boolean> {
+  return pushMessage(env, {
     title: `[${SOURCE_LABEL[ev.source] ?? ev.source}] ${ev.title}`,
     body: formatBody(ev),
     urgent: ev.severity === 'urgent',

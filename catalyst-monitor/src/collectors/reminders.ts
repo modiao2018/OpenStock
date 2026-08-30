@@ -54,7 +54,7 @@ export async function collectReminders(config: MonitorConfig): Promise<NewEvent[
       const dedupeKey = `reminded:${c.id}:${days}`;
       if (await getKv(dedupeKey)) continue;
 
-      const delivered = await pushMessage(config, {
+      const delivered = await pushMessage(config.env, {
         title: `催化剂提醒｜${c.symbol} ${days} 天后`,
         body: `${c.label}\n日期: ${c.date}\n事件前请核对情景预案与仓位（二元事件注意 gap 风险）`,
         urgent: false,

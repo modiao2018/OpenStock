@@ -436,7 +436,20 @@
       "notConfigured": "Not configured",
       "testPush": "Send Test Push",
       "pushOk": "OK",
-      "pushFail": "Failed"
+      "pushFail": "Failed",
+      "simTitle": "Simulated scenario push",
+      "simNote": "Sends sample notifications marked 【模拟】 without writing to the timeline; urgent kinds ring and follow up with AI analysis, like the real flow",
+      "simSent": "Simulated push sent: {kind}",
+      "simFailed": "Send failed. Check push channel",
+      "sim": {
+        "market": "Market move",
+        "halts": "Halt",
+        "edgar": "8-K filing",
+        "clinicaltrials": "Trial results",
+        "rss": "News",
+        "reminder": "Catalyst reminder",
+        "weekly": "Weekly report"
+      }
     },
     "llm": {
       "title": "LLM Settings",
