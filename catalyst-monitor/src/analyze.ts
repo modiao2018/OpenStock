@@ -2,6 +2,7 @@ import { callAIProviderWithConfig } from '@/lib/ai-provider';
 import { resolveLlmConfig } from '@/lib/llm-config';
 import { log, logError } from './config';
 import { fetchWithRetry } from './http';
+import { getRecentEvents, listTrials, listUpcomingCustomEvents } from './store';
 import type { MonitorConfig, StoredEvent } from './types';
 
 const MAX_DOC_CHARS = 6000;
@@ -46,12 +47,50 @@ async function buildContext(config: MonitorConfig, ev: StoredEvent): Promise<str
     }
     case 'clinicaltrials':
       return `事件类型: ClinicalTrials.gov 注册信息变更\n最新关键字段: ${JSON.stringify(ev.raw)}`;
+    case 'market':
+      return buildMarketContext(ev);
     case 'halts':
       // 停牌事件本身没有"报告内容"，且推送时效优先，不做 LLM 分析
       return null;
     default:
       return null;
   }
+}
+
+/** 盘面异动简报的上下文：信号数据 + 该标的近期事件 + 临近催化剂 */
+async function buildMarketContext(ev: StoredEvent): Promise<string> {
+  const symbol = ev.symbol;
+  const parts = [
+    '事件类型: 盘面异动信号（价格/成交量异常，非新闻）',
+    `信号数据: ${JSON.stringify(ev.raw)}`,
+  ];
+
+  try {
+    const recent = (await getRecentEvents(new Date(Date.now() - 48 * 3600_000)))
+      .filter((e) => e.symbol === symbol && e.source !== 'market' && !e.firstSnapshot)
+      .slice(0, 8);
+    parts.push(
+      recent.length
+        ? `该标的近 48 小时公开事件:\n${recent.map((e) => `- [${e.source}] ${e.title}`).join('\n')}`
+        : '该标的近 48 小时无已捕获的公开事件（异动无公开信息对应）'
+    );
+
+    const in30d = new Date(Date.now() + 30 * 24 * 3600_000).toISOString().slice(0, 10);
+    const catalysts: string[] = [];
+    for (const c of await listUpcomingCustomEvents()) {
+      if (c.symbol === symbol && c.date <= in30d) catalysts.push(`- ${c.date} ${c.title}`);
+    }
+    for (const t of await listTrials()) {
+      if (t.symbol === symbol && t.primaryCompletionDate && t.primaryCompletionDate <= in30d) {
+        catalysts.push(`- ${t.primaryCompletionDate} ${t.nctId} 主要完成`);
+      }
+    }
+    parts.push(catalysts.length ? `未来 30 天催化剂:\n${catalysts.join('\n')}` : '未来 30 天无已知催化剂');
+  } catch (err) {
+    logError('analyze:market-context', err);
+  }
+
+  return parts.join('\n');
 }
 
 export interface GuidanceCatalyst {
@@ -140,11 +179,20 @@ export async function analyzeEvent(config: MonitorConfig, ev: StoredEvent): Prom
     ? `\n用户预设的情景预案：\n${watchItem.scenarioNotes}\n若本事件是数据/审批结果，请在最后指明结果落在哪一档（成功/模糊/失败/无法判断）。`
     : '';
 
+  // 盘面异动是"没有新闻的异常"，分析目标是排查原因而不是解读报告
+  const instruction =
+    ev.source === 'market'
+      ? '这是一条盘面异动告警。请用简体中文输出不超过 200 字的异动简报（纯文本，不要 markdown）：' +
+        '1) 解读异动方向与力度；2) 结合近期事件与催化剂日历给出最可能的原因假设' +
+        '（有公告对应 / 临近催化剂的提前定价 / 无信息对应的可疑资金流——若无对应信息要明确提示警惕未公开消息）；' +
+        '3) 建议动作（如查停牌与新闻 wire、复核仓位、勿盲目追价）。'
+      : '请用简体中文分析以下事件，输出不超过 150 字的纯文本（不要使用 markdown 或列表符号）：' +
+        '先一句话概括发生了什么；再给出关键数据或条款（如有）；' +
+        '最后给出倾向判断（利好/利空/中性/不确定）及一句理由。';
+
   const prompt =
-    '你是美股医药催化剂监控助手，用户是中国投资者。请用简体中文分析以下事件，' +
-    '输出不超过 150 字的纯文本（不要使用 markdown 或列表符号）：' +
-    '先一句话概括发生了什么；再给出关键数据或条款（如有）；' +
-    '最后给出倾向判断（利好/利空/中性/不确定）及一句理由。' +
+    '你是美股医药催化剂监控助手，用户是中国投资者。' +
+    instruction +
     scenarioBlock +
     '\n\n' +
     `监控标的: ${ev.symbol ?? '未知'}\n事件标题: ${ev.title}\n${context}`;
