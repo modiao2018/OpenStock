@@ -7,10 +7,12 @@ import {
     getCatalystEvents,
     getCatalystTrials,
     getCatalystWatchItems,
+    getMonitorStatus,
 } from '@/lib/actions/catalyst.actions';
 import CatalystManager from '@/components/catalyst/CatalystManager';
 import CatalystCalendar from '@/components/catalyst/CatalystCalendar';
 import EventTimeline from '@/components/catalyst/EventTimeline';
+import MonitorDebugPanel from '@/components/catalyst/MonitorDebugPanel';
 
 export default async function CatalystPage() {
     const t = await getTranslations('catalyst.page');
@@ -19,10 +21,11 @@ export default async function CatalystPage() {
         redirect('/sign-in');
     }
 
-    const [watchItems, trials, events] = await Promise.all([
+    const [watchItems, trials, events, monitorStatus] = await Promise.all([
         getCatalystWatchItems(),
         getCatalystTrials(),
         getCatalystEvents(50),
+        getMonitorStatus(),
     ]);
 
     return (
@@ -39,7 +42,8 @@ export default async function CatalystPage() {
                     <CatalystManager initialItems={watchItems} />
                     <EventTimeline events={events} />
                 </div>
-                <div className="lg:col-span-1">
+                <div className="lg:col-span-1 space-y-8">
+                    <MonitorDebugPanel status={monitorStatus} />
                     <CatalystCalendar trials={trials} />
                 </div>
             </div>

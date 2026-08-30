@@ -18,16 +18,24 @@ function formatBody(ev: StoredEvent): string {
   return lines.join('\n');
 }
 
-async function sendBark(barkUrl: string, ev: StoredEvent): Promise<void> {
-  const title = `[${SOURCE_LABEL[ev.source] ?? ev.source}] ${ev.title}`;
+export interface PushMessage {
+  title: string;
+  body: string;
+  /** true → Bark critical 级别（绕过静音/勿扰） */
+  urgent: boolean;
+  url?: string;
+}
+
+/** 供 daemon 和网页端（测试推送）共用 */
+export async function sendBark(barkUrl: string, msg: PushMessage): Promise<void> {
   const payload: Record<string, string> = {
-    title: title.slice(0, 200),
-    body: formatBody(ev).slice(0, 1000),
+    title: msg.title.slice(0, 200),
+    body: msg.body.slice(0, 1000),
     group: 'catalyst-monitor',
     // critical 级别在 iOS 上可绕过静音/勿扰——只给紧急事件用
-    level: ev.severity === 'urgent' ? 'critical' : 'timeSensitive',
+    level: msg.urgent ? 'critical' : 'timeSensitive',
   };
-  if (ev.url) payload.url = ev.url;
+  if (msg.url) payload.url = msg.url;
 
   const res = await fetch(barkUrl, {
     method: 'POST',
@@ -38,9 +46,9 @@ async function sendBark(barkUrl: string, ev: StoredEvent): Promise<void> {
   if (!res.ok) throw new Error(`Bark HTTP ${res.status}`);
 }
 
-async function sendFeishu(webhookUrl: string, ev: StoredEvent): Promise<void> {
-  const prefix = ev.severity === 'urgent' ? '🚨' : '📌';
-  const text = `${prefix} [${SOURCE_LABEL[ev.source] ?? ev.source}] ${ev.title}\n${formatBody(ev)}`;
+export async function sendFeishu(webhookUrl: string, msg: PushMessage): Promise<void> {
+  const prefix = msg.urgent ? '🚨' : '📌';
+  const text = `${prefix} ${msg.title}\n${msg.body}`;
   const res = await fetch(webhookUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -63,12 +71,19 @@ export async function notify(config: MonitorConfig, ev: StoredEvent): Promise<bo
     return false;
   }
 
+  const msg: PushMessage = {
+    title: `[${SOURCE_LABEL[ev.source] ?? ev.source}] ${ev.title}`,
+    body: formatBody(ev),
+    urgent: ev.severity === 'urgent',
+    url: ev.url,
+  };
+
   let delivered = false;
   const useBark = barkUrl && (ev.severity === 'urgent' || !feishuWebhookUrl);
 
   if (useBark) {
     try {
-      await sendBark(barkUrl, ev);
+      await sendBark(barkUrl, msg);
       delivered = true;
     } catch (err) {
       logError('notify:bark', err);
@@ -76,7 +91,7 @@ export async function notify(config: MonitorConfig, ev: StoredEvent): Promise<bo
   }
   if (feishuWebhookUrl) {
     try {
-      await sendFeishu(feishuWebhookUrl, ev);
+      await sendFeishu(feishuWebhookUrl, msg);
       delivered = true;
     } catch (err) {
       logError('notify:feishu', err);

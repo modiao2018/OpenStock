@@ -381,6 +381,23 @@
       "hasResults": "已有结果",
       "lastUpdate": "最近更新"
     },
+    "debug": {
+      "title": "运行状态与调试",
+      "online": "在线",
+      "offline": "离线",
+      "collectors": "采集器频率",
+      "every": "每 {minutes} 分钟",
+      "lastRun": "上次运行",
+      "never": "从未运行",
+      "channels": "推送渠道",
+      "feishu": "飞书",
+      "edgarContact": "EDGAR 联系邮箱",
+      "configured": "已配置",
+      "notConfigured": "未配置",
+      "testPush": "发送测试推送",
+      "pushOk": "成功",
+      "pushFail": "失败"
+    },
     "timeline": {
       "title": "事件时间线",
       "empty": "暂无事件",

@@ -1,6 +1,6 @@
 import './env';
 import { loadConfig, log, logError } from './config';
-import { closeStore, getWatchItems, insertEvent, markNotified, seedWatchItems } from './store';
+import { closeStore, getWatchItems, insertEvent, markNotified, seedWatchItems, setKv } from './store';
 import { notify } from './notify';
 import { collectClinicalTrials } from './collectors/clinicaltrials';
 import { collectEdgar } from './collectors/edgar';
@@ -38,6 +38,13 @@ async function runCollector(def: CollectorDef, config: MonitorConfig): Promise<v
     }
   } catch (err) {
     logError(def.name, err);
+  } finally {
+    // 心跳：网页端"运行状态"面板据此判断 daemon 是否在线、各采集器上次运行时间
+    try {
+      await setKv(`collector_last_run:${def.name}`, new Date().toISOString());
+    } catch {
+      // 数据库不可用时上面已报过错，心跳失败不再刷屏
+    }
   }
 }
 

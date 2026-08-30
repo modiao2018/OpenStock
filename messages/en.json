@@ -381,6 +381,23 @@
       "hasResults": "Results posted",
       "lastUpdate": "Last update"
     },
+    "debug": {
+      "title": "Status & Debug",
+      "online": "Online",
+      "offline": "Offline",
+      "collectors": "Collector intervals",
+      "every": "every {minutes} min",
+      "lastRun": "Last run",
+      "never": "Never ran",
+      "channels": "Push channels",
+      "feishu": "Feishu",
+      "edgarContact": "EDGAR contact email",
+      "configured": "Configured",
+      "notConfigured": "Not configured",
+      "testPush": "Send Test Push",
+      "pushOk": "OK",
+      "pushFail": "Failed"
+    },
     "timeline": {
       "title": "Event Timeline",
       "empty": "No events yet",

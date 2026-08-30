@@ -1,11 +1,16 @@
 'use server';
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { parse as parseYaml } from 'yaml';
 import { connectToDatabase } from '@/database/mongoose';
 import {
     CatalystEvent,
+    CatalystKv,
     CatalystTrial,
     CatalystWatchItem,
 } from '@/database/models/catalyst.model';
+import { sendBark, sendFeishu } from '@/catalyst-monitor/src/notify';
 import { revalidatePath } from 'next/cache';
 
 export interface CatalystWatchItemData {
@@ -157,6 +162,102 @@ export async function getCatalystEvents(limit = 50): Promise<CatalystEventData[]
         console.error('Error fetching catalyst events:', error);
         return [];
     }
+}
+
+// ---- 运行状态与调试 ----
+
+export interface CollectorStatus {
+    name: string;
+    intervalMinutes: number;
+    lastRun?: string;
+    /** 上次运行时间在 3 倍轮询间隔内视为活跃 */
+    active: boolean;
+}
+
+export interface MonitorStatusData {
+    daemonOnline: boolean;
+    channels: { bark: boolean; feishu: boolean; edgarContact: boolean };
+    collectors: CollectorStatus[];
+}
+
+export async function getMonitorStatus(): Promise<MonitorStatusData> {
+    // 轮询间隔以 config.yaml 为准（daemon 启动时读取同一文件）
+    const defaults = { halts: 2, edgar: 5, rss: 5, clinicaltrials: 15 };
+    let intervals: Record<string, number> = { ...defaults };
+    try {
+        const raw = parseYaml(readFileSync(join(process.cwd(), 'catalyst-monitor', 'config.yaml'), 'utf8')) as any;
+        intervals = {
+            halts: Number(raw?.poll?.halts_minutes ?? defaults.halts),
+            edgar: Number(raw?.poll?.edgar_minutes ?? defaults.edgar),
+            rss: Number(raw?.poll?.rss_minutes ?? defaults.rss),
+            clinicaltrials: Number(raw?.poll?.clinicaltrials_minutes ?? defaults.clinicaltrials),
+        };
+    } catch (error) {
+        console.error('Error reading catalyst-monitor/config.yaml:', error);
+    }
+
+    let lastRuns: Record<string, string> = {};
+    try {
+        await connectToDatabase();
+        const docs = await CatalystKv.find({ key: /^collector_last_run:/ }).lean();
+        lastRuns = Object.fromEntries(docs.map((d) => [d.key.replace('collector_last_run:', ''), d.value]));
+    } catch (error) {
+        console.error('Error fetching collector heartbeats:', error);
+    }
+
+    const now = Date.now();
+    const collectors: CollectorStatus[] = Object.entries(intervals).map(([name, intervalMinutes]) => {
+        const lastRun = lastRuns[name];
+        const active = !!lastRun && now - Date.parse(lastRun) < intervalMinutes * 3 * 60_000;
+        return { name, intervalMinutes, lastRun, active };
+    });
+
+    return {
+        daemonOnline: collectors.some((c) => c.active),
+        channels: {
+            bark: Boolean(process.env.BARK_URL),
+            feishu: Boolean(process.env.FEISHU_WEBHOOK_URL),
+            edgarContact: Boolean(process.env.EDGAR_CONTACT),
+        },
+        collectors,
+    };
+}
+
+export interface TestPushResult {
+    bark: 'ok' | 'fail' | 'skipped';
+    feishu: 'ok' | 'fail' | 'skipped';
+}
+
+/** 调试用：向已配置的渠道各发一条测试消息（normal 级别，不响铃） */
+export async function sendTestPush(): Promise<TestPushResult> {
+    const msg = {
+        title: 'catalyst-monitor 测试推送',
+        body: `来自网页调试面板 · ${new Date().toISOString()}`,
+        urgent: false,
+    };
+    const result: TestPushResult = { bark: 'skipped', feishu: 'skipped' };
+
+    const barkUrl = process.env.BARK_URL;
+    if (barkUrl) {
+        try {
+            await sendBark(barkUrl, msg);
+            result.bark = 'ok';
+        } catch (error) {
+            console.error('Test push to Bark failed:', error);
+            result.bark = 'fail';
+        }
+    }
+    const feishuUrl = process.env.FEISHU_WEBHOOK_URL;
+    if (feishuUrl) {
+        try {
+            await sendFeishu(feishuUrl, msg);
+            result.feishu = 'ok';
+        } catch (error) {
+            console.error('Test push to Feishu failed:', error);
+            result.feishu = 'fail';
+        }
+    }
+    return result;
 }
 
 export async function getCatalystTrials(): Promise<CatalystTrialData[]> {
