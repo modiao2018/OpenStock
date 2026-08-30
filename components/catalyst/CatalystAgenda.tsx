@@ -109,7 +109,8 @@ export default function CatalystAgenda({
                     key: `t-${tr.nctId}`,
                     date: iso ?? '9999-12-31',
                     symbol: tr.symbol,
-                    title: tr.title,
+                    // 中文界面优先显示 AI 翻译的标题，原文可通过链接核对
+                    title: locale.startsWith('zh') ? (tr.titleZh ?? tr.title) : tr.title,
                     chip: t('phase', { phases: phaseDigits(tr.phase) }),
                     isCustom: false,
                     url: `https://clinicaltrials.gov/study/${tr.nctId}`,
@@ -121,7 +122,7 @@ export default function CatalystAgenda({
         out.sort((a, b) => a.date.localeCompare(b.date) || Number(b.isCustom) - Number(a.isCustom));
         return out;
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [customEvents, trials, showTrials]);
+    }, [customEvents, trials, showTrials, locale]);
 
     const byDate = useMemo(() => {
         const m = new Map<string, AgendaEntry[]>();

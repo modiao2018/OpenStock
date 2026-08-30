@@ -52,6 +52,8 @@ export interface ICatalystTrial extends Document {
     nctId: string;
     symbol: string;
     title: string;
+    /** AI 翻译的中文标题（登记库原文是英文） */
+    titleZh?: string;
     overallStatus: string;
     phase: string;
     primaryCompletionDate?: string;
@@ -65,6 +67,7 @@ const CatalystTrialSchema = new Schema<ICatalystTrial>(
         nctId: { type: String, required: true, unique: true, uppercase: true, trim: true },
         symbol: { type: String, required: true, uppercase: true, trim: true },
         title: { type: String, required: true },
+        titleZh: { type: String },
         overallStatus: { type: String, required: true },
         phase: { type: String, required: true },
         primaryCompletionDate: { type: String },

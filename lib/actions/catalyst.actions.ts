@@ -61,6 +61,7 @@ export interface CatalystTrialData {
     nctId: string;
     symbol: string;
     title: string;
+    titleZh?: string;
     overallStatus: string;
     phase: string;
     primaryCompletionDate?: string;
@@ -930,6 +931,7 @@ export async function getCatalystTrials(): Promise<CatalystTrialData[]> {
             nctId: d.nctId,
             symbol: d.symbol,
             title: d.title,
+            titleZh: d.titleZh ?? undefined,
             overallStatus: d.overallStatus,
             phase: d.phase,
             primaryCompletionDate: d.primaryCompletionDate ?? undefined,

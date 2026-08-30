@@ -137,6 +137,47 @@ export function extractAction(analysis?: string | null): ActionWord | null {
   return (m?.[1] as ActionWord) ?? null;
 }
 
+/** 批量把英文试验标题译成中文短句（一次 LLM 调用处理一批），存回 trials 表 */
+export async function translateTrialTitles(
+  trials: Array<{ nctId: string; title: string }>,
+  save: (nctId: string, zh: string) => Promise<void>
+): Promise<number> {
+  if (trials.length === 0) return 0;
+  const llm = await resolveLlmConfig();
+  if (!llm) return 0;
+
+  const prompt =
+    '把以下临床试验英文标题翻译成简洁的中文（每条不超过 40 字，保留药物代号原文，突出适应症和分期）。' +
+    '只输出 JSON 数组，不要其他文字：[{"nctId":"...","zh":"..."}]\n\n' +
+    trials.map((t) => `${t.nctId}: ${t.title}`).join('\n');
+
+  try {
+    const reply = await callAIProviderWithConfig(prompt, {
+      name: llm.provider,
+      apiKey: llm.apiKey,
+      baseUrl: llm.baseUrl,
+      model: llm.model,
+    });
+    const parsed = (reply.match(/\[[\s\S]*\]/) ? JSON.parse(reply.match(/\[[\s\S]*\]/)![0]) : []) as Array<{
+      nctId?: string;
+      zh?: string;
+    }>;
+    let saved = 0;
+    const valid = new Set(trials.map((t) => t.nctId));
+    for (const item of parsed) {
+      if (item.nctId && item.zh && valid.has(item.nctId)) {
+        await save(item.nctId, String(item.zh).slice(0, 80));
+        saved++;
+      }
+    }
+    if (saved > 0) log('analyze', `试验标题翻译完成 ${saved}/${trials.length} 条`);
+    return saved;
+  } catch (err) {
+    logError('analyze:translate', err);
+    return 0;
+  }
+}
+
 export interface GuidanceCatalyst {
   title: string;
   date: string; // YYYY-MM-DD

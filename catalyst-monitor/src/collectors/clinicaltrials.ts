@@ -1,6 +1,7 @@
 import { log, logError } from '../config';
 import { fetchWithRetry } from '../http';
-import { sha256, upsertTrial } from '../store';
+import { listTrialsMissingZh, setTrialTitleZh, sha256, upsertTrial } from '../store';
+import { translateTrialTitles } from '../analyze';
 import type { MonitorConfig, NewEvent } from '../types';
 
 const API_BASE = 'https://clinicaltrials.gov/api/v2/studies';
@@ -99,6 +100,13 @@ export async function collectClinicalTrials(config: MonitorConfig): Promise<NewE
   // 个别试验失败只记日志；全军覆没说明源整体不可用，抛给 daemon 的错误追踪
   if (attempted > 0 && failed === attempted) {
     throw new Error(`全部 ${attempted} 个试验查询失败，最近错误: ${lastError instanceof Error ? lastError.message : lastError}`);
+  }
+
+  // 补翻中文标题（一批一次 LLM 调用；未配置 LLM 则静默跳过）
+  try {
+    await translateTrialTitles(await listTrialsMissingZh(), setTrialTitleZh);
+  } catch (err) {
+    logError('clinicaltrials:translate', err);
   }
 
   log('clinicaltrials', `checked ${events.length} trials`);

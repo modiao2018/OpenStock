@@ -78,6 +78,19 @@ export async function upsertTrial(t: TrialSnapshot): Promise<void> {
   await CatalystTrial.findOneAndUpdate({ nctId: t.nctId }, { $set: t }, { upsert: true });
 }
 
+/** 缺少中文标题的试验（AI 翻译用），限量避免单轮 LLM 过载 */
+export async function listTrialsMissingZh(limit = 20): Promise<Array<{ nctId: string; title: string }>> {
+  await connectToDatabase();
+  const docs = await CatalystTrial.find({ $or: [{ titleZh: null }, { titleZh: { $exists: false } }] })
+    .limit(limit)
+    .lean();
+  return docs.map((d) => ({ nctId: d.nctId, title: d.title }));
+}
+
+export async function setTrialTitleZh(nctId: string, titleZh: string): Promise<void> {
+  await CatalystTrial.updateOne({ nctId }, { $set: { titleZh } });
+}
+
 export async function listTrials(): Promise<TrialSnapshot[]> {
   await connectToDatabase();
   const docs = await CatalystTrial.find().sort({ primaryCompletionDate: 1 }).lean();
