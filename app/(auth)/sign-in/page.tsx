@@ -10,9 +10,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import OpenDevSocietyBranding from "@/components/OpenDevSocietyBranding";
 import React from "react";
+import { useTranslations } from "next-intl";
 
 const SignIn = () => {
     const router = useRouter()
+    const t = useTranslations('auth.signIn');
     const {
         register,
         handleSubmit,
@@ -32,58 +34,58 @@ const SignIn = () => {
                 router.push('/');
                 return;
             }
-            toast.error('Sign in failed', {
-                description: result.error ?? 'Invalid email or password.',
+            toast.error(t('toastErrorTitle'), {
+                description: result.error ?? t('toastErrorInvalid'),
             });
         } catch (e) {
             console.error(e);
-            toast.error('Sign in failed', {
-                description: e instanceof Error ? e.message : 'Failed to sign in.'
+            toast.error(t('toastErrorTitle'), {
+                description: e instanceof Error ? e.message : t('toastErrorGeneric')
             })
         }
     }
 
     return (
         <>
-            <h1 className="form-title">Welcome back</h1>
+            <h1 className="form-title">{t('title')}</h1>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
                 <InputField
                     name="email"
-                    label="Email"
+                    label={t('emailLabel')}
                     placeholder="opendevsociety@cc.cc"
                     register={register}
                     error={errors.email}
                     validation={{
-                        required: 'Email is required',
+                        required: t('emailRequired'),
                         pattern: {
                             value: /^[\w-.]+@([\w-]+\.)+[\w-]{2,}$/,
-                            message: 'Please enter a valid email address'
+                            message: t('emailInvalid')
                         }
                     }}
                 />
 
                 <InputField
                     name="password"
-                    label="Password"
-                    placeholder="Enter your password"
+                    label={t('passwordLabel')}
+                    placeholder={t('passwordPlaceholder')}
                     type="password"
                     register={register}
                     error={errors.password}
-                    validation={{ required: 'Password is required', minLength: 8 }}
+                    validation={{ required: t('passwordRequired'), minLength: 8 }}
                 />
 
                 <div className="flex justify-end">
                     <Link href="/forgot-password" className="footer-link text-sm">
-                        Forgot password?
+                        {t('forgotPassword')}
                     </Link>
                 </div>
 
                 <Button type="submit" disabled={isSubmitting} className="yellow-btn w-full mt-5">
-                    {isSubmitting ? 'Signing In' : 'Sign In'}
+                    {isSubmitting ? t('submitting') : t('submit')}
                 </Button>
 
-                <FooterLink text="Don't have an account?" linkText="Create an account" href="/sign-up" />
+                <FooterLink text={t('footerText')} linkText={t('footerLink')} href="/sign-up" />
                 <OpenDevSocietyBranding outerClassName="mt-10 flex justify-center" />
                 <div className="mt-5 flex justify-center">
                     <a href="https://peerlist.io/ravixalgorithm/project/openstock" target="_blank" rel="noreferrer">

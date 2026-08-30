@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from "react";
 import { addToWatchlist, removeFromWatchlist } from "@/lib/actions/watchlist.actions";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 interface WatchlistButtonProps {
     symbol: string;
@@ -22,20 +23,21 @@ const WatchlistButton = ({
     userId,
     onWatchlistChange,
 }: WatchlistButtonProps) => {
+    const t = useTranslations("watchlist.button");
     const [added, setAdded] = useState<boolean>(!!isInWatchlist);
     const [loading, setLoading] = useState(false);
 
     const label = useMemo(() => {
         if (type === "icon") return added ? "" : "";
-        return added ? "Remove from Watchlist" : "Add to Watchlist";
-    }, [added, type]);
+        return added ? t("removeFromWatchlist") : t("addToWatchlist");
+    }, [added, type, t]);
 
     const handleClick = async (e: React.MouseEvent) => {
         e.preventDefault(); // Prevent link navigation if inside a link
 
         if (!userId && !onWatchlistChange) {
             console.error("WatchlistButton: userId or onWatchlistChange is required");
-            toast.error("Please sign in to modify watchlist");
+            toast.error(t("signInRequired"));
             return;
         }
 
@@ -47,10 +49,10 @@ const WatchlistButton = ({
             if (userId) {
                 if (next) {
                     await addToWatchlist(userId, symbol, company);
-                    toast.success(`${symbol} added to watchlist`);
+                    toast.success(t("addedTo", { symbol }));
                 } else {
                     await removeFromWatchlist(userId, symbol);
-                    toast.success(`${symbol} removed from watchlist`);
+                    toast.success(t("removedFrom", { symbol }));
                 }
             }
 
@@ -59,7 +61,7 @@ const WatchlistButton = ({
         } catch (error) {
             console.error("Watchlist action failed:", error);
             setAdded(!next); // Revert on error
-            toast.error("Failed to update watchlist");
+            toast.error(t("updateFailed"));
         } finally {
             setLoading(false);
         }
@@ -69,8 +71,8 @@ const WatchlistButton = ({
         return (
             <button
                 type="button"
-                title={added ? `Remove ${symbol} from watchlist` : `Add ${symbol} to watchlist`}
-                aria-label={added ? `Remove ${symbol} from watchlist` : `Add ${symbol} to watchlist`}
+                title={added ? t("removeSymbol", { symbol }) : t("addSymbol", { symbol })}
+                aria-label={added ? t("removeSymbol", { symbol }) : t("addSymbol", { symbol })}
                 className={`flex items-center justify-center p-2 rounded-full transition-all ${added ? "text-yellow-400 hover:bg-yellow-400/10" : "text-gray-400 hover:text-white hover:bg-white/10"} ${loading ? "opacity-50 cursor-wait" : ""}`}
                 onClick={handleClick}
                 disabled={loading}
@@ -112,7 +114,7 @@ const WatchlistButton = ({
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-7 4v6m4-6v6m4-6v6" />
                 </svg>
             ) : null}
-            <span>{loading ? "Updating..." : label}</span>
+            <span>{loading ? t("updating") : label}</span>
         </button>
     );
 };

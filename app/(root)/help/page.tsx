@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import {
   HelpCircle,
   MessageCircle,
@@ -9,34 +10,17 @@ import {
   ChevronDown
 } from 'lucide-react';
 
-export const metadata: Metadata = {
-  title: 'Help Center | OpenStock',
-  description: 'Community-driven support for OpenStock. No paywalls, just help.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('metadata');
+  return {
+    title: t('help.title'),
+    description: t('help.description'),
+  };
+}
 
-export default function HelpPage() {
-  const faqs = [
-    {
-      question: "Is OpenStock really free forever?",
-      answer: "Yes! We run on donations and community contribution. Core features (tracking, alerts, analysis) will remain free. We believe financial tools shouldn't be luxury items."
-    },
-    {
-      question: "How do I add stocks to my watchlist?",
-      answer: "Use the search bar at the top or in the header to find a company. On the stock's detail page, click the 'Heart' or 'Star' icon to instantly add it to your dashboard."
-    },
-    {
-      question: "Where does the market data come from?",
-      answer: "We partner with Finnhub and other providers to offer real-time and delayed data. While robust, please use it for analysis rather than high-frequency trading."
-    },
-    {
-      question: "Can I contribute code or designs?",
-      answer: "Absolutely! Check our GitHub repository. We label issues as 'good first issue' for beginners. We welcome designers, developers, and writers alike."
-    },
-    {
-      question: "My alerts aren't triggering.",
-      answer: "Alerts run every 5 minutes via our background jobs. Ensure you've confirmed your email address, as we send notifications primarily via email."
-    }
-  ];
+export default async function HelpPage() {
+  const t = await getTranslations('help');
+  const faqs = t.raw('faq') as { question: string; answer: string }[];
 
   return (
     <div className="max-w-4xl mx-auto px-4 pb-20">
@@ -46,38 +30,38 @@ export default function HelpPage() {
         <div className="inline-flex p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20 mb-4">
           <HelpCircle className="text-blue-400 h-8 w-8" />
         </div>
-        <h1 className="text-4xl md:text-5xl font-bold text-white">How can we help?</h1>
-        <p className="text-xl text-gray-400">Community-powered support for everyone.</p>
+        <h1 className="text-4xl md:text-5xl font-bold text-white">{t('title')}</h1>
+        <p className="text-xl text-gray-400">{t('subtitle')}</p>
       </div>
 
       {/* Quick Action Grid */}
       <div className="grid md:grid-cols-3 gap-4 mb-16">
         <HelpCard
           icon={<BookOpen className="text-teal-400" />}
-          title="Read Docs"
-          desc="Deep dive into features and API integration."
+          title={t('cards.docs.title')}
+          desc={t('cards.docs.desc')}
           link="/api-docs"
-          linkText="View Documentation"
+          linkText={t('cards.docs.linkText')}
         />
         <HelpCard
           icon={<MessageCircle className="text-purple-400" />}
-          title="Community Chat"
-          desc="Get real-time answers from other users."
+          title={t('cards.chat.title')}
+          desc={t('cards.chat.desc')}
           link="https://discord.gg/JkJ8kfxgxB"
-          linkText="Join Discord"
+          linkText={t('cards.chat.linkText')}
         />
         <HelpCard
           icon={<Github className="text-white" />}
-          title="Report Bugs"
-          desc="Found an issue? Let our developers know."
+          title={t('cards.bugs.title')}
+          desc={t('cards.bugs.desc')}
           link="https://github.com/Open-Dev-Society/OpenStock/issues"
-          linkText="Open Issue"
+          linkText={t('cards.bugs.linkText')}
         />
       </div>
 
       {/* FAQs */}
       <div className="space-y-8">
-        <h2 className="text-2xl font-bold text-white border-b border-gray-800 pb-4">Frequently Asked Questions</h2>
+        <h2 className="text-2xl font-bold text-white border-b border-gray-800 pb-4">{t('faqTitle')}</h2>
         <div className="grid gap-4">
           {faqs.map((faq, idx) => (
             <div key={idx} className="bg-gray-900/50 border border-gray-800 rounded-xl p-6 hover:bg-gray-800/50 transition-colors">
@@ -95,14 +79,14 @@ export default function HelpPage() {
 
       {/* Direct Contact */}
       <div className="mt-20 bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-2xl p-8 text-center">
-        <h3 className="text-xl font-bold text-white mb-2">Still stuck?</h3>
-        <p className="text-gray-400 mb-6">Our team (and community) answers emails, usually entirely for free.</p>
+        <h3 className="text-xl font-bold text-white mb-2">{t('stuckTitle')}</h3>
+        <p className="text-gray-400 mb-6">{t('stuckDesc')}</p>
         <a
           href="mailto:opendevsociety@gmail.com"
           className="inline-flex items-center gap-2 bg-white text-black px-6 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors"
         >
           <Mail size={18} />
-          Contact Support
+          {t('contactButton')}
         </a>
       </div>
 

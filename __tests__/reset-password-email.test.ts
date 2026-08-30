@@ -37,7 +37,7 @@ describe('sendPasswordResetEmail', () => {
         expect(sendMailMock).toHaveBeenCalledTimes(1);
         const [mailOptions] = sendMailMock.mock.calls[0];
 
-        expect(mailOptions.html).toContain('Hi &lt;Admin&amp;Co.&gt;,');
+        expect(mailOptions.html).toContain('&lt;Admin&amp;Co.&gt;，你好：');
         expect(mailOptions.html).toContain('href="https://example.com/reset-password?token=a%20b&amp;next=%3Cscript%3E"');
         expect(mailOptions.html).not.toContain('<script>');
         expect(mailOptions.text).toContain('https://example.com/reset-password?token=a%20b&next=%3Cscript%3E');

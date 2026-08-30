@@ -15,11 +15,15 @@ import { headers } from 'next/headers';
 import { isStockInWatchlist } from '@/lib/actions/watchlist.actions';
 import { getStockSentimentInsights } from '@/lib/actions/adanos.actions';
 import { formatSymbolForTradingView } from '@/lib/utils';
+import { getLocale } from 'next-intl/server';
+import { toTradingViewLocale } from '@/i18n/config';
 
 export default async function StockDetails({ params }: StockDetailsPageProps) {
     const { symbol } = await params;
     const tvSymbol = formatSymbolForTradingView(symbol);
     const scriptUrl = `https://s3.tradingview.com/external-embedding/embed-widget-`;
+    const locale = await getLocale();
+    const tvLocale = toTradingViewLocale(locale);
 
     const session = await auth.api.getSession({
         headers: await headers()
@@ -37,13 +41,13 @@ export default async function StockDetails({ params }: StockDetailsPageProps) {
                 <div className="flex flex-col gap-6">
                     <TradingViewWidget
                         scriptUrl={`${scriptUrl}symbol-info.js`}
-                        config={SYMBOL_INFO_WIDGET_CONFIG(tvSymbol)}
+                        config={{ ...SYMBOL_INFO_WIDGET_CONFIG(tvSymbol), locale: tvLocale }}
                         height={170}
                     />
 
                     <TradingViewWidget
                         scriptUrl={`${scriptUrl}advanced-chart.js`}
-                        config={CANDLE_CHART_WIDGET_CONFIG(tvSymbol)}
+                        config={{ ...CANDLE_CHART_WIDGET_CONFIG(tvSymbol), locale: tvLocale }}
                         className="custom-chart"
                         height={600}
                         allowExpand={true}
@@ -51,7 +55,7 @@ export default async function StockDetails({ params }: StockDetailsPageProps) {
 
                     <TradingViewWidget
                         scriptUrl={`${scriptUrl}advanced-chart.js`}
-                        config={BASELINE_WIDGET_CONFIG(tvSymbol)}
+                        config={{ ...BASELINE_WIDGET_CONFIG(tvSymbol), locale: tvLocale }}
                         className="custom-chart"
                         height={600}
                         allowExpand={true}
@@ -73,19 +77,19 @@ export default async function StockDetails({ params }: StockDetailsPageProps) {
 
                     <TradingViewWidget
                         scriptUrl={`${scriptUrl}technical-analysis.js`}
-                        config={TECHNICAL_ANALYSIS_WIDGET_CONFIG(tvSymbol)}
+                        config={{ ...TECHNICAL_ANALYSIS_WIDGET_CONFIG(tvSymbol), locale: tvLocale }}
                         height={400}
                     />
 
                     <TradingViewWidget
                         scriptUrl={`${scriptUrl}company-profile.js`}
-                        config={COMPANY_PROFILE_WIDGET_CONFIG(tvSymbol)}
+                        config={{ ...COMPANY_PROFILE_WIDGET_CONFIG(tvSymbol), locale: tvLocale }}
                         height={440}
                     />
 
                     <TradingViewWidget
                         scriptUrl={`${scriptUrl}financials.js`}
-                        config={COMPANY_FINANCIALS_WIDGET_CONFIG(tvSymbol)}
+                        config={{ ...COMPANY_FINANCIALS_WIDGET_CONFIG(tvSymbol), locale: tvLocale }}
                         height={800}
                     />
                 </div>

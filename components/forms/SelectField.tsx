@@ -9,7 +9,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 
-const SelectField = ({name, label, placeholder, options, control, error, required = false}: SelectFieldProps) => {
+const SelectField = ({name, label, placeholder, options, control, error, required = false, requiredMessage}: SelectFieldProps & { requiredMessage?: string }) => {
     return (
         <div className="space-y-2">
             <Label htmlFor={name}>{label}</Label>
@@ -18,7 +18,7 @@ const SelectField = ({name, label, placeholder, options, control, error, require
                 name={name}
                 control={control}
                 rules={{
-                    required: required ? `Please select ${label.toLowerCase()}`:false,
+                    required: required ? (requiredMessage ?? `Please select ${label.toLowerCase()}`) : false,
                 }}
                 render={({field}) => (
                     <Select value={field.value} onValueChange={field.onChange}>

@@ -5,6 +5,7 @@ import { removeFromWatchlist } from "@/lib/actions/watchlist.actions";
 import { getQuote } from "@/lib/actions/finnhub.actions";
 import { Bell, Loader2, X } from "lucide-react";
 import CreateAlertModal from "./CreateAlertModal";
+import { useTranslations } from "next-intl";
 
 interface WatchlistStockChipProps {
     symbol: string;
@@ -12,6 +13,7 @@ interface WatchlistStockChipProps {
 }
 
 export default function WatchlistStockChip({ symbol, userId }: WatchlistStockChipProps) {
+    const t = useTranslations("watchlist.chip");
     const [price, setPrice] = useState<number>(0);
     const [modalOpen, setModalOpen] = useState(false);
     const [loadingPrice, setLoadingPrice] = useState(false);
@@ -52,7 +54,7 @@ export default function WatchlistStockChip({ symbol, userId }: WatchlistStockChi
             <button
                 onClick={handleBellClick}
                 className="text-gray-400 hover:text-yellow-400 transition-colors p-0.5"
-                title="Create Alert"
+                title={t("createAlert")}
                 disabled={loadingPrice}
             >
                 {loadingPrice ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />}
@@ -60,7 +62,7 @@ export default function WatchlistStockChip({ symbol, userId }: WatchlistStockChi
 
             {/* Remove Button */}
             <form action={handleRemove}>
-                <button type="submit" className="text-gray-400 hover:text-red-400 transition-colors p-0.5" title="Remove">
+                <button type="submit" className="text-gray-400 hover:text-red-400 transition-colors p-0.5" title={t("remove")}>
                     <X className="w-3.5 h-3.5" />
                 </button>
             </form>

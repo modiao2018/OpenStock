@@ -185,6 +185,12 @@ describe('getChangeColorClass', () => {
     it('returns red for negative', () => {
         expect(getChangeColorClass(-0.5)).toBe('text-red-500');
     });
+
+    it('follows the red-up convention for zh-CN', () => {
+        expect(getChangeColorClass(1.5, 'zh-CN')).toBe('text-red-500');
+        expect(getChangeColorClass(-0.5, 'zh-CN')).toBe('text-green-500');
+        expect(getChangeColorClass(0, 'zh-CN')).toBe('text-gray-400');
+    });
 });
 
 describe('calculateNewsDistribution', () => {

@@ -4,14 +4,16 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getUserWatchlist } from '@/lib/actions/watchlist.actions';
 import { getUserAlerts } from '@/lib/actions/alert.actions';
-import { getNews } from '@/lib/actions/finnhub.actions';
+import { getNews, getWatchlistData } from '@/lib/actions/finnhub.actions';
 import WatchlistManager from '@/components/watchlist/WatchlistManager';
 import AlertsPanel from '@/components/watchlist/AlertsPanel';
 import NewsGrid from '@/components/watchlist/NewsGrid';
 import SearchCommand from '@/components/SearchCommand';
 import { Loader2 } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 
 export default async function WatchlistPage() {
+    const t = await getTranslations('watchlist.page');
     const session = await auth.api.getSession({
         headers: await headers()
     });
@@ -31,8 +33,11 @@ export default async function WatchlistPage() {
 
     const watchlistSymbols = watchlistItems.map((item: any) => item.symbol);
 
-    // Fallback news if watchlist has items
-    const relevantNews = watchlistSymbols.length > 0 ? await getNews(watchlistSymbols) : news;
+    // Quotes for the self-rendered table + news relevant to the watchlist
+    const [tableData, relevantNews] = await Promise.all([
+        watchlistSymbols.length > 0 ? getWatchlistData(watchlistSymbols) : Promise.resolve([]),
+        watchlistSymbols.length > 0 ? getNews(watchlistSymbols) : Promise.resolve(news),
+    ]);
 
     return (
         <div className="min-h-screen bg-black text-gray-100 p-6 md:p-8">
@@ -40,12 +45,12 @@ export default async function WatchlistPage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
                 <div>
                     <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-500">
-                        Watchlist
+                        {t('title')}
                     </h1>
-                    <p className="text-gray-500 mt-1">Track your favorite stocks and manage alerts.</p>
+                    <p className="text-gray-500 mt-1">{t('subtitle')}</p>
                 </div>
                 <div className="flex items-center space-x-4">
-                    <SearchCommand renderAs="button" label="Add Stock" initialStocks={[]} />
+                    <SearchCommand renderAs="button" label={t('addStock')} initialStocks={[]} />
                 </div>
             </div>
 
@@ -53,7 +58,7 @@ export default async function WatchlistPage() {
                 {/* Main Content - Watchlist Table */}
                 <div className="lg:col-span-3 space-y-8">
                     <div className="space-y-6">
-                        <WatchlistManager initialItems={watchlistItems} userId={userId} />
+                        <WatchlistManager initialItems={watchlistItems} initialTableData={tableData} userId={userId} />
                     </div>
 
                     {/* News Section */}

@@ -13,11 +13,11 @@ export const formatTimeAgo = (timestamp: number) => {
 
     if (diffInHours > 24) {
         const days = Math.floor(diffInHours / 24);
-        return `${days} day${days > 1 ? 's' : ''} ago`;
+        return `${days} 天前`;
     } else if (diffInHours >= 1) {
-        return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+        return `${diffInHours} 小时前`;
     } else {
-        return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
+        return `${diffInMinutes} 分钟前`;
     }
 };
 
@@ -103,9 +103,14 @@ export const formatChangePercent = (changePercent?: number) => {
     return `${sign}${changePercent.toFixed(2)}%`;
 };
 
-export const getChangeColorClass = (changePercent?: number) => {
+// Chinese market convention is the opposite of the Western one: red = up, green = down
+export const isRedUpLocale = (locale: string) => locale === 'zh-CN';
+
+export const getChangeColorClass = (changePercent?: number, locale: string = 'en') => {
     if (!changePercent) return 'text-gray-400';
-    return changePercent > 0 ? 'text-green-500' : 'text-red-500';
+    const positive = changePercent > 0;
+    if (isRedUpLocale(locale)) return positive ? 'text-red-500' : 'text-green-500';
+    return positive ? 'text-green-500' : 'text-red-500';
 };
 
 export const formatPrice = (price: number) => {
@@ -132,7 +137,9 @@ export function formatNumber(num: number): string {
     return value.toString();
 }
 
-export const formatDateToday = new Date().toLocaleDateString('en-US', {
+// Note: this is a function (not a module-level const) so the date is computed
+// at call time rather than frozen at import time.
+export const formatDateToday = () => new Date().toLocaleDateString('zh-CN', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -143,10 +150,10 @@ export const formatDateToday = new Date().toLocaleDateString('en-US', {
 
 export const getAlertText = (alert: Alert) => {
     const condition = alert.alertType === 'upper' ? '>' : '<';
-    return `Price ${condition} ${formatPrice(alert.threshold)}`;
+    return `价格 ${condition} ${formatPrice(alert.threshold)}`;
 };
 
-export const getFormattedTodayDate = () => new Date().toLocaleDateString('en-US', {
+export const getFormattedTodayDate = () => new Date().toLocaleDateString('zh-CN', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',

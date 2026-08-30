@@ -6,8 +6,11 @@ import Link from "next/link";
 import { ArrowUp, ArrowDown, Bell } from "lucide-react";
 import CreateAlertModal from "./CreateAlertModal";
 import WatchlistButton from "@/components/WatchlistButton";
-import { formatCurrency, formatNumber } from "@/lib/utils";
+import { formatCurrency, formatNumber, isRedUpLocale } from "@/lib/utils";
 import { removeFromWatchlist } from "@/lib/actions/watchlist.actions";
+import { useLocale, useTranslations } from "next-intl";
+
+const TABLE_HEADER_KEYS = ["company", "symbol", "price", "change", "marketCap", "actions"] as const;
 
 interface WatchlistTableProps {
     data: any[];
@@ -16,6 +19,8 @@ interface WatchlistTableProps {
 }
 
 export default function WatchlistTable({ data, userId, onRefresh }: WatchlistTableProps) {
+    const t = useTranslations("watchlist.table");
+    const redUp = isRedUpLocale(useLocale());
     const [stocks, setStocks] = useState(data);
 
     useEffect(() => {
@@ -64,8 +69,8 @@ export default function WatchlistTable({ data, userId, onRefresh }: WatchlistTab
     if (!stocks || stocks.length === 0) {
         return (
             <div className="text-center py-12 bg-gray-900/50 rounded-lg border border-gray-800">
-                <h3 className="text-xl font-medium text-gray-300 mb-2">Your watchlist is empty</h3>
-                <p className="text-gray-500 mb-6">Add stocks to track their performance and set alerts.</p>
+                <h3 className="text-xl font-medium text-gray-300 mb-2">{t("emptyTitle")}</h3>
+                <p className="text-gray-500 mb-6">{t("emptyDescription")}</p>
             </div>
         );
     }
@@ -75,12 +80,14 @@ export default function WatchlistTable({ data, userId, onRefresh }: WatchlistTab
             <table className="w-full text-left text-sm border-collapse">
                 <thead className="bg-white/5 text-gray-400 font-medium border-b border-white/10">
                     <tr>
-                        <th className="px-6 py-4 font-semibold tracking-wide">Company</th>
-                        <th className="px-6 py-4 font-semibold tracking-wide">Symbol</th>
-                        <th className="px-6 py-4 font-semibold tracking-wide">Price</th>
-                        <th className="px-6 py-4 font-semibold tracking-wide">Change</th>
-                        <th className="px-6 py-4 font-semibold tracking-wide">Market Cap</th>
-                        <th className="px-6 py-4 text-right font-semibold tracking-wide">Actions</th>
+                        {TABLE_HEADER_KEYS.map((key) => (
+                            <th
+                                key={key}
+                                className={`px-6 py-4 font-semibold tracking-wide${key === "actions" ? " text-right" : ""}`}
+                            >
+                                {t(`headers.${key}`)}
+                            </th>
+                        ))}
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-white/10">
@@ -118,7 +125,7 @@ export default function WatchlistTable({ data, userId, onRefresh }: WatchlistTab
                                     {formatCurrency(stock.price)}
                                 </td>
                                 <td className={`px-6 py-4 font-medium`}>
-                                    <div className={`flex items-center w-fit px-2 py-1 rounded-md ${isPositive ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"}`}>
+                                    <div className={`flex items-center w-fit px-2 py-1 rounded-md ${(redUp ? !isPositive : isPositive) ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"}`}>
                                         {isPositive ? <ArrowUp className="w-3.5 h-3.5 mr-1.5" /> : <ArrowDown className="w-3.5 h-3.5 mr-1.5" />}
                                         {Math.abs(stock.changePercent).toFixed(2)}%
                                     </div>
@@ -134,7 +141,7 @@ export default function WatchlistTable({ data, userId, onRefresh }: WatchlistTab
                                             currentPrice={stock.price}
                                             onAlertCreated={onRefresh}
                                         >
-                                            <button className="p-2.5 rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-all border border-transparent hover:border-white/10" title="Add Alert">
+                                            <button className="p-2.5 rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-all border border-transparent hover:border-white/10" title={t("addAlert")}>
                                                 <Bell className="w-4.5 h-4.5" />
                                             </button>
                                         </CreateAlertModal>

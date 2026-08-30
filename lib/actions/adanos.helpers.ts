@@ -14,29 +14,31 @@ export type SourceComparePayload = {
     stocks?: BaseCompareRow[];
 };
 
+// `label` and `metricLabel` are stable i18n keys, translated at render time
+// (see StockSentimentCard: `sentiment.sources.*` / `sentiment.metrics.*`).
 export const SOURCE_CONFIG = {
     reddit: {
-        label: 'Reddit',
+        label: 'reddit',
         path: '/reddit/stocks/v1/compare',
-        metricLabel: 'Mentions',
+        metricLabel: 'mentions',
         metricField: 'mentions',
     },
     x: {
-        label: 'X.com',
+        label: 'x',
         path: '/x/stocks/v1/compare',
-        metricLabel: 'Mentions',
+        metricLabel: 'mentions',
         metricField: 'mentions',
     },
     news: {
-        label: 'News',
+        label: 'news',
         path: '/news/stocks/v1/compare',
-        metricLabel: 'Mentions',
+        metricLabel: 'mentions',
         metricField: 'mentions',
     },
     polymarket: {
-        label: 'Polymarket',
+        label: 'polymarket',
         path: '/polymarket/stocks/v1/compare',
-        metricLabel: 'Trades',
+        metricLabel: 'trades',
         metricField: 'trade_count',
     },
 } as const satisfies Record<
@@ -67,7 +69,7 @@ export interface StockSentimentInsights {
     companyName: string | null;
     averageBuzz: number;
     bullishAverage: number | null;
-    sourceAlignment: string;
+    sourceAlignment: SourceAlignmentKey;
     availableSources: number;
     sources: SentimentSourceInsight[];
 }
@@ -94,20 +96,30 @@ function normalizeTrend(value: unknown): SentimentTrend | null {
     return value === 'rising' || value === 'falling' || value === 'stable' ? value : null;
 }
 
-export function getSourceAlignment(bullishValues: number[]): string {
-    if (bullishValues.length === 0) return 'No sentiment mix';
-    if (bullishValues.length === 1) return 'Single-source view';
+export type SourceAlignmentKey =
+    | 'bullishAlignment'
+    | 'bearishAlignment'
+    | 'tightAlignment'
+    | 'wideDivergence'
+    | 'mixed'
+    | 'singleSource'
+    | 'noSentimentMix';
+
+// Returns a stable key, translated at render time (`sentiment.alignment.*`).
+export function getSourceAlignment(bullishValues: number[]): SourceAlignmentKey {
+    if (bullishValues.length === 0) return 'noSentimentMix';
+    if (bullishValues.length === 1) return 'singleSource';
 
     const min = Math.min(...bullishValues);
     const max = Math.max(...bullishValues);
     const spread = max - min;
     const avg = average(bullishValues);
 
-    if (spread <= 12 && avg >= 60) return 'Bullish alignment';
-    if (spread <= 12 && avg <= 40) return 'Bearish alignment';
-    if (spread <= 12) return 'Tight alignment';
-    if (spread >= 25) return 'Wide divergence';
-    return 'Mixed';
+    if (spread <= 12 && avg >= 60) return 'bullishAlignment';
+    if (spread <= 12 && avg <= 40) return 'bearishAlignment';
+    if (spread <= 12) return 'tightAlignment';
+    if (spread >= 25) return 'wideDivergence';
+    return 'mixed';
 }
 
 export function normalizeSourceInsight(

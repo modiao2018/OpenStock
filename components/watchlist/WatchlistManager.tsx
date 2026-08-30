@@ -2,17 +2,20 @@
 
 import React, { useState, useMemo } from 'react';
 import WatchlistStockChip from './WatchlistStockChip';
-import TradingViewWatchlist from './TradingViewWatchlist';
+import WatchlistTable from './WatchlistTable';
 import { Button } from '@/components/ui/button';
 import { ArrowDownAZ, ArrowUpZA, ArrowUpDown } from 'lucide-react';
 import { WatchlistItem } from '@/database/models/watchlist.model';
+import { useTranslations } from 'next-intl';
 
 interface WatchlistManagerProps {
     initialItems: WatchlistItem[]; // Using the DB model type directly or a simplified version
+    initialTableData: any[]; // Quotes from getWatchlistData, same order as initialItems
     userId: string;
 }
 
-export default function WatchlistManager({ initialItems, userId }: WatchlistManagerProps) {
+export default function WatchlistManager({ initialItems, initialTableData, userId }: WatchlistManagerProps) {
+    const t = useTranslations('watchlist.manager');
     // Sort state: 'asc' (A-Z), 'desc' (Z-A), or null (added order/default)
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | null>(null);
 
@@ -36,12 +39,19 @@ export default function WatchlistManager({ initialItems, userId }: WatchlistMana
 
     const watchlistSymbols = sortedItems.map((item) => item.symbol);
 
+    const sortedTableData = useMemo(() => {
+        if (!sortOrder) return initialTableData;
+        return [...initialTableData].sort((a, b) =>
+            sortOrder === 'asc' ? a.symbol.localeCompare(b.symbol) : b.symbol.localeCompare(a.symbol)
+        );
+    }, [initialTableData, sortOrder]);
+
     return (
         <div className="space-y-6">
             <div className="bg-gray-900/30 rounded-xl border border-gray-800 p-4 backdrop-blur-sm">
                 <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider flex items-center">
-                        <span className="mr-2">Manage Symbols</span>
+                        <span className="mr-2">{t('manageSymbols')}</span>
                         <span className="text-xs bg-gray-800 text-gray-500 px-2 py-0.5 rounded-full">
                             {watchlistSymbols.length}
                         </span>
@@ -53,10 +63,10 @@ export default function WatchlistManager({ initialItems, userId }: WatchlistMana
                         className="h-8 px-2 text-gray-400 hover:text-white hover:bg-white/10"
                         title={
                             sortOrder === 'asc'
-                                ? 'Sorted A-Z'
+                                ? t('sortedAsc')
                                 : sortOrder === 'desc'
-                                    ? 'Sorted Z-A'
-                                    : 'Default Order'
+                                    ? t('sortedDesc')
+                                    : t('defaultOrder')
                         }
                     >
                         {sortOrder === 'asc' && <ArrowDownAZ className="w-4 h-4 mr-2" />}
@@ -64,10 +74,10 @@ export default function WatchlistManager({ initialItems, userId }: WatchlistMana
                         {sortOrder === null && <ArrowUpDown className="w-4 h-4 mr-2" />}
                         <span className="text-xs">
                             {sortOrder === 'asc'
-                                ? 'A-Z'
+                                ? t('sortAscShort')
                                 : sortOrder === 'desc'
-                                    ? 'Z-A'
-                                    : 'Sort'}
+                                    ? t('sortDescShort')
+                                    : t('sortShort')}
                         </span>
                     </Button>
                 </div>
@@ -83,12 +93,12 @@ export default function WatchlistManager({ initialItems, userId }: WatchlistMana
                         ))}
                     </div>
                 ) : (
-                    <p className="text-sm text-gray-500 italic">No stocks in watchlist.</p>
+                    <p className="text-sm text-gray-500 italic">{t('empty')}</p>
                 )}
             </div>
 
             <div className="min-h-[550px]">
-                <TradingViewWatchlist symbols={watchlistSymbols} />
+                <WatchlistTable data={sortedTableData} userId={userId} />
             </div>
         </div>
     );

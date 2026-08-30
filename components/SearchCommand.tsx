@@ -7,8 +7,11 @@ import {Loader2,  TrendingUp} from "lucide-react";
 import Link from "next/link";
 import {searchStocks} from "@/lib/actions/finnhub.actions";
 import {useDebounce} from "@/hooks/useDebounce";
+import {useTranslations} from "next-intl";
 
-export default function SearchCommand({ renderAs = 'button', label = 'Add stock', initialStocks }: SearchCommandProps) {
+export default function SearchCommand({ renderAs = 'button', label, initialStocks }: SearchCommandProps) {
+    const t = useTranslations("search")
+    const displayLabel = label ?? t('addStock')
     const [open, setOpen] = useState(false)
     const [searchTerm, setSearchTerm] = useState("")
     const [loading, setLoading] = useState(false)
@@ -62,29 +65,29 @@ export default function SearchCommand({ renderAs = 'button', label = 'Add stock'
                     onClick={() => setOpen(true)}
                     className="search-text"
                 >
-                    {label}
+                    {displayLabel}
                 </button>
             ): (
                 <Button onClick={() => setOpen(true)} className="search-btn">
-                    {label}
+                    {displayLabel}
                 </Button>
             )}
             <CommandDialog open={open} onOpenChange={setOpen} className="search-dialog">
                 <div className="search-field">
-                    <CommandInput value={searchTerm} onValueChange={setSearchTerm} placeholder="Search stocks..." className="search-input" />
+                    <CommandInput value={searchTerm} onValueChange={setSearchTerm} placeholder={t('placeholder')} className="search-input" />
                     {loading && <Loader2 className="search-loader" />}
                 </div>
                 <CommandList className="search-list">
                     {loading ? (
-                        <CommandEmpty className="search-list-empty">Loading stocks...</CommandEmpty>
+                        <CommandEmpty className="search-list-empty">{t('loading')}</CommandEmpty>
                     ) : displayStocks?.length === 0 ? (
                         <div className="search-list-indicator">
-                            {isSearchMode ? 'No results found' : 'No stocks available'}
+                            {isSearchMode ? t('noResults') : t('noStocks')}
                         </div>
                     ) : (
                         <ul>
                             <div className="search-count">
-                                {isSearchMode ? 'Search results' : 'Popular stocks'}
+                                {isSearchMode ? t('searchResults') : t('popularStocks')}
                                 {` `}({displayStocks?.length || 0})
                             </div>
                             {displayStocks?.map((stock) => (
@@ -100,7 +103,7 @@ export default function SearchCommand({ renderAs = 'button', label = 'Add stock'
                                                 {stock.name}
                                             </div>
                                             <div className="text-sm text-gray-500">
-                                                {[stock.symbol, stock.exchange, stock.type].filter(Boolean).join(' | ')}
+                                                {[stock.symbol, stock.exchange, stock.type === 'Common Stock' ? t('commonStock') : stock.type].filter(Boolean).join(' | ')}
                                             </div>
                                         </div>
 

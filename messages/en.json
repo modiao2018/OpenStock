@@ -1,0 +1,489 @@
+{
+  "metadata": {
+    "title": "OpenStock",
+    "description": "OpenStock is an open-source alternative to expensive market platforms. Track real-time prices, set personalized alerts, and explore detailed company insights — built openly, for everyone, forever free.",
+    "about": {
+      "title": "About Us | OpenStock",
+      "description": "The story behind OpenStock and the Open Dev Society."
+    },
+    "help": {
+      "title": "Help Center | OpenStock",
+      "description": "Community-driven support for OpenStock. No paywalls, just help."
+    },
+    "apiDocs": {
+      "title": "API & Architecture | OpenStock",
+      "description": "Technical documentation for OpenStock architecture, AI integrations, and background jobs."
+    }
+  },
+  "common": {
+    "loading": "Loading..."
+  },
+  "home": {
+    "stockHeatmap": "Stock Heatmap"
+  },
+  "heatmap": {
+    "marketCap": "Market Cap",
+    "noData": "Heatmap data is unavailable right now. Please try again later.",
+    "settings": "Settings",
+    "sourceLabel": "Data source",
+    "sourcePopular": "Configured stocks",
+    "configureDashboard": "Customize industries & stocks…",
+    "sourceWatchlist": "My watchlist",
+    "groupBySector": "Group by sector",
+    "showLegend": "Show legend",
+    "showSectorChips": "Show sector tags",
+    "showZoomControls": "Show zoom buttons",
+    "allSectors": "All sectors",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomReset": "Reset zoom",
+    "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit fullscreen",
+    "open": "Open",
+    "prevClose": "Prev close",
+    "dayRange": "Day range",
+    "clearFilter": "Clear filter",
+    "watchlistEmpty": "Your watchlist is empty — add some stocks first."
+  },
+  "sectors": {
+    "Technology": "Technology",
+    "Semiconductors": "Semiconductors",
+    "Media": "Media",
+    "Retail": "Retail",
+    "Automobiles": "Automobiles",
+    "Financial Services": "Financial Services",
+    "Road & Rail": "Road & Rail",
+    "Hotels, Restaurants & Leisure": "Hotels, Restaurants & Leisure",
+    "Banking": "Banking",
+    "Insurance": "Insurance",
+    "Pharmaceuticals": "Pharmaceuticals",
+    "Biotechnology": "Biotechnology",
+    "Health Care": "Health Care",
+    "Energy": "Energy",
+    "Utilities": "Utilities",
+    "Telecommunication": "Telecommunication",
+    "Communications": "Communications",
+    "Aerospace & Defense": "Aerospace & Defense",
+    "Machinery": "Machinery",
+    "Chemicals": "Chemicals",
+    "Beverages": "Beverages",
+    "Food Products": "Food Products",
+    "Consumer products": "Consumer products",
+    "Textiles, Apparel & Luxury Goods": "Textiles, Apparel & Luxury Goods",
+    "Airlines": "Airlines",
+    "Entertainment": "Entertainment",
+    "Real Estate": "Real Estate",
+    "Logistics & Transportation": "Logistics & Transportation",
+    "Life Sciences Tools & Services": "Life Sciences Tools & Services",
+    "Auto Components": "Auto Components",
+    "Electrical Equipment": "Electrical Equipment",
+    "Other": "Other"
+  },
+  "dashboardConfig": {
+    "title": "Customize dashboard",
+    "description": "Pick the industries and stocks to display. The dashboard heatmap follows this selection.",
+    "selectIndustry": "Select all",
+    "clearIndustry": "Clear",
+    "selectedCount": "{count} selected",
+    "resetDefault": "Reset to default",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Dashboard configuration saved",
+    "saveFailed": "Failed to save. Please try again."
+  },
+  "auth": {
+    "layout": {
+      "quote": "“For me, OpenStock isn’t just another stock app. It’s about giving people clarity and control in the market, without barriers or subscriptions.”",
+      "founder": "Founder @opendevsociety",
+      "dashboardAlt": "Dashboard Preview"
+    },
+    "signIn": {
+      "title": "Welcome back",
+      "emailLabel": "Email",
+      "emailRequired": "Email is required",
+      "emailInvalid": "Please enter a valid email address",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "passwordRequired": "Password is required",
+      "forgotPassword": "Forgot password?",
+      "submit": "Sign In",
+      "submitting": "Signing In",
+      "footerText": "Don't have an account?",
+      "footerLink": "Create an account",
+      "toastErrorTitle": "Sign in failed",
+      "toastErrorInvalid": "Invalid email or password.",
+      "toastErrorGeneric": "Failed to sign in."
+    },
+    "signUp": {
+      "title": "Sign Up & Personalize",
+      "fullNameLabel": "Full Name",
+      "fullNamePlaceholder": "Enter full name",
+      "fullNameRequired": "Full name is required",
+      "emailLabel": "Email",
+      "emailRequired": "Email is required",
+      "emailInvalid": "Please enter a valid email address",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Enter a strong password",
+      "countryLabel": "Country",
+      "investmentGoalsLabel": "Investment Goals",
+      "investmentGoalsPlaceholder": "Select your investment goal",
+      "investmentGoalsRequired": "Please select investment goals",
+      "riskToleranceLabel": "Risk Tolerance",
+      "riskTolerancePlaceholder": "Select your risk level",
+      "riskToleranceRequired": "Please select risk tolerance",
+      "preferredIndustryLabel": "Preferred Industry",
+      "preferredIndustryPlaceholder": "Select your preferred industry",
+      "preferredIndustryRequired": "Please select preferred industry",
+      "submit": "Start Your Investing Journey",
+      "submitting": "Creating Account",
+      "footerText": "Already have an account?",
+      "footerLink": "Sign in",
+      "toastErrorTitle": "Sign up failed",
+      "toastErrorDescription": "We could not create your account.",
+      "toastErrorGeneric": "Failed to create an account."
+    },
+    "forgotPassword": {
+      "title": "Forgot your password?",
+      "subtitle": "Enter your email address and we'll send you a password reset link.",
+      "emailLabel": "Email",
+      "emailRequired": "Email is required",
+      "emailInvalid": "Please enter a valid email address",
+      "submit": "Send reset link",
+      "submitting": "Sending reset link",
+      "successToast": "If an account exists for that email, a reset link has been sent.",
+      "toastErrorTitle": "Password reset unavailable",
+      "toastErrorGeneric": "Unable to start password reset.",
+      "footerText": "Remembered it?",
+      "footerLink": "Sign in"
+    },
+    "resetPassword": {
+      "loading": "Loading reset form...",
+      "title": "Choose a new password",
+      "subtitle": "Enter a new password for your account.",
+      "newPasswordLabel": "New Password",
+      "newPasswordPlaceholder": "Enter a new password",
+      "confirmPasswordLabel": "Confirm Password",
+      "confirmPasswordPlaceholder": "Confirm your new password",
+      "confirmPasswordRequired": "Please confirm your new password",
+      "passwordsMismatch": "Passwords do not match",
+      "invalidToken": "Reset link is invalid or expired.",
+      "successToast": "Password updated. You can sign in now.",
+      "toastErrorTitle": "Password reset failed",
+      "toastErrorGeneric": "Unable to reset your password.",
+      "submit": "Reset password",
+      "submitting": "Resetting password",
+      "footerText": "Need a fresh link?",
+      "footerLink": "Request another one"
+    },
+    "passwordValidation": {
+      "required": "Password is required",
+      "minLength": "Password must be at least 8 characters",
+      "pattern": "Password must include uppercase, lowercase, and a number"
+    },
+    "passwordRules": {
+      "minLength": "At least 8 characters",
+      "uppercase": "At least 1 uppercase letter",
+      "lowercase": "At least 1 lowercase letter",
+      "number": "At least 1 number"
+    }
+  },
+  "options": {
+    "investmentGoals": {
+      "Growth": "Growth",
+      "Income": "Income",
+      "Balanced": "Balanced",
+      "Conservative": "Conservative"
+    },
+    "riskTolerance": {
+      "Low": "Low",
+      "Medium": "Medium",
+      "High": "High"
+    },
+    "preferredIndustries": {
+      "Technology": "Technology",
+      "Healthcare": "Healthcare",
+      "Finance": "Finance",
+      "Energy": "Energy",
+      "Consumer Goods": "Consumer Goods"
+    }
+  },
+  "country": {
+    "placeholder": "Select your country...",
+    "search": "Search countries...",
+    "empty": "No country found.",
+    "helper": "Helps us show market data and news relevant to you.",
+    "required": "Please select your country"
+  },
+  "about": {
+    "heroTitle": "Tools for Everyone.",
+    "heroSubtitle": "We believe financial intelligence shouldn't be locked behind paywalls. OpenStock is built by the community, for the community.",
+    "features": [
+      {
+        "title": "Open Access",
+        "desc": "No premium tiers for core features. Real-time data and insights available to all, forever."
+      },
+      {
+        "title": "Open Source",
+        "desc": "Fully transparent codebase. Audit our algorithms, contribute features, and build with us."
+      },
+      {
+        "title": "Community Driven",
+        "desc": "Powered by donations and volunteers. We answer to our users, not shareholders."
+      }
+    ],
+    "storyTitle": "The Open Dev Society",
+    "storyP1": "OpenStock was born from a simple frustration: why are powerful financial tools so expensive?",
+    "storyP2": "We are a collective of developers, designers, and financial enthusiasts working under the <ods>Open Dev Society</ods> banner. Our mission is to democratize software by building high-quality, open-source alternatives to proprietary platforms.",
+    "githubCta": "Visit our GitHub",
+    "partnersTitle": "Backed by Amazing Partners"
+  },
+  "help": {
+    "title": "How can we help?",
+    "subtitle": "Community-powered support for everyone.",
+    "cards": {
+      "docs": {
+        "title": "Read Docs",
+        "desc": "Deep dive into features and API integration.",
+        "linkText": "View Documentation"
+      },
+      "chat": {
+        "title": "Community Chat",
+        "desc": "Get real-time answers from other users.",
+        "linkText": "Join Discord"
+      },
+      "bugs": {
+        "title": "Report Bugs",
+        "desc": "Found an issue? Let our developers know.",
+        "linkText": "Open Issue"
+      }
+    },
+    "faqTitle": "Frequently Asked Questions",
+    "faq": [
+      {
+        "question": "Is OpenStock really free forever?",
+        "answer": "Yes! We run on donations and community contribution. Core features (tracking, alerts, analysis) will remain free. We believe financial tools shouldn't be luxury items."
+      },
+      {
+        "question": "How do I add stocks to my watchlist?",
+        "answer": "Use the search bar at the top or in the header to find a company. On the stock's detail page, click the 'Heart' or 'Star' icon to instantly add it to your dashboard."
+      },
+      {
+        "question": "Where does the market data come from?",
+        "answer": "We partner with Finnhub and other providers to offer real-time and delayed data. While robust, please use it for analysis rather than high-frequency trading."
+      },
+      {
+        "question": "Can I contribute code or designs?",
+        "answer": "Absolutely! Check our GitHub repository. We label issues as 'good first issue' for beginners. We welcome designers, developers, and writers alike."
+      },
+      {
+        "question": "My alerts aren't triggering.",
+        "answer": "Alerts run every 5 minutes via our background jobs. Ensure you've confirmed your email address, as we send notifications primarily via email."
+      }
+    ],
+    "stuckTitle": "Still stuck?",
+    "stuckDesc": "Our team (and community) answers emails, usually entirely for free.",
+    "contactButton": "Contact Support"
+  },
+  "apiDocs": {
+    "heroTitle": "OpenStock Architecture",
+    "heroSubtitle": "A transparent look at the event-driven, multi-provider system powering your market insights.",
+    "badgeVersion": "v1.0.0 Active",
+    "badgeAi": "Gemini + Siray AI",
+    "badgeLicense": "Open Source AGPL-3.0",
+    "aiTitle": "Intelligent UI",
+    "aiDesc": "We prioritize uptime for generative features (Welcome Emails, News Summaries) using a robust multi-provider strategy. Our system automatically routes around outages.",
+    "primaryTitle": "Primary: Google Gemini",
+    "primaryDesc": "Handles high-volume inference for news summarization and personalization.",
+    "fallbackTitle": "Fallback: Siray.ai",
+    "fallbackDesc": "Instant failover protection. If Gemini wavers, Siray takes over to ensure zero dropped requests.",
+    "flowTrigger": "User Action / Cron Job",
+    "flowAttempt": "Attempt Gemini",
+    "flowFallback": "Fallback to Siray",
+    "flowDelivered": "Content Delivered",
+    "jobsTitle": "Serverless Infrastructure",
+    "jobs": [
+      {
+        "title": "Sign Up Email",
+        "trigger": "Event",
+        "desc": "Generates personalized welcome/onboarding email via AI."
+      },
+      {
+        "title": "Weekly News",
+        "trigger": "Cron: Mon 9am",
+        "desc": "Summarizes market news and broadcasts via ConvertKit."
+      },
+      {
+        "title": "Stock Alerts",
+        "trigger": "Cron: 5m",
+        "desc": "Checks user price targets against real-time data."
+      },
+      {
+        "title": "Re-engagement",
+        "trigger": "Cron: Daily",
+        "desc": "Identifies dormant users and sends nudges."
+      }
+    ],
+    "stackTitle": "Tech Stack & Data",
+    "stack": [
+      {
+        "title": "Finnhub",
+        "desc": "Real-time quotes, technical indicators, and market news."
+      },
+      {
+        "title": "ConvertKit (Kit)",
+        "desc": "High-volume newsletter broadcasts and user tagging."
+      },
+      {
+        "title": "MongoDB Atlas",
+        "desc": "Distributed data on AWS. SRV-bypassed connection for maximum reliability."
+      }
+    ]
+  },
+  "nav": {
+    "Dashboard": "Dashboard",
+    "Search": "Search",
+    "Watchlist": "Watchlist",
+    "API Docs": "API Docs"
+  },
+  "userMenu": {
+    "logout": "Logout"
+  },
+  "footer": {
+    "tagline": "OpenStock is an open-source alternative to expensive market platforms. Track real-time prices, set personalized alerts, and explore detailed company insights — built openly, for everyone, forever free.",
+    "resources": "Resources",
+    "apiDocumentation": "API Documentation",
+    "helpCenter": "Help Center"
+  },
+  "sentiment": {
+    "title": "Sentiment Insights",
+    "heading": "{symbol} across social and public channels",
+    "description": "Structured sentiment snapshot across Reddit, X.com, news, and Polymarket.",
+    "avgBuzz": "Avg. Buzz",
+    "bullishAvg": "Bullish Avg",
+    "sourceAlignment": "Source Alignment",
+    "coverage": "Coverage",
+    "buzz": "Buzz",
+    "bullish": "Bullish",
+    "trend": "Trend",
+    "noTrend": "No trend",
+    "trends": {
+      "rising": "Rising",
+      "falling": "Falling",
+      "stable": "Stable"
+    },
+    "alignment": {
+      "bullishAlignment": "Bullish alignment",
+      "bearishAlignment": "Bearish alignment",
+      "tightAlignment": "Tight alignment",
+      "wideDivergence": "Wide divergence",
+      "mixed": "Mixed",
+      "singleSource": "Single-source view",
+      "noSentimentMix": "No sentiment mix"
+    },
+    "sources": {
+      "reddit": "Reddit",
+      "x": "X.com",
+      "news": "News",
+      "polymarket": "Polymarket"
+    },
+    "metrics": {
+      "mentions": "Mentions",
+      "trades": "Trades"
+    }
+  },
+  "ui": {
+    "commandPalette": "Command Palette",
+    "commandPlaceholder": "Search for a command to run...",
+    "close": "Close"
+  },
+  "watchlist": {
+    "page": {
+      "title": "Watchlist",
+      "subtitle": "Track your favorite stocks and manage alerts.",
+      "addStock": "Add Stock"
+    },
+    "table": {
+      "headers": {
+        "company": "Company",
+        "symbol": "Symbol",
+        "price": "Price",
+        "change": "Change",
+        "marketCap": "Market Cap",
+        "actions": "Actions"
+      },
+      "emptyTitle": "Your watchlist is empty",
+      "emptyDescription": "Add stocks to track their performance and set alerts.",
+      "addAlert": "Add Alert"
+    },
+    "alerts": {
+      "title": "Alerts",
+      "empty": "No active alerts. Add one from the watchlist.",
+      "target": "Target: {price}",
+      "conditionAbove": "Condition: Price above {price}",
+      "conditionBelow": "Condition: Price below {price}",
+      "activeUntil": "Active until {date}",
+      "confirmDelete": "Are you sure you want to delete this alert?"
+    },
+    "manager": {
+      "manageSymbols": "Manage Symbols",
+      "sortedAsc": "Sorted A-Z",
+      "sortedDesc": "Sorted Z-A",
+      "defaultOrder": "Default Order",
+      "sortAscShort": "A-Z",
+      "sortDescShort": "Z-A",
+      "sortShort": "Sort",
+      "empty": "No stocks in watchlist."
+    },
+    "chip": {
+      "createAlert": "Create Alert",
+      "remove": "Remove"
+    },
+    "news": {
+      "title": "Market News",
+      "marketBadge": "MARKET",
+      "companyNews": "Company News",
+      "marketNews": "Market News"
+    },
+    "alertModal": {
+      "title": "Price Alert",
+      "alertName": "Alert Name",
+      "alertNamePlaceholder": "e.g. Apple at Discount",
+      "stockIdentifier": "Stock identifier",
+      "alertType": "Alert type",
+      "selectTypePlaceholder": "Select type",
+      "typePrice": "Price",
+      "condition": "Condition",
+      "greaterThan": "Greater than >",
+      "lessThan": "Less than <",
+      "thresholdValue": "Threshold value",
+      "thresholdPlaceholder": "eg: 140",
+      "expiryNote": "Alert expires automatically in 90 days",
+      "createButton": "Create Alert",
+      "creating": "Creating Alert...",
+      "createSuccess": "Alert created successfully",
+      "createError": "Failed to create alert"
+    },
+    "button": {
+      "addToWatchlist": "Add to Watchlist",
+      "removeFromWatchlist": "Remove from Watchlist",
+      "updating": "Updating...",
+      "addSymbol": "Add {symbol} to watchlist",
+      "removeSymbol": "Remove {symbol} from watchlist",
+      "addedTo": "{symbol} added to watchlist",
+      "removedFrom": "{symbol} removed from watchlist",
+      "signInRequired": "Please sign in to modify watchlist",
+      "updateFailed": "Failed to update watchlist"
+    }
+  },
+  "search": {
+    "addStock": "Add stock",
+    "placeholder": "Search stocks...",
+    "loading": "Loading stocks...",
+    "noResults": "No results found",
+    "noStocks": "No stocks available",
+    "searchResults": "Search results",
+    "popularStocks": "Popular stocks",
+    "commonStock": "Common Stock"
+  }
+}

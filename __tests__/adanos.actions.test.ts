@@ -34,17 +34,17 @@ describe('normalizeSourceInsight', () => {
         });
 
         expect(reddit).toMatchObject({
-            label: 'Reddit',
+            label: 'reddit',
             companyName: null,
-            metricLabel: 'Mentions',
+            metricLabel: 'mentions',
             metricValue: 647,
             buzzScore: 81.2,
             bullishPct: 46,
         });
         expect(polymarket).toMatchObject({
-            label: 'Polymarket',
+            label: 'polymarket',
             companyName: null,
-            metricLabel: 'Trades',
+            metricLabel: 'trades',
             metricValue: 3731,
             buzzScore: 55.7,
             bullishPct: 72,
@@ -72,11 +72,11 @@ describe('normalizeSourceInsight', () => {
 
 describe('getSourceAlignment', () => {
     it('classifies wide divergence when sources materially disagree', () => {
-        expect(getSourceAlignment([31, 56, 48, 30])).toBe('Wide divergence');
+        expect(getSourceAlignment([31, 56, 48, 30])).toBe('wideDivergence');
     });
 
     it('classifies bullish alignment when sources are tightly aligned and positive', () => {
-        expect(getSourceAlignment([61, 64, 67])).toBe('Bullish alignment');
+        expect(getSourceAlignment([61, 64, 67])).toBe('bullishAlignment');
     });
 });
 
@@ -85,32 +85,32 @@ describe('buildStockSentimentInsights', () => {
         const insight = buildStockSentimentInsights('TSLA', [
             {
                 source: 'reddit',
-                label: 'Reddit',
+                label: 'reddit',
                 companyName: 'Tesla, Inc.',
                 buzzScore: 74.1,
                 bullishPct: 31,
                 trend: 'rising',
-                metricLabel: 'Mentions',
+                metricLabel: 'mentions',
                 metricValue: 647,
             },
             {
                 source: 'x',
-                label: 'X.com',
+                label: 'x',
                 companyName: 'Tesla, Inc.',
                 buzzScore: 86.1,
                 bullishPct: 56,
                 trend: 'falling',
-                metricLabel: 'Mentions',
+                metricLabel: 'mentions',
                 metricValue: 2650,
             },
             {
                 source: 'polymarket',
-                label: 'Polymarket',
+                label: 'polymarket',
                 companyName: 'Tesla, Inc.',
                 buzzScore: 83.3,
                 bullishPct: 30,
                 trend: 'falling',
-                metricLabel: 'Trades',
+                metricLabel: 'trades',
                 metricValue: 3731,
             },
             null,
@@ -121,7 +121,7 @@ describe('buildStockSentimentInsights', () => {
             companyName: 'Tesla, Inc.',
             averageBuzz: 81.2,
             bullishAverage: 39,
-            sourceAlignment: 'Wide divergence',
+            sourceAlignment: 'wideDivergence',
             availableSources: 3,
         });
         expect(insight?.sources).toHaveLength(3);

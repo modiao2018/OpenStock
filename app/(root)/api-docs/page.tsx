@@ -1,7 +1,7 @@
 
 import React from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 import {
   Server,
   Cpu,
@@ -16,12 +16,28 @@ import {
   AlertTriangle
 } from 'lucide-react';
 
-export const metadata = {
-  title: 'API & Architecture | OpenStock',
-  description: 'Technical documentation for OpenStock architecture, AI integrations, and background jobs.',
-};
+export async function generateMetadata() {
+  const t = await getTranslations('metadata');
+  return {
+    title: t('apiDocs.title'),
+    description: t('apiDocs.description'),
+  };
+}
 
-export default function ApiDocsPage() {
+export default async function ApiDocsPage() {
+  const t = await getTranslations('apiDocs');
+  const jobs = t.raw('jobs') as { title: string; trigger: string; desc: string }[];
+  const stack = t.raw('stack') as { title: string; desc: string }[];
+
+  const jobIcons = [
+    <Mail key="mail" size={20} />,
+    <BarChart2 key="chart" size={20} />,
+    <Clock key="clock" size={20} />,
+    <AlertTriangle key="alert" size={20} />,
+  ];
+  const jobColors = ['purple', 'teal', 'yellow', 'red'];
+  const stackUrls = ['https://finnhub.io', 'https://kit.com', 'https://mongodb.com'];
+
   return (
     <div className="max-w-5xl mx-auto space-y-16 pb-20">
       {/* Hero Section */}
@@ -37,16 +53,16 @@ export default function ApiDocsPage() {
         </div>
 
         <h1 className="text-4xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
-          OpenStock Architecture
+          {t('heroTitle')}
         </h1>
         <p className="text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
-          A transparent look at the event-driven, multi-provider system powering your market insights.
+          {t('heroSubtitle')}
         </p>
 
         <div className="flex flex-wrap justify-center gap-3 pt-2">
-          <Badge color="green">v1.0.0 Active</Badge>
-          <Badge color="purple">Gemini + Siray AI</Badge>
-          <Badge color="blue">Open Source AGPL-3.0</Badge>
+          <Badge color="green">{t('badgeVersion')}</Badge>
+          <Badge color="purple">{t('badgeAi')}</Badge>
+          <Badge color="blue">{t('badgeLicense')}</Badge>
         </div>
       </section>
 
@@ -55,11 +71,10 @@ export default function ApiDocsPage() {
         <div className="space-y-6">
           <div className="flex items-center gap-3">
             <Cpu className="text-teal-400 h-8 w-8" />
-            <h2 className="text-3xl font-bold text-gray-100">Intelligent UI</h2>
+            <h2 className="text-3xl font-bold text-gray-100">{t('aiTitle')}</h2>
           </div>
           <p className="text-gray-400 leading-relaxed">
-            We prioritize uptime for generative features (Welcome Emails, News Summaries) using a robust
-            multi-provider strategy. Our system automatically routes around outages.
+            {t('aiDesc')}
           </p>
 
           <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6 space-y-4">
@@ -69,11 +84,11 @@ export default function ApiDocsPage() {
               </div>
               <div>
                 <h3 className="text-white font-semibold flex items-center gap-2">
-                  Primary: Google Gemini
+                  {t('primaryTitle')}
                   <span className="text-[10px] bg-teal-500/10 text-teal-400 px-2 py-0.5 rounded-full border border-teal-500/20">Flash Lite 2.5</span>
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
-                  Handles high-volume inference for news summarization and personalization.
+                  {t('primaryDesc')}
                 </p>
               </div>
             </div>
@@ -86,11 +101,11 @@ export default function ApiDocsPage() {
               </div>
               <div>
                 <h3 className="text-white font-semibold flex items-center gap-2">
-                  Fallback: Siray.ai
+                  {t('fallbackTitle')}
                   <span className="text-[10px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/20">Ultra 1.0</span>
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
-                  Instant failover protection. If Gemini wavers, Siray takes over to ensure zero dropped requests.
+                  {t('fallbackDesc')}
                 </p>
               </div>
             </div>
@@ -104,19 +119,19 @@ export default function ApiDocsPage() {
           {/* Visual Flowchart */}
           <div className="relative z-10 flex flex-col items-center gap-6 w-full max-w-sm">
             <div className="bg-gray-800 text-gray-300 px-4 py-2 rounded-lg text-sm border border-gray-700 w-full text-center">
-              User Action / Cron Job
+              {t('flowTrigger')}
             </div>
             <div className="h-6 w-px bg-gray-700" />
             <div className="bg-gray-800 p-4 rounded-xl border border-gray-600 w-full flex flex-col gap-3 relative shadow-2xl">
               <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 h-12 bg-teal-500 rounded-full" />
               <span className="text-xs font-mono text-teal-500 mb-1">Inngest Function</span>
               <div className="flex items-center justify-between text-sm text-gray-200 bg-black/40 p-2 rounded border border-gray-700">
-                <span>Attempt Gemini</span>
+                <span>{t('flowAttempt')}</span>
                 <CheckCircle2 size={14} className="text-teal-500" />
               </div>
               <div className="flex items-center justify-between text-sm text-gray-200 bg-blue-900/20 p-2 rounded border border-blue-800/50">
                 <span className="flex items-center gap-2">
-                  Fallback to Siray
+                  {t('flowFallback')}
                   <ShieldCheck size={12} className="text-blue-400" />
                 </span>
                 <ArrowRight size={14} className="text-blue-400" />
@@ -124,7 +139,7 @@ export default function ApiDocsPage() {
             </div>
             <div className="h-6 w-px bg-gray-700" />
             <div className="bg-green-900/20 text-green-400 px-4 py-2 rounded-lg text-sm border border-green-900/50 w-full text-center font-medium">
-              Content Delivered
+              {t('flowDelivered')}
             </div>
           </div>
         </div>
@@ -134,38 +149,20 @@ export default function ApiDocsPage() {
       <section>
         <div className="flex items-center gap-3 mb-6">
           <Server className="text-purple-400 h-8 w-8" />
-          <h2 className="text-3xl font-bold text-gray-100">Serverless Infrastructure</h2>
+          <h2 className="text-3xl font-bold text-gray-100">{t('jobsTitle')}</h2>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <JobCard
-            icon={<Mail size={20} />}
-            title="Sign Up Email"
-            trigger="Event"
-            desc="Generates personalized welcome/onboarding email via AI."
-            color="purple"
-          />
-          <JobCard
-            icon={<BarChart2 size={20} />}
-            title="Weekly News"
-            trigger="Cron: Mon 9am"
-            desc="Summarizes market news and broadcasts via ConvertKit."
-            color="teal"
-          />
-          <JobCard
-            icon={<Clock size={20} />}
-            title="Stock Alerts"
-            trigger="Cron: 5m"
-            desc="Checks user price targets against real-time data."
-            color="yellow"
-          />
-          <JobCard
-            icon={<AlertTriangle size={20} />}
-            title="Re-engagement"
-            trigger="Cron: Daily"
-            desc="Identifies dormant users and sends nudges."
-            color="red"
-          />
+          {jobs.map((job, idx) => (
+            <JobCard
+              key={idx}
+              icon={jobIcons[idx]}
+              title={job.title}
+              trigger={job.trigger}
+              desc={job.desc}
+              color={jobColors[idx]}
+            />
+          ))}
         </div>
       </section>
 
@@ -173,25 +170,18 @@ export default function ApiDocsPage() {
       <section className="space-y-6">
         <div className="flex items-center gap-3">
           <Database className="text-blue-400 h-8 w-8" />
-          <h2 className="text-3xl font-bold text-gray-100">Tech Stack & Data</h2>
+          <h2 className="text-3xl font-bold text-gray-100">{t('stackTitle')}</h2>
         </div>
 
         <div className="grid gap-4">
-          <StackItem
-            title="Finnhub"
-            desc="Real-time quotes, technical indicators, and market news."
-            url="https://finnhub.io"
-          />
-          <StackItem
-            title="ConvertKit (Kit)"
-            desc="High-volume newsletter broadcasts and user tagging."
-            url="https://kit.com"
-          />
-          <StackItem
-            title="MongoDB Atlas"
-            desc="Distributed data on AWS. SRV-bypassed connection for maximum reliability."
-            url="https://mongodb.com"
-          />
+          {stack.map((item, idx) => (
+            <StackItem
+              key={idx}
+              title={item.title}
+              desc={item.desc}
+              url={stackUrls[idx]}
+            />
+          ))}
         </div>
       </section>
 

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Control, Controller, FieldError } from 'react-hook-form';
 import {
     Popover,
@@ -21,6 +21,7 @@ import { Label } from '@/components/ui/label';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import countryList from 'react-select-country-list';
+import { useLocale, useTranslations } from 'next-intl';
 
 type CountrySelectProps = {
     name: string;
@@ -30,6 +31,25 @@ type CountrySelectProps = {
     required?: boolean;
 };
 
+// Localized country names via the built-in Intl API; the submitted `value`
+// stays the ISO code the library provides.
+const useLocalizedCountries = (locale: string) =>
+    useMemo(() => {
+        const base = countryList().getData();
+        let displayNames: Intl.DisplayNames | undefined;
+        try {
+            displayNames = new Intl.DisplayNames([locale], { type: 'region' });
+        } catch {
+            displayNames = undefined;
+        }
+        return base
+            .map((country) => ({
+                value: country.value,
+                label: displayNames?.of(country.value) ?? country.label,
+            }))
+            .sort((a, b) => a.label.localeCompare(b.label, locale));
+    }, [locale]);
+
 const CountrySelect = ({
                            value,
                            onChange,
@@ -38,9 +58,10 @@ const CountrySelect = ({
     onChange: (value: string) => void;
 }) => {
     const [open, setOpen] = useState(false);
+    const locale = useLocale();
+    const t = useTranslations('country');
 
-    // Get country options with flags
-    const countries = countryList().getData();
+    const countries = useLocalizedCountries(locale);
 
     // Helper function to get flag emoji
     const getFlagEmoji = (countryCode: string) => {
@@ -66,7 +87,7 @@ const CountrySelect = ({
               <span>{countries.find((c) => c.value === value)?.label}</span>
             </span>
                     ) : (
-                        'Select your country...'
+                        t('placeholder')
                     )}
                     <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
                 </Button>
@@ -77,11 +98,11 @@ const CountrySelect = ({
             >
                 <Command className='bg-gray-800 border-gray-600'>
                     <CommandInput
-                        placeholder='Search countries...'
+                        placeholder={t('search')}
                         className='country-select-input'
                     />
                     <CommandEmpty className='country-select-empty'>
-                        No country found.
+                        {t('empty')}
                     </CommandEmpty>
                     <CommandList className='max-h-60 bg-gray-800 scrollbar-hide-default'>
                         <CommandGroup className='bg-gray-800'>
@@ -122,6 +143,8 @@ export const CountrySelectField = ({
                                        error,
                                        required = false,
                                    }: CountrySelectProps) => {
+    const t = useTranslations('country');
+
     return (
         <div className='space-y-2'>
             <Label htmlFor={name} className='form-label'>
@@ -131,7 +154,7 @@ export const CountrySelectField = ({
                 name={name}
                 control={control}
                 rules={{
-                    required: required ? `Please select ${label.toLowerCase()}` : false,
+                    required: required ? t('required') : false,
                 }}
                 render={({ field }) => (
                     <CountrySelect value={field.value} onChange={field.onChange} />
@@ -139,7 +162,7 @@ export const CountrySelectField = ({
             />
             {error && <p className='text-sm text-red-500'>{error.message}</p>}
             <p className='text-xs text-gray-500'>
-                Helps us show market data and news relevant to you.
+                {t('helper')}
             </p>
         </div>
     );
