@@ -441,7 +441,8 @@
         "clinicaltrials": "临床试验",
         "edgar": "SEC 申报",
         "halts": "停牌",
-        "rss": "新闻"
+        "rss": "新闻",
+        "market": "盘面异动"
       }
     }
   },

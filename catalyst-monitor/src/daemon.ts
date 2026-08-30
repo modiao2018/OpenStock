@@ -7,6 +7,7 @@ import { collectClinicalTrials } from './collectors/clinicaltrials';
 import { collectEdgar } from './collectors/edgar';
 import { collectHalts } from './collectors/halts';
 import { collectRss } from './collectors/rss';
+import { collectMarket } from './collectors/market';
 import type { MonitorConfig, NewEvent } from './types';
 
 interface CollectorDef {
@@ -76,6 +77,7 @@ async function main(): Promise<void> {
   const config = loadConfig();
 
   const collectors: CollectorDef[] = [
+    { name: 'market', intervalMinutes: config.poll.marketMinutes, run: collectMarket },
     { name: 'halts', intervalMinutes: config.poll.haltsMinutes, run: collectHalts },
     { name: 'edgar', intervalMinutes: config.poll.edgarMinutes, run: collectEdgar },
     { name: 'rss', intervalMinutes: config.poll.rssMinutes, run: collectRss },

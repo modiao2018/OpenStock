@@ -8,6 +8,7 @@ const SOURCE_BADGES: Record<string, string> = {
     edgar: 'bg-purple-900/60 text-purple-300',
     halts: 'bg-red-900/60 text-red-300',
     rss: 'bg-gray-800 text-gray-300',
+    market: 'bg-amber-900/60 text-amber-300',
 };
 
 function formatTime(iso: string): string {

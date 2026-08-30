@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import mongoose from 'mongoose';
 import { connectToDatabase } from '@/database/mongoose';
-import { CatalystEvent, CatalystTrial, CatalystKv, CatalystWatchItem } from '@/database/models/catalyst.model';
+import { CatalystBar, CatalystEvent, CatalystTrial, CatalystKv, CatalystWatchItem } from '@/database/models/catalyst.model';
 import { log } from './config';
 import type { NewEvent, StoredEvent, WatchItem } from './types';
 
@@ -116,6 +116,44 @@ export async function seedWatchItems(items: WatchItem[]): Promise<void> {
   for (const item of items) {
     await CatalystWatchItem.findOneAndUpdate({ symbol: item.symbol }, { $set: item }, { upsert: true });
   }
+}
+
+export interface Bar {
+  symbol: string;
+  t: Date;
+  o: number;
+  h: number;
+  l: number;
+  c: number;
+  v: number;
+}
+
+/** 批量入库分钟 K 线，重复时间戳静默忽略 */
+export async function insertBars(bars: Bar[]): Promise<number> {
+  if (bars.length === 0) return 0;
+  await connectToDatabase();
+  try {
+    const res = await CatalystBar.insertMany(bars, { ordered: false });
+    return res.length;
+  } catch (err: unknown) {
+    // ordered:false 时重复键错误仍会抛出，但非重复的已写入
+    const e = err as { insertedDocs?: unknown[]; code?: number };
+    if (e?.insertedDocs) return e.insertedDocs.length;
+    if (e?.code === 11000) return 0;
+    throw err;
+  }
+}
+
+export async function getLatestBarTime(symbol: string): Promise<Date | null> {
+  await connectToDatabase();
+  const doc = await CatalystBar.findOne({ symbol }).sort({ t: -1 }).lean();
+  return doc ? new Date(doc.t) : null;
+}
+
+export async function getBars(symbol: string, since: Date): Promise<Bar[]> {
+  await connectToDatabase();
+  const docs = await CatalystBar.find({ symbol, t: { $gte: since } }).sort({ t: 1 }).lean();
+  return docs.map((d) => ({ symbol: d.symbol, t: new Date(d.t), o: d.o, h: d.h, l: d.l, c: d.c, v: d.v }));
 }
 
 export async function closeStore(): Promise<void> {

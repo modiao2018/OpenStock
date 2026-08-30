@@ -27,9 +27,16 @@ feeds:
     url: https://www.prnewswire.com/rss/health-latest-news/health-latest-news-list.rss
   # 可以继续加：GlobeNewswire / Business Wire 的行业 feed、公司 IR 页面的 RSS 等
 
+# 盘面异动检测（需在 .env 配置 ALPACA_API_KEY/SECRET）
+market:
+  benchmark: XBI          # 行业基准 ETF，扣除板块共振
+  sigma_threshold: 2.5    # 5分钟 abnormal return 超过历史波动的倍数
+  rvol_threshold: 3       # 相对成交量放大倍数
+
 # 各采集器轮询间隔（分钟）
 poll:
   clinicaltrials_minutes: 15
   edgar_minutes: 5
   halts_minutes: 2
   rss_minutes: 5
+  market_minutes: 2

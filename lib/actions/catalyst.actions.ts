@@ -193,11 +193,12 @@ export interface MonitorStatusData {
 
 export async function getMonitorStatus(): Promise<MonitorStatusData> {
     // 轮询间隔以 config.yaml 为准（daemon 启动时读取同一文件）
-    const defaults = { halts: 2, edgar: 5, rss: 5, clinicaltrials: 15 };
+    const defaults = { market: 2, halts: 2, edgar: 5, rss: 5, clinicaltrials: 15 };
     let intervals: Record<string, number> = { ...defaults };
     try {
         const raw = parseYaml(readFileSync(join(process.cwd(), 'catalyst-monitor', 'config.yaml'), 'utf8')) as any;
         intervals = {
+            market: Number(raw?.poll?.market_minutes ?? defaults.market),
             halts: Number(raw?.poll?.halts_minutes ?? defaults.halts),
             edgar: Number(raw?.poll?.edgar_minutes ?? defaults.edgar),
             rss: Number(raw?.poll?.rss_minutes ?? defaults.rss),

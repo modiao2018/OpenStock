@@ -6,7 +6,7 @@ import { Schema, model, models, type Document, type Model } from 'mongoose';
  */
 
 export interface ICatalystEvent extends Document {
-    source: 'clinicaltrials' | 'edgar' | 'halts' | 'rss';
+    source: 'clinicaltrials' | 'edgar' | 'halts' | 'rss' | 'market';
     externalId: string;
     symbol?: string;
     title: string;
@@ -28,7 +28,7 @@ export interface ICatalystEvent extends Document {
 
 const CatalystEventSchema = new Schema<ICatalystEvent>(
     {
-        source: { type: String, enum: ['clinicaltrials', 'edgar', 'halts', 'rss'], required: true },
+        source: { type: String, enum: ['clinicaltrials', 'edgar', 'halts', 'rss', 'market'], required: true },
         externalId: { type: String, required: true },
         symbol: { type: String, uppercase: true, trim: true },
         title: { type: String, required: true },
@@ -93,6 +93,28 @@ const CatalystWatchItemSchema = new Schema<ICatalystWatchItem>(
     { timestamps: true }
 );
 
+/** 分钟 K 线（Alpaca IEX），异动检测的基线与实时数据 */
+export interface ICatalystBar extends Document {
+    symbol: string;
+    t: Date;
+    o: number;
+    h: number;
+    l: number;
+    c: number;
+    v: number;
+}
+
+const CatalystBarSchema = new Schema<ICatalystBar>({
+    symbol: { type: String, required: true, uppercase: true, trim: true },
+    t: { type: Date, required: true },
+    o: { type: Number, required: true },
+    h: { type: Number, required: true },
+    l: { type: Number, required: true },
+    c: { type: Number, required: true },
+    v: { type: Number, required: true },
+});
+CatalystBarSchema.index({ symbol: 1, t: 1 }, { unique: true });
+
 export interface ICatalystKv extends Document {
     key: string;
     value: string;
@@ -113,6 +135,8 @@ export const CatalystTrial: Model<ICatalystTrial> =
     (models?.CatalystTrial as Model<ICatalystTrial>) || model<ICatalystTrial>('CatalystTrial', CatalystTrialSchema);
 export const CatalystKv: Model<ICatalystKv> =
     (models?.CatalystKv as Model<ICatalystKv>) || model<ICatalystKv>('CatalystKv', CatalystKvSchema);
+export const CatalystBar: Model<ICatalystBar> =
+    (models?.CatalystBar as Model<ICatalystBar>) || model<ICatalystBar>('CatalystBar', CatalystBarSchema);
 export const CatalystWatchItem: Model<ICatalystWatchItem> =
     (models?.CatalystWatchItem as Model<ICatalystWatchItem>) ||
     model<ICatalystWatchItem>('CatalystWatchItem', CatalystWatchItemSchema);

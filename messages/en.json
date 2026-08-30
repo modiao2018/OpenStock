@@ -441,7 +441,8 @@
         "clinicaltrials": "Clinical Trial",
         "edgar": "SEC Filing",
         "halts": "Halt",
-        "rss": "News"
+        "rss": "News",
+        "market": "Market Move"
       }
     }
   },

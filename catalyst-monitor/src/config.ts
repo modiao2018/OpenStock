@@ -36,10 +36,18 @@ export function loadConfig(): MonitorConfig {
       edgarMinutes: Number(raw.poll?.edgar_minutes ?? 5),
       haltsMinutes: Number(raw.poll?.halts_minutes ?? 2),
       rssMinutes: Number(raw.poll?.rss_minutes ?? 5),
+      marketMinutes: Number(raw.poll?.market_minutes ?? 2),
+    },
+    market: {
+      benchmark: String(raw.market?.benchmark ?? 'XBI').toUpperCase(),
+      sigmaThreshold: Number(raw.market?.sigma_threshold ?? 2.5),
+      rvolThreshold: Number(raw.market?.rvol_threshold ?? 3),
     },
     env: {
       barkUrl: process.env.BARK_URL || undefined,
       edgarContact: process.env.EDGAR_CONTACT || 'catalyst-monitor@example.com',
+      alpacaKey: process.env.ALPACA_API_KEY || undefined,
+      alpacaSecret: process.env.ALPACA_API_SECRET || undefined,
     },
   };
 }

@@ -22,14 +22,25 @@ export interface MonitorConfig {
     edgarMinutes: number;
     haltsMinutes: number;
     rssMinutes: number;
+    marketMinutes: number;
+  };
+  market: {
+    /** 行业基准 ETF，用于扣除板块共振（默认 XBI） */
+    benchmark: string;
+    /** abnormal return 触发阈值（σ 倍数） */
+    sigmaThreshold: number;
+    /** 相对成交量触发阈值 */
+    rvolThreshold: number;
   };
   env: {
     barkUrl?: string;
     edgarContact: string;
+    alpacaKey?: string;
+    alpacaSecret?: string;
   };
 }
 
-export type EventSource = 'clinicaltrials' | 'edgar' | 'halts' | 'rss';
+export type EventSource = 'clinicaltrials' | 'edgar' | 'halts' | 'rss' | 'market';
 export type Severity = 'urgent' | 'normal';
 
 /** 采集器产出的一条待入库事件 */
