@@ -25,9 +25,13 @@
 
 # 2. 编辑 catalyst-monitor/config.yaml，配置 watchlist（代码、公司名、NCT 编号、关键词）
 
+npm run dev               # 【推荐】随主应用一起启停：dev.sh 会同时拉起监控 daemon
+                          #   （caffeinate 防休眠，日志在 /tmp/catalyst-monitor.log），退出时一并停止
+npm run monitor           # 单独常驻运行（不启动网页）
 npm run monitor:once      # 所有采集器跑一遍后退出（首轮为建档，不推送已有存量）
-npm run monitor           # 常驻运行（美股盘中 = 北京时间 21:30–04:00，Mac 别休眠，可用 caffeinate -i npm run monitor）
 npm run monitor:calendar  # 打印催化剂日历
+npm run monitor:report -- --dry-run   # 生成周报预览（不发送）
+sh scripts/install-monitor-daemon.sh  # 可选：装成 launchd 开机自启服务（不跟随 dev 启停）
 ```
 
 三个命令都会先确保 MongoDB 容器已启动（`docker compose up -d --wait mongodb`）。
