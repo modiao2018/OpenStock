@@ -405,7 +405,12 @@ export async function getAttribution(eventId: string): Promise<AttributionData> 
         const ev = await CatalystEvent.findById(eventId).lean();
         if (!ev?.symbol) return { available: false, reason: 'no_symbol' };
 
-        const t0 = Date.parse(ev.publishedAt ?? '') || new Date(ev.fetchedAt).getTime();
+        // 锚点取"信息进入市场"的时刻：源发布时间需带具体时分（EDGAR/停牌/新闻）；
+        // 纯日期（如临床试验注册库的更新日）无法定位盘中时点，改用首次抓取时间
+        const pub = ev.publishedAt ?? '';
+        const pubMs = Date.parse(pub);
+        const hasClock = /\d{2}:\d{2}/.test(pub) && !Number.isNaN(pubMs);
+        const t0 = hasClock ? pubMs : new Date(ev.fetchedAt).getTime();
         const benchmark = await getBenchmarkSymbol();
 
         const baselineStart = new Date(t0 - 8 * 24 * 3600_000);
