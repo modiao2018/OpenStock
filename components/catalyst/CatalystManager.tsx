@@ -288,6 +288,7 @@ export default function CatalystManager({ initialItems }: { initialItems: Cataly
                                 {searching ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Search className="w-4 h-4 mr-1" />}
                                 {t('searchTrials')}
                             </Button>
+                            <p className="text-xs text-gray-600 mt-1.5">{t('trialsHint')}</p>
                         </div>
 
                         {trialResults.length > 0 && (

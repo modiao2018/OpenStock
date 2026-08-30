@@ -19,6 +19,7 @@ import MonitorDebugPanel from '@/components/catalyst/MonitorDebugPanel';
 import LlmConfigDialog from '@/components/catalyst/LlmConfigDialog';
 import AutoRefresh from '@/components/catalyst/AutoRefresh';
 import MarketPanel from '@/components/catalyst/MarketPanel';
+import GuideCard from '@/components/catalyst/GuideCard';
 
 export default async function CatalystPage() {
     const t = await getTranslations('catalyst.page');
@@ -49,6 +50,8 @@ export default async function CatalystPage() {
                 </div>
                 <LlmConfigDialog initial={llmConfig} />
             </div>
+
+            <GuideCard />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-8">
