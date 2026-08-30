@@ -352,8 +352,20 @@
       "title": "Catalyst Monitor",
       "subtitle": "Clinical event watchlist, catalyst calendar and event timeline"
     },
+    "status": {
+      "RECRUITING": "Recruiting",
+      "NOT_YET_RECRUITING": "Not yet recruiting",
+      "ENROLLING_BY_INVITATION": "Enrolling by invitation",
+      "ACTIVE_NOT_RECRUITING": "Active, not recruiting",
+      "COMPLETED": "Completed",
+      "TERMINATED": "Terminated",
+      "SUSPENDED": "Suspended",
+      "WITHDRAWN": "Withdrawn",
+      "UNKNOWN": "Unknown"
+    },
     "manager": {
       "title": "Watch List",
+      "hint": "Add a company and tick the trials to follow; the daemon monitors its filings, halts and trial status changes",
       "add": "Add Company",
       "edit": "Edit",
       "delete": "Delete",
@@ -374,7 +386,9 @@
     },
     "calendar": {
       "title": "Catalyst Calendar",
+      "hint": "Countdown to each trial's primary completion date; topline data usually follows weeks to months later",
       "empty": "No trials archived yet. They appear after the daemon's first run.",
+      "phase": "Phase {phases}",
       "primaryCompletion": "Primary completion",
       "daysLeft": "in {days} days",
       "daysPast": "{days} days ago",
@@ -416,10 +430,13 @@
     },
     "timeline": {
       "title": "Event Timeline",
+      "hint": "Each item records source-published and first-fetched times for post-hoc attribution. \"Archived\" is the initial snapshot; \"Updated\" marks a real change",
       "empty": "No events yet",
       "publishedAt": "Published",
       "fetchedAt": "Fetched",
       "analysis": "AI Analysis",
+      "archived": "Archived",
+      "updated": "Updated",
       "source": {
         "clinicaltrials": "Clinical Trial",
         "edgar": "SEC Filing",

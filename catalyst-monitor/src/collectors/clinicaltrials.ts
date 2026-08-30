@@ -76,7 +76,8 @@ export async function collectClinicalTrials(config: MonitorConfig): Promise<NewE
           source: 'clinicaltrials',
           externalId: nctId,
           symbol: item.symbol,
-          title: `${item.symbol} ${nctId} 注册信息更新: ${statusZh(overallStatus)}${hasResults ? '（已发布结果）' : ''}`,
+          // "建档/更新"语义由时间线上的徽章表达，标题只描述当前状态
+          title: `${item.symbol} ${nctId} ${statusZh(overallStatus)}${hasResults ? '（已发布结果）' : ''}`,
           url: `https://clinicaltrials.gov/study/${nctId}`,
           publishedAt: watched.lastUpdatePostDate ?? undefined,
           contentHash: sha256(watched),

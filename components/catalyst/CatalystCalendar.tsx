@@ -12,16 +12,27 @@ const STATUS_COLORS: Record<string, string> = {
     WITHDRAWN: 'text-red-400',
 };
 
+/** "PHASE1/PHASE2" → "1/2"，交给 i18n 拼成 "临床 1/2 期" / "Phase 1/2" */
+function phaseDigits(phase: string): string {
+    const digits = phase
+        .split('/')
+        .map((p) => p.replace('EARLY_PHASE', '早期').replace('PHASE', ''))
+        .filter(Boolean);
+    return digits.join('/') || phase;
+}
+
 export default async function CatalystCalendar({ trials }: { trials: CatalystTrialData[] }) {
     const t = await getTranslations('catalyst.calendar');
+    const tStatus = await getTranslations('catalyst.status');
     const now = Date.now();
 
     return (
         <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5">
-            <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
+            <h2 className="text-lg font-semibold flex items-center gap-2 mb-1">
                 <CalendarClock className="w-5 h-5 text-teal-500" />
                 {t('title')}
             </h2>
+            <p className="text-xs text-gray-600 mb-4">{t('hint')}</p>
 
             {trials.length === 0 ? (
                 <p className="text-gray-500 text-sm">{t('empty')}</p>
@@ -35,7 +46,9 @@ export default async function CatalystCalendar({ trials }: { trials: CatalystTri
                                 <div className="flex items-center justify-between gap-2">
                                     <span className="font-medium text-gray-100">
                                         {trial.symbol}
-                                        <span className="ml-2 text-xs text-gray-500">{trial.phase}</span>
+                                        <span className="ml-2 text-xs text-gray-500">
+                                            {t('phase', { phases: phaseDigits(trial.phase) })}
+                                        </span>
                                     </span>
                                     {days !== null && (
                                         <span className={`text-sm font-semibold ${days >= 0 ? 'text-amber-400' : 'text-gray-500'}`}>
@@ -54,7 +67,7 @@ export default async function CatalystCalendar({ trials }: { trials: CatalystTri
                                 <div className="flex items-center gap-3 mt-1 text-xs">
                                     <span className="text-gray-500">{trial.nctId}</span>
                                     <span className={STATUS_COLORS[trial.overallStatus] ?? 'text-gray-400'}>
-                                        {trial.overallStatus}
+                                        {tStatus.has(trial.overallStatus) ? tStatus(trial.overallStatus) : trial.overallStatus}
                                     </span>
                                     {trial.hasResults && <span className="text-teal-400">{t('hasResults')}</span>}
                                 </div>

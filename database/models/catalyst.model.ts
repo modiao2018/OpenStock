@@ -22,6 +22,8 @@ export interface ICatalystEvent extends Document {
     notified: boolean;
     /** LLM 生成的中文分析（报告类事件） */
     analysis?: string;
+    /** 首次建档快照（非真实变更，不推送，时间线上区分显示） */
+    firstSnapshot: boolean;
 }
 
 const CatalystEventSchema = new Schema<ICatalystEvent>(
@@ -38,6 +40,7 @@ const CatalystEventSchema = new Schema<ICatalystEvent>(
         raw: { type: Schema.Types.Mixed },
         notified: { type: Boolean, default: false },
         analysis: { type: String },
+        firstSnapshot: { type: Boolean, default: false },
     },
     { timestamps: true }
 );

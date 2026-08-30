@@ -22,10 +22,11 @@ export default async function EventTimeline({ events }: { events: CatalystEventD
 
     return (
         <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5">
-            <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
+            <h2 className="text-lg font-semibold flex items-center gap-2 mb-1">
                 <History className="w-5 h-5 text-teal-500" />
                 {t('title')}
             </h2>
+            <p className="text-xs text-gray-600 mb-4">{t('hint')}</p>
 
             {events.length === 0 ? (
                 <p className="text-gray-500 text-sm">{t('empty')}</p>
@@ -36,6 +37,15 @@ export default async function EventTimeline({ events }: { events: CatalystEventD
                             <span className={`shrink-0 mt-0.5 px-2 py-0.5 rounded text-xs ${SOURCE_BADGES[ev.source] ?? 'bg-gray-800 text-gray-300'}`}>
                                 {t(`source.${ev.source}`)}
                             </span>
+                            {ev.source === 'clinicaltrials' && (
+                                <span
+                                    className={`shrink-0 mt-0.5 px-2 py-0.5 rounded text-xs ${
+                                        ev.firstSnapshot ? 'bg-gray-800/80 text-gray-500' : 'bg-amber-900/50 text-amber-300'
+                                    }`}
+                                >
+                                    {ev.firstSnapshot ? t('archived') : t('updated')}
+                                </span>
+                            )}
                             <div className="min-w-0">
                                 <div className="flex items-center gap-2">
                                     {ev.severity === 'urgent' && <span className="text-red-400 text-xs">●</span>}

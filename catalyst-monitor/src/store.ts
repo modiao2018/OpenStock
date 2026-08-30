@@ -42,6 +42,7 @@ export async function insertEvent(ev: NewEvent): Promise<StoredEvent | null> {
       contentHash: ev.contentHash,
       severity: ev.severity,
       raw: ev.raw,
+      firstSnapshot: !seenBefore,
     });
     return {
       ...ev,

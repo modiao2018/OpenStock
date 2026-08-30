@@ -352,8 +352,20 @@
       "title": "催化剂监控",
       "subtitle": "临床事件监控清单、催化剂日历与事件时间线"
     },
+    "status": {
+      "RECRUITING": "招募中",
+      "NOT_YET_RECRUITING": "尚未招募",
+      "ENROLLING_BY_INVITATION": "邀请入组",
+      "ACTIVE_NOT_RECRUITING": "进行中（停止招募）",
+      "COMPLETED": "已完成",
+      "TERMINATED": "已终止",
+      "SUSPENDED": "已暂停",
+      "WITHDRAWN": "已撤回",
+      "UNKNOWN": "状态未知"
+    },
     "manager": {
       "title": "监控清单",
+      "hint": "添加公司并勾选要跟踪的临床试验，后台会自动监控其公告、停牌与试验状态变化",
       "add": "添加公司",
       "edit": "编辑",
       "delete": "删除",
@@ -374,7 +386,9 @@
     },
     "calendar": {
       "title": "催化剂日历",
+      "hint": "按试验\"主要完成日期\"倒计时——数据收集完成的时点，顶线数据通常在其后数周至数月公布",
       "empty": "暂无试验建档，daemon 运行一轮后出现",
+      "phase": "临床 {phases} 期",
       "primaryCompletion": "主要完成",
       "daysLeft": "{days} 天后",
       "daysPast": "已过 {days} 天",
@@ -416,10 +430,13 @@
     },
     "timeline": {
       "title": "事件时间线",
+      "hint": "每条信息记录\"源发布时间\"与\"首次抓取时间\"，事后可回查市场是否在公告前提前反应。\"建档\"是首次收录的现状快照，\"更新\"才是真实变更",
       "empty": "暂无事件",
       "publishedAt": "源发布",
       "fetchedAt": "抓取",
       "analysis": "AI 分析",
+      "archived": "建档",
+      "updated": "更新",
       "source": {
         "clinicaltrials": "临床试验",
         "edgar": "SEC 申报",

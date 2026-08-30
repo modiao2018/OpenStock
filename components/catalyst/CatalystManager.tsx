@@ -147,7 +147,7 @@ export default function CatalystManager({ initialItems }: { initialItems: Cataly
 
     return (
         <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-1">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                     <Radar className="w-5 h-5 text-teal-500" />
                     {t('title')}
@@ -157,6 +157,8 @@ export default function CatalystManager({ initialItems }: { initialItems: Cataly
                     {t('add')}
                 </Button>
             </div>
+
+            <p className="text-xs text-gray-600 mb-4">{t('hint')}</p>
 
             {initialItems.length === 0 ? (
                 <p className="text-gray-500 text-sm">{t('empty')}</p>

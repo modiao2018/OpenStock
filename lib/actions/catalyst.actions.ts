@@ -45,6 +45,7 @@ export interface CatalystEventData {
     severity: string;
     notified: boolean;
     analysis?: string;
+    firstSnapshot: boolean;
 }
 
 export interface CatalystTrialData {
@@ -166,6 +167,7 @@ export async function getCatalystEvents(limit = 50): Promise<CatalystEventData[]
             severity: d.severity,
             notified: d.notified,
             analysis: d.analysis ?? undefined,
+            firstSnapshot: d.firstSnapshot ?? false,
         }));
     } catch (error) {
         console.error('Error fetching catalyst events:', error);
