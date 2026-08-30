@@ -1,7 +1,7 @@
 import { XMLParser } from 'fast-xml-parser';
-import { log } from '../config.js';
-import { sha256 } from '../store.js';
-import type { MonitorConfig, NewEvent } from '../types.js';
+import { log } from '../config';
+import { sha256 } from '../store';
+import type { MonitorConfig, NewEvent } from '../types';
 
 const HALTS_RSS = 'https://www.nasdaqtrader.com/rss.aspx?feed=tradehalts';
 

@@ -1,5 +1,5 @@
-import { log, logError } from './config.js';
-import type { MonitorConfig, StoredEvent } from './types.js';
+import { log, logError } from './config';
+import type { MonitorConfig, StoredEvent } from './types';
 
 const SOURCE_LABEL: Record<string, string> = {
   clinicaltrials: '临床试验',

@@ -1,7 +1,7 @@
 import { XMLParser } from 'fast-xml-parser';
-import { log, logError } from '../config.js';
-import { sha256 } from '../store.js';
-import type { MonitorConfig, NewEvent, WatchItem } from '../types.js';
+import { log, logError } from '../config';
+import { sha256 } from '../store';
+import type { MonitorConfig, NewEvent, WatchItem } from '../types';
 
 function toArray<T>(v: T | T[] | undefined): T[] {
   if (v === undefined) return [];

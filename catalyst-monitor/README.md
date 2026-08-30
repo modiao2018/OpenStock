@@ -1,10 +1,10 @@
 # catalyst-monitor
 
-医药股临床催化剂事件监控。独立于 OpenStock 主应用的常驻进程：不 import 主应用代码，自带 SQLite 存储（`data/monitor.db`）和 YAML 配置。
+医药股临床催化剂事件监控。OpenStock 项目内的一个后台模块：与主应用共用依赖（根 package.json）、环境变量（根 `.env`）和 MongoDB，但作为独立的常驻进程运行，不参与 Next.js 构建路由。
 
 解决的问题见 `../docs/医药股临床数据公布前股价提前反应原因.md`：
 
-1. **事后归因** —— 每条信息存 `published_at`（源声明的发布时间）+ `fetched_at`（首次抓取时间）+ 内容哈希。股价"提前异动"发生后可回查时间线，判断是信息源慢了还是市场提前定价。
+1. **事后归因** —— 每条信息存 `publishedAt`（源声明的发布时间）+ `fetchedAt`（首次抓取时间）+ 内容哈希。股价"提前异动"发生后可回查时间线，判断是信息源慢了还是市场提前定价。
 2. **第一时间知道公告落地** —— 监控比公司 IR 页面更靠前的公开源：SEC EDGAR（8-K/6-K 的 acceptanceDateTime 是权威公开时点）、Nasdaq 停牌 RSS（T1 News Pending = 官方"即将发布"信号）、ClinicalTrials.gov 注册信息变更、新闻 wire RSS。
 3. **催化剂日历** —— 试验的主要完成日期倒计时，事件前有准备而不是事件后被动反应。
 
@@ -16,38 +16,43 @@
 
 ## 使用
 
+在**仓库根目录**操作（无需单独安装依赖）：
+
 ```bash
-cd catalyst-monitor
-# 需要 Node 22（本机在 ~/.local/node/node-v22.14.0-darwin-arm64/bin）
-npm install
+# 1. 在根 .env 追加三个变量：
+#    BARK_URL=https://api.day.app/你的设备key
+#    FEISHU_WEBHOOK_URL=https://open.feishu.cn/open-apis/bot/v2/hook/xxxx
+#    EDGAR_CONTACT=你的邮箱（SEC 要求 User-Agent 带联系方式）
 
-cp .env.example .env   # 填 BARK_URL / FEISHU_WEBHOOK_URL / EDGAR_CONTACT
-vi config.yaml          # 配置 watchlist：股票代码、公司名、NCT 编号、新闻关键词
+# 2. 编辑 catalyst-monitor/config.yaml，配置 watchlist（代码、公司名、NCT 编号、关键词）
 
-npm run once      # 所有采集器跑一遍后退出（首轮为建档，不推送已有存量）
-npm run daemon    # 常驻运行（美股盘中 = 北京时间 21:30–04:00，注意 Mac 别休眠）
-npm run calendar  # 打印催化剂日历
+npm run monitor:once      # 所有采集器跑一遍后退出（首轮为建档，不推送已有存量）
+npm run monitor           # 常驻运行（美股盘中 = 北京时间 21:30–04:00，Mac 别休眠，可用 caffeinate -i npm run monitor）
+npm run monitor:calendar  # 打印催化剂日历
 ```
+
+三个命令都会先确保 MongoDB 容器已启动（`docker compose up -d --wait mongodb`）。
 
 ## 行为说明
 
 - **首次快照不推送**：ClinicalTrials 首轮建档只入库；EDGAR/新闻只推 `lookback_days` 内的新申报。避免启动刷屏。
 - **变更检测**：同一实体（NCT/停牌）关键字段哈希变化才产生新事件；EDGAR 申报不可变，每份只推一次。
 - **推送分级**：停牌、8-K、试验终止/结果发布 → urgent（Bark critical + 飞书）；其余 → normal（飞书为主）。
-- **推送失败不阻塞采集**：渠道报错只记日志，事件仍入库（`notified=0`），可事后补查。
+- **推送失败不阻塞采集**：渠道报错只记日志，事件仍入库（`notified=false`），可事后补查。
 
-## 数据表
+## 数据存储
 
-| 表 | 用途 |
+模型定义在 `database/models/catalyst.model.ts`（与主应用同库）：
+
+| Collection | 用途 |
 |---|---|
-| `events` | 信息时间线：source / external_id / published_at / fetched_at / content_hash / raw |
-| `trials` | 试验最新快照（催化剂日历数据源） |
-| `kv` | 缓存（EDGAR ticker→CIK 映射，24h 刷新） |
+| `catalystevents` | 信息时间线：source / externalId / publishedAt / fetchedAt / contentHash / raw；`(source, externalId, contentHash)` 唯一索引保证幂等 |
+| `catalysttrials` | 试验最新快照（催化剂日历数据源） |
+| `catalystkvs` | 缓存（EDGAR ticker→CIK 映射，24h 刷新） |
 
-查询示例（事后归因）：
+查询示例（事后归因，mongosh）：
 
-```sql
-SELECT source, title, published_at, fetched_at
-FROM events WHERE symbol = 'SRPT'
-ORDER BY COALESCE(published_at, fetched_at);
+```js
+db.catalystevents.find({ symbol: 'SRPT' }, { source: 1, title: 1, publishedAt: 1, fetchedAt: 1 })
+  .sort({ fetchedAt: 1 })
 ```

@@ -1,6 +1,6 @@
-import { log, logError } from '../config.js';
-import { sha256, type Store } from '../store.js';
-import type { MonitorConfig, NewEvent } from '../types.js';
+import { log, logError } from '../config';
+import { getKv, setKv, sha256 } from '../store';
+import type { MonitorConfig, NewEvent } from '../types';
 
 const CIK_MAP_URL = 'https://www.sec.gov/files/company_tickers.json';
 const CIK_MAP_TTL_MS = 24 * 60 * 60 * 1000;
@@ -14,8 +14,8 @@ function edgarHeaders(contact: string): Record<string, string> {
   return { 'User-Agent': `catalyst-monitor/0.1 (${contact})`, Accept: 'application/json' };
 }
 
-async function getCikMap(config: MonitorConfig, store: Store): Promise<Record<string, string>> {
-  const cached = store.getKv('edgar_cik_map', CIK_MAP_TTL_MS);
+async function getCikMap(config: MonitorConfig): Promise<Record<string, string>> {
+  const cached = await getKv('edgar_cik_map', CIK_MAP_TTL_MS);
   if (cached) return JSON.parse(cached);
 
   const res = await fetch(CIK_MAP_URL, {
@@ -29,7 +29,7 @@ async function getCikMap(config: MonitorConfig, store: Store): Promise<Record<st
   for (const entry of Object.values(data)) {
     map[entry.ticker.toUpperCase()] = String(entry.cik_str);
   }
-  store.setKv('edgar_cik_map', JSON.stringify(map));
+  await setKv('edgar_cik_map', JSON.stringify(map));
   return map;
 }
 
@@ -37,9 +37,9 @@ async function getCikMap(config: MonitorConfig, store: Store): Promise<Record<st
  * 轮询 watchlist 公司在 EDGAR 的最新申报，筛出 8-K/6-K 等重大事件类型。
  * acceptanceDateTime 是 SEC 收到申报的时间——这是"最早公开时点"的权威锚点。
  */
-export async function collectEdgar(config: MonitorConfig, store: Store): Promise<NewEvent[]> {
+export async function collectEdgar(config: MonitorConfig): Promise<NewEvent[]> {
   const events: NewEvent[] = [];
-  const cikMap = await getCikMap(config, store);
+  const cikMap = await getCikMap(config);
   const cutoff = Date.now() - config.edgar.lookbackDays * 24 * 60 * 60 * 1000;
 
   for (const item of config.watchlist) {

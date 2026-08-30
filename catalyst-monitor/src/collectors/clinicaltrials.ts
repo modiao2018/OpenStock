@@ -1,6 +1,6 @@
-import { log, logError } from '../config.js';
-import { sha256, type Store } from '../store.js';
-import type { MonitorConfig, NewEvent } from '../types.js';
+import { log, logError } from '../config';
+import { sha256, upsertTrial } from '../store';
+import type { MonitorConfig, NewEvent } from '../types';
 
 const API_BASE = 'https://clinicaltrials.gov/api/v2/studies';
 
@@ -12,7 +12,7 @@ const BAD_STATUSES = new Set(['TERMINATED', 'SUSPENDED', 'WITHDRAWN']);
  * 关键字段（状态、完成日期、是否发布结果等）哈希变化即产生事件；
  * 同时把最新快照写入 trials 表供催化剂日历使用。
  */
-export async function collectClinicalTrials(config: MonitorConfig, store: Store): Promise<NewEvent[]> {
+export async function collectClinicalTrials(config: MonitorConfig): Promise<NewEvent[]> {
   const events: NewEvent[] = [];
 
   for (const item of config.watchlist) {
@@ -43,7 +43,7 @@ export async function collectClinicalTrials(config: MonitorConfig, store: Store)
           resultsFirstPostDate: status.resultsFirstPostDateStruct?.date ?? null,
         };
 
-        store.upsertTrial({
+        await upsertTrial({
           nctId,
           symbol: item.symbol,
           title,

@@ -2,14 +2,12 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
-import dotenv from 'dotenv';
-import type { MonitorConfig, WatchItem } from './types.js';
+import type { MonitorConfig, WatchItem } from './types';
 
 export const MODULE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
+// 环境变量与主应用共用仓库根目录的 .env，由 env.ts 在入口处加载
 export function loadConfig(): MonitorConfig {
-  dotenv.config({ path: join(MODULE_ROOT, '.env') });
-
   const rawText = readFileSync(join(MODULE_ROOT, 'config.yaml'), 'utf8');
   const raw = parse(rawText) as Record<string, any>;
 

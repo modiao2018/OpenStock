@@ -1,23 +1,24 @@
-import { loadConfig, log, logError } from './config.js';
-import { Store } from './store.js';
-import { notify } from './notify.js';
-import { collectClinicalTrials } from './collectors/clinicaltrials.js';
-import { collectEdgar } from './collectors/edgar.js';
-import { collectHalts } from './collectors/halts.js';
-import { collectRss } from './collectors/rss.js';
-import type { MonitorConfig, NewEvent } from './types.js';
+import './env';
+import { loadConfig, log, logError } from './config';
+import { closeStore, insertEvent, markNotified } from './store';
+import { notify } from './notify';
+import { collectClinicalTrials } from './collectors/clinicaltrials';
+import { collectEdgar } from './collectors/edgar';
+import { collectHalts } from './collectors/halts';
+import { collectRss } from './collectors/rss';
+import type { MonitorConfig, NewEvent } from './types';
 
 interface CollectorDef {
   name: string;
   intervalMinutes: number;
-  run: (config: MonitorConfig, store: Store) => Promise<NewEvent[]>;
+  run: (config: MonitorConfig) => Promise<NewEvent[]>;
 }
 
-async function runCollector(def: CollectorDef, config: MonitorConfig, store: Store): Promise<void> {
+async function runCollector(def: CollectorDef, config: MonitorConfig): Promise<void> {
   try {
-    const candidates = await def.run(config, store);
+    const candidates = await def.run(config);
     for (const ev of candidates) {
-      const stored = store.insertEvent(ev);
+      const stored = await insertEvent(ev);
       if (!stored) continue; // 已见过、无变化
 
       if (stored.isFirstSnapshot && stored.source === 'clinicaltrials') {
@@ -27,7 +28,7 @@ async function runCollector(def: CollectorDef, config: MonitorConfig, store: Sto
       }
       log(def.name, `新事件: ${stored.title}`);
       const delivered = await notify(config, stored);
-      if (delivered) store.markNotified(stored.id);
+      if (delivered) await markNotified(stored.id);
     }
   } catch (err) {
     logError(def.name, err);
@@ -37,12 +38,11 @@ async function runCollector(def: CollectorDef, config: MonitorConfig, store: Sto
 async function main(): Promise<void> {
   const once = process.argv.includes('--once');
   const config = loadConfig();
-  const store = new Store();
 
   const collectors: CollectorDef[] = [
-    { name: 'halts', intervalMinutes: config.poll.haltsMinutes, run: (c) => collectHalts(c) },
+    { name: 'halts', intervalMinutes: config.poll.haltsMinutes, run: collectHalts },
     { name: 'edgar', intervalMinutes: config.poll.edgarMinutes, run: collectEdgar },
-    { name: 'rss', intervalMinutes: config.poll.rssMinutes, run: (c) => collectRss(c) },
+    { name: 'rss', intervalMinutes: config.poll.rssMinutes, run: collectRss },
     { name: 'clinicaltrials', intervalMinutes: config.poll.clinicaltrialsMinutes, run: collectClinicalTrials },
   ];
 
@@ -54,24 +54,23 @@ async function main(): Promise<void> {
 
   if (once) {
     for (const def of collectors) {
-      await runCollector(def, config, store);
+      await runCollector(def, config);
     }
-    store.close();
+    await closeStore();
     log('daemon', '单次运行完成');
     return;
   }
 
   const timers: NodeJS.Timeout[] = [];
   for (const def of collectors) {
-    void runCollector(def, config, store);
-    timers.push(setInterval(() => void runCollector(def, config, store), def.intervalMinutes * 60_000));
+    void runCollector(def, config);
+    timers.push(setInterval(() => void runCollector(def, config), def.intervalMinutes * 60_000));
   }
 
   const shutdown = () => {
     log('daemon', '收到退出信号，清理中…');
     timers.forEach(clearInterval);
-    store.close();
-    process.exit(0);
+    void closeStore().finally(() => process.exit(0));
   };
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);

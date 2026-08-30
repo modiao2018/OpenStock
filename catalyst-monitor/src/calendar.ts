@@ -1,13 +1,13 @@
-import { Store } from './store.js';
+import './env';
+import { closeStore, listTrials } from './store';
 
 /** 催化剂日历：列出所有已建档试验的关键日期，按主要完成日期排序 */
-function main(): void {
-  const store = new Store();
-  const trials = store.listTrials();
-  store.close();
+async function main(): Promise<void> {
+  const trials = await listTrials();
+  await closeStore();
 
   if (trials.length === 0) {
-    console.log('尚无试验数据。先运行 npm run once 建档。');
+    console.log('尚无试验数据。先运行 npm run monitor:once 建档。');
     return;
   }
 
@@ -28,4 +28,7 @@ function main(): void {
   }
 }
 
-main();
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

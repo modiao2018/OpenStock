@@ -51,7 +51,7 @@ export interface NewEvent {
 
 /** 入库后的事件（含首次抓取时间与是否为该实体的首个快照） */
 export interface StoredEvent extends NewEvent {
-  id: number;
+  id: string;
   fetchedAt: string;
   /** 首次见到该 externalId（首轮建档快照，不推送，避免启动时刷屏） */
   isFirstSnapshot: boolean;
