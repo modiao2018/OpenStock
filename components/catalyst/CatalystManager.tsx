@@ -37,6 +37,7 @@ export default function CatalystManager({ initialItems }: { initialItems: Cataly
     const [company, setCompany] = useState('');
     const [keywords, setKeywords] = useState('');
     const [scenarioNotes, setScenarioNotes] = useState('');
+    const [autoDiscover, setAutoDiscover] = useState(true);
     const [trialResults, setTrialResults] = useState<TrialSearchResult[]>([]);
     const [selectedNctIds, setSelectedNctIds] = useState<Set<string>>(new Set());
     const [searching, setSearching] = useState(false);
@@ -76,6 +77,7 @@ export default function CatalystManager({ initialItems }: { initialItems: Cataly
         setCompany('');
         setKeywords('');
         setScenarioNotes('');
+        setAutoDiscover(true);
         setTrialResults([]);
         setSelectedNctIds(new Set());
         setSearched(false);
@@ -89,6 +91,7 @@ export default function CatalystManager({ initialItems }: { initialItems: Cataly
         setCompany(item.company);
         setKeywords(item.keywords.join(', '));
         setScenarioNotes(item.scenarioNotes ?? '');
+        setAutoDiscover(item.autoDiscover ?? true);
         // 已选试验先以"仅编号"形式展示，搜索后会合并出完整标题
         setTrialResults(
             item.nctIds.map((nctId) => ({ nctId, title: nctId, overallStatus: '', phase: '' }))
@@ -133,6 +136,7 @@ export default function CatalystManager({ initialItems }: { initialItems: Cataly
                 nctIds: Array.from(selectedNctIds),
                 keywords: keywords.split(/[,，]/).map((k) => k.trim()).filter(Boolean),
                 scenarioNotes: scenarioNotes.trim() || undefined,
+                autoDiscover,
             });
             setDialogOpen(false);
             router.refresh();
@@ -289,6 +293,15 @@ export default function CatalystManager({ initialItems }: { initialItems: Cataly
                                 {t('searchTrials')}
                             </Button>
                             <p className="text-xs text-gray-600 mt-1.5">{t('trialsHint')}</p>
+                            <label className="flex items-start gap-2 mt-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={autoDiscover}
+                                    onChange={(e) => setAutoDiscover(e.target.checked)}
+                                    className="mt-0.5 accent-teal-500"
+                                />
+                                <span className="text-xs text-gray-400">{t('autoDiscover')}</span>
+                            </label>
                         </div>
 
                         {trialResults.length > 0 && (

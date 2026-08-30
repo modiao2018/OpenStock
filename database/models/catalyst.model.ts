@@ -83,6 +83,8 @@ export interface ICatalystWatchItem extends Document {
     keywords: string[];
     /** 情景预案：成功/模糊/失败的判据，事件落地时 AI 对档用 */
     scenarioNotes?: string;
+    /** 自动发现该公司的在研试验（每 12 小时按主办方查询登记库） */
+    autoDiscover: boolean;
 }
 
 const CatalystWatchItemSchema = new Schema<ICatalystWatchItem>(
@@ -92,6 +94,7 @@ const CatalystWatchItemSchema = new Schema<ICatalystWatchItem>(
         nctIds: { type: [String], default: [] },
         keywords: { type: [String], default: [] },
         scenarioNotes: { type: String },
+        autoDiscover: { type: Boolean, default: true },
     },
     { timestamps: true }
 );

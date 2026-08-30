@@ -10,6 +10,7 @@ import { collectRss } from './collectors/rss';
 import { collectMarket } from './collectors/market';
 import { collectReminders } from './collectors/reminders';
 import { collectWeekly } from './collectors/weekly';
+import { collectDiscovery } from './collectors/discovery';
 import { upsertCustomEvent } from './store';
 import type { AnalysisResult } from './analyze';
 import type { MonitorConfig, NewEvent } from './types';
@@ -129,6 +130,7 @@ async function main(): Promise<void> {
     { name: 'edgar', intervalMinutes: config.poll.edgarMinutes, run: collectEdgar },
     { name: 'rss', intervalMinutes: config.poll.rssMinutes, run: collectRss },
     { name: 'clinicaltrials', intervalMinutes: config.poll.clinicaltrialsMinutes, run: collectClinicalTrials },
+    { name: 'discovery', intervalMinutes: 720, run: collectDiscovery },
     { name: 'reminders', intervalMinutes: 360, run: collectReminders },
     { name: 'weekly', intervalMinutes: 60, run: collectWeekly },
   ];

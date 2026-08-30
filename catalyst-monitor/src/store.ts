@@ -116,7 +116,14 @@ export async function getWatchItems(): Promise<WatchItem[]> {
     nctIds: d.nctIds ?? [],
     keywords: d.keywords ?? [],
     scenarioNotes: d.scenarioNotes ?? undefined,
+    autoDiscover: d.autoDiscover ?? true,
   }));
+}
+
+/** 自动发现的新试验并入监控清单（不移除用户手选的） */
+export async function addNctIdsToWatchItem(symbol: string, nctIds: string[]): Promise<void> {
+  await connectToDatabase();
+  await CatalystWatchItem.updateOne({ symbol }, { $addToSet: { nctIds: { $each: nctIds } } });
 }
 
 export async function seedWatchItems(items: WatchItem[]): Promise<void> {

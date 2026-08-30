@@ -32,6 +32,7 @@ export interface CatalystWatchItemData {
     nctIds: string[];
     keywords: string[];
     scenarioNotes?: string;
+    autoDiscover: boolean;
 }
 
 export interface TrialSearchResult {
@@ -78,6 +79,7 @@ export async function getCatalystWatchItems(): Promise<CatalystWatchItemData[]> 
             nctIds: d.nctIds ?? [],
             keywords: d.keywords ?? [],
             scenarioNotes: d.scenarioNotes ?? undefined,
+            autoDiscover: d.autoDiscover ?? true,
         }));
     } catch (error) {
         console.error('Error fetching catalyst watch items:', error);
@@ -98,6 +100,7 @@ export async function saveCatalystWatchItem(item: CatalystWatchItemData) {
                 nctIds,
                 keywords: item.keywords.map((k) => k.trim()).filter(Boolean),
                 scenarioNotes: item.scenarioNotes?.trim() || undefined,
+                autoDiscover: item.autoDiscover,
             },
             { upsert: true }
         );
@@ -209,7 +212,7 @@ export interface MonitorStatusData {
 
 export async function getMonitorStatus(): Promise<MonitorStatusData> {
     // 轮询间隔以 config.yaml 为准（daemon 启动时读取同一文件）
-    const defaults = { market: 2, halts: 2, edgar: 5, rss: 5, clinicaltrials: 15 };
+    const defaults = { market: 2, halts: 2, edgar: 5, rss: 5, clinicaltrials: 15, discovery: 720 };
     let intervals: Record<string, number> = { ...defaults };
     try {
         const raw = parseYaml(readFileSync(join(process.cwd(), 'catalyst-monitor', 'config.yaml'), 'utf8')) as any;
@@ -219,6 +222,7 @@ export async function getMonitorStatus(): Promise<MonitorStatusData> {
             edgar: Number(raw?.poll?.edgar_minutes ?? defaults.edgar),
             rss: Number(raw?.poll?.rss_minutes ?? defaults.rss),
             clinicaltrials: Number(raw?.poll?.clinicaltrials_minutes ?? defaults.clinicaltrials),
+            discovery: defaults.discovery,
         };
     } catch (error) {
         console.error('Error reading catalyst-monitor/config.yaml:', error);

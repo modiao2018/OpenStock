@@ -5,6 +5,8 @@ export interface WatchItem {
   keywords: string[];
   /** 情景预案（成功/模糊/失败判据），事件分析时 LLM 据此对档 */
   scenarioNotes?: string;
+  /** 自动发现该公司在研试验（默认开启） */
+  autoDiscover?: boolean;
 }
 
 export interface FeedConfig {

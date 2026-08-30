@@ -357,7 +357,7 @@
       "whyTitle": "Why monitor \"catalysts\"",
       "whyBody": "Biotech stock prices hinge on a few key dates: clinical data readouts, FDA decisions. These events are binary — +50% or cut in half in a day — and the market often moves before the announcement. This page does three things: counts down to events so you prepare a plan; pushes alerts with AI interpretation and a trade rating the moment things happen; and lets you check afterwards whether the price moved early.",
       "watchlistTitle": "Filling the watch list",
-      "watchlistBody": "Add companies you hold or follow. \"Search Clinical Trials\" lists the company's registered trials — if unsure, tick the ones that are Recruiting/Active and Phase 2 or 3 (what the market watches). Keywords should be drug codes (e.g. ABCL635) for news matching. Strongly recommend filling the scenario plan: pre-write what you'll do if data is good/mixed/bad, and the AI will map results to a tier when the event lands.",
+      "watchlistBody": "Add companies you hold or follow — no need to pick trials manually: auto-discovery (on by default) adds the company's lead-sponsored active trials every 12h and pushes when new ones are registered. You can still hand-pick via \"Search Clinical Trials\". Keywords should be drug codes (e.g. ABCL635) for news matching. Strongly recommend filling the scenario plan: pre-write what you'll do if data is good/mixed/bad, and the AI will map results to a tier when the event lands.",
       "glossaryTitle": "Terms you'll encounter",
       "glossaryBody": "· NCT ID: a trial's ID in the official registry — handled automatically\n· Phase 1: dozens of people, safety\n· Phase 2: hundreds, first efficacy test — make-or-break for most biotechs\n· Phase 3: confirmatory trial deciding approval\n· Topline data: first release of main results — the biggest price mover\n· Primary completion: data collection ends; publication follows weeks to months later\n· PDUFA date: FDA's decision deadline\n· 8-K: mandatory material-event filing\n· T1 halt: trading paused for \"news pending\" — often right before a readout",
       "timelineTitle": "Reading the event timeline",
@@ -392,7 +392,8 @@
       "company": "Company Name",
       "keywords": "News keywords (comma separated)",
       "searchTrials": "Search Clinical Trials",
-      "trialsHint": "Unsure which to pick? Tick Recruiting/Active trials in Phase 2 or 3 — those are what the market watches",
+      "trialsHint": "Optional — with auto-discovery below, the company's active trials are tracked automatically",
+      "autoDiscover": "Auto-discover trials: every 12h, query the registry by company and add its lead-sponsored active trials (Phase 2/3 first, up to 10). New registrations trigger a push. Manually picked trials are always kept.",
       "noTrials": "No trials found. Try adjusting the company name.",
       "trialsSelected": "{count} trials selected",
       "save": "Save",
@@ -532,7 +533,8 @@
         "edgar": "SEC Filing",
         "halts": "Halt",
         "rss": "News",
-        "market": "Market Move"
+        "market": "Market Move",
+        "discovery": "Trial Discovery"
       }
     }
   },
