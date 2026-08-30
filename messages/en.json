@@ -378,7 +378,7 @@
       "noData": "Pending",
       "noCatalyst": "No catalyst in 90d",
       "zTitle": "Latest 5-min abnormal return (σ)",
-      "sparkTitle": "Latest session"
+      "sparkLabel": "Last {days} sessions"
     },
     "status": {
       "RECRUITING": "Recruiting",

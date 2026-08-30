@@ -667,8 +667,11 @@ export interface SymbolTileData {
     lastClose?: number;
     /** 最近交易日相对前一交易日收盘的涨跌幅（%） */
     dayChangePct?: number;
-    /** 最近交易日的收盘价序列（降采样，火花线用） */
+    /** 近 5 个交易日的收盘价序列（跨日降采样，火花线用） */
     spark: number[];
+    /** 火花线覆盖的交易日数与区间涨跌幅（%） */
+    sparkDays?: number;
+    sparkChangePct?: number;
     z?: number;
     nextCatalyst?: UpcomingCatalyst;
 }
@@ -721,7 +724,7 @@ export async function getDashboardOverview(): Promise<DashboardOverview> {
                 z: zBySymbol.get(item.symbol),
                 nextCatalyst: nextBySymbol.get(item.symbol),
             };
-            const bars = await CatalystBar.find({ symbol: item.symbol, t: { $gte: new Date(Date.now() - 5 * 24 * 3600_000) } })
+            const bars = await CatalystBar.find({ symbol: item.symbol, t: { $gte: new Date(Date.now() - 8 * 24 * 3600_000) } })
                 .sort({ t: 1 })
                 .lean();
             if (bars.length > 0) {
@@ -732,7 +735,7 @@ export async function getDashboardOverview(): Promise<DashboardOverview> {
                     if (!sessions.has(day)) sessions.set(day, []);
                     sessions.get(day)!.push(b.c);
                 }
-                const dayKeys = [...sessions.keys()].sort();
+                const dayKeys = [...sessions.keys()].sort().slice(-5);
                 const lastCloses = sessions.get(dayKeys[dayKeys.length - 1])!;
                 tile.lastClose = lastCloses[lastCloses.length - 1];
                 if (dayKeys.length >= 2) {
@@ -740,8 +743,14 @@ export async function getDashboardOverview(): Promise<DashboardOverview> {
                     const prev = prevCloses[prevCloses.length - 1];
                     if (prev > 0) tile.dayChangePct = Number((((tile.lastClose! - prev) / prev) * 100).toFixed(2));
                 }
-                const stride = Math.max(1, Math.ceil(lastCloses.length / 48));
-                tile.spark = lastCloses.filter((_, i) => i % stride === 0 || i === lastCloses.length - 1);
+                // 火花线跨近 5 个交易日，降采样到 ≤120 点——单日分钟线看不出趋势形状
+                const allCloses = dayKeys.flatMap((k) => sessions.get(k)!);
+                const stride = Math.max(1, Math.ceil(allCloses.length / 120));
+                tile.spark = allCloses.filter((_, i) => i % stride === 0 || i === allCloses.length - 1);
+                tile.sparkDays = dayKeys.length;
+                if (tile.spark[0] > 0) {
+                    tile.sparkChangePct = Number((((tile.lastClose! - tile.spark[0]) / tile.spark[0]) * 100).toFixed(1));
+                }
             }
             overview.tiles.push(tile);
         }

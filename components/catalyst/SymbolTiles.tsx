@@ -3,19 +3,23 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { isRedUpLocale } from '@/lib/utils';
 import type { SymbolTileData } from '@/lib/actions/catalyst.actions';
 
-function Sparkline({ points, up, redUp }: { points: number[]; up: boolean; redUp: boolean }) {
-    if (points.length < 2) return <div className="h-9" />;
+function Sparkline({ points, redUp }: { points: number[]; redUp: boolean }) {
+    if (points.length < 2) return <div className="h-10" />;
     const min = Math.min(...points);
     const max = Math.max(...points);
     const range = max - min || 1;
-    const w = 120;
-    const h = 36;
-    const coords = points.map((p, i) => `${(i / (points.length - 1)) * w},${h - 4 - ((p - min) / range) * (h - 8)}`);
-    // 中国惯例红涨绿跌；英文界面自动反转
-    const color = up === redUp ? '#f87171' : '#4ade80';
+    const w = 240;
+    const h = 40;
+    const y = (p: number) => h - 4 - ((p - min) / range) * (h - 8);
+    const coords = points.map((p, i) => `${(i / (points.length - 1)) * w},${y(p)}`);
+    // 颜色按整段区间方向：中国惯例红涨绿跌，英文界面自动反转
+    const periodUp = points[points.length - 1] >= points[0];
+    const color = periodUp === redUp ? '#f87171' : '#4ade80';
     const [lastX, lastY] = coords[coords.length - 1].split(',');
     return (
-        <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-9" preserveAspectRatio="none" aria-hidden="true">
+        <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-10" preserveAspectRatio="none" aria-hidden="true">
+            {/* 起点基准虚线：线在基准之上=涨、之下=跌，幅度可比 */}
+            <line x1="0" y1={y(points[0])} x2={w} y2={y(points[0])} stroke="#374151" strokeWidth="1" strokeDasharray="3,4" />
             <polyline points={coords.join(' ')} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" />
             <circle cx={lastX} cy={lastY} r="2.5" fill={color} />
         </svg>
@@ -67,8 +71,21 @@ export default async function SymbolTiles({ tiles }: { tiles: SymbolTileData[] }
                             </span>
                         </div>
 
-                        <div className="mt-1" title={t('sparkTitle')}>
-                            <Sparkline points={tile.spark} up={up} redUp={redUp} />
+                        <div className="mt-1">
+                            {tile.sparkDays !== undefined && tile.sparkChangePct !== undefined && (
+                                <div className="flex justify-between text-[10px] text-gray-600 mb-0.5">
+                                    <span>{t('sparkLabel', { days: tile.sparkDays })}</span>
+                                    <span
+                                        className={`tabular-nums ${
+                                            (tile.sparkChangePct >= 0) === redUp ? 'text-red-400/70' : 'text-green-400/70'
+                                        }`}
+                                    >
+                                        {tile.sparkChangePct > 0 ? '+' : ''}
+                                        {tile.sparkChangePct}%
+                                    </span>
+                                </div>
+                            )}
+                            <Sparkline points={tile.spark} redUp={redUp} />
                         </div>
 
                         <div className="mt-1.5 text-xs">

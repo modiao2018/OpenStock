@@ -378,7 +378,7 @@
       "noData": "待积累",
       "noCatalyst": "90 天内无催化剂",
       "zTitle": "最新 5 分钟异常收益（σ 倍数）",
-      "sparkTitle": "最近交易日走势"
+      "sparkLabel": "近 {days} 个交易日"
     },
     "status": {
       "RECRUITING": "招募中",
