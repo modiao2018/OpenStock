@@ -57,6 +57,7 @@ export default function CatalystAgenda({
     const [date, setDate] = useState('');
     const [kind, setKind] = useState<CustomCatalystKind>('data-readout');
     const [saving, setSaving] = useState(false);
+    const [showTrials, setShowTrials] = useState(true);
 
     const now = Date.now();
     const today = new Date().toISOString().slice(0, 10);
@@ -76,6 +77,7 @@ export default function CatalystAgenda({
                 note: c.note,
             });
         }
+        if (showTrials)
         for (const tr of trials) {
             const d = tr.primaryCompletionDate;
             const iso = d && /^\d{4}-\d{2}$/.test(d) ? `${d}-01` : d;
@@ -91,7 +93,8 @@ export default function CatalystAgenda({
                 note: tr.nctId,
             });
         }
-        entries.sort((a, b) => a.date.localeCompare(b.date));
+        // 同日先显示自定义催化剂（信息最准），试验注册日期垫后
+        entries.sort((a, b) => a.date.localeCompare(b.date) || Number(b.isCustom) - Number(a.isCustom));
 
         const byMonth = new Map<string, AgendaEntry[]>();
         for (const e of entries) {
@@ -104,7 +107,7 @@ export default function CatalystAgenda({
         }
         return [...byMonth.entries()];
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [customEvents, trials, locale]);
+    }, [customEvents, trials, locale, showTrials]);
 
     const handleAdd = async () => {
         setSaving(true);
@@ -134,7 +137,13 @@ export default function CatalystAgenda({
                     {tCustom('add')}
                 </Button>
             </div>
-            <p className="text-xs text-gray-600 mb-4">{t('hint')}</p>
+            <p className="text-xs text-gray-600 mb-2">{t('hint')}</p>
+            {trials.length > 0 && (
+                <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer mb-4">
+                    <input type="checkbox" checked={showTrials} onChange={(e) => setShowTrials(e.target.checked)} className="accent-teal-500" />
+                    {t('showTrials', { count: trials.length })}
+                </label>
+            )}
 
             {groups.length === 0 ? (
                 <p className="text-gray-500 text-sm">{t('empty')}</p>
@@ -156,7 +165,13 @@ export default function CatalystAgenda({
                                             >
                                                 {days === null ? '—' : past ? t('past') : `T-${days}`}
                                             </span>
-                                            <div className="min-w-0 flex-1 border-l border-gray-800 pl-2.5">
+                                            <div
+                                                className={`min-w-0 flex-1 pl-2.5 ${
+                                                    e.isCustom
+                                                        ? 'border-l-2 border-teal-600 bg-teal-950/25 rounded-r-lg py-1 pr-1.5'
+                                                        : 'border-l border-gray-800'
+                                                }`}
+                                            >
                                                 <div className="flex items-center gap-1.5 flex-wrap">
                                                     <span className="text-sm font-medium text-gray-200">{e.symbol}</span>
                                                     <span className="text-xs px-1.5 py-0.5 rounded bg-gray-800 text-gray-400">{e.chip}</span>
@@ -191,7 +206,7 @@ export default function CatalystAgenda({
                                                         {e.title}
                                                     </a>
                                                 ) : (
-                                                    <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">{e.title}</p>
+                                                    <p className={`text-xs line-clamp-1 mt-0.5 ${e.isCustom ? 'text-gray-300' : 'text-gray-500'}`}>{e.title}</p>
                                                 )}
                                             </div>
                                         </li>

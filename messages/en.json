@@ -448,6 +448,7 @@
       "trialsTitle": "Trial registry dates",
       "past": "Past",
       "undated": "Undated",
+      "showTrials": "Show trial registry dates ({count})",
       "phase": "Phase {phases}",
       "primaryCompletion": "Primary completion",
       "daysLeft": "in {days} days",

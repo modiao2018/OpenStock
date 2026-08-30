@@ -448,6 +448,7 @@
       "trialsTitle": "试验注册日期",
       "past": "已过",
       "undated": "日期未定",
+      "showTrials": "显示试验注册日期（{count}）",
       "phase": "临床 {phases} 期",
       "primaryCompletion": "主要完成",
       "daysLeft": "{days} 天后",
