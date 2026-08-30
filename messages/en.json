@@ -359,6 +359,8 @@
       "delete": "Delete",
       "empty": "No entries yet. Click \"Add Company\" to start.",
       "dialogTitle": "Watch Entry",
+      "stockSearch": "Find a stock",
+      "stockSearchPlaceholder": "Type a ticker or company name, then pick from the dropdown",
       "symbol": "Ticker",
       "company": "Company Name",
       "keywords": "News keywords (comma separated)",

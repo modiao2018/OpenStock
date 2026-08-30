@@ -359,6 +359,8 @@
       "delete": "删除",
       "empty": "暂无监控条目，点击\"添加公司\"开始",
       "dialogTitle": "监控条目",
+      "stockSearch": "查找股票",
+      "stockSearchPlaceholder": "输入股票代码或公司名，从下拉中选择",
       "symbol": "股票代码",
       "company": "公司名称",
       "keywords": "新闻关键词（逗号分隔）",
