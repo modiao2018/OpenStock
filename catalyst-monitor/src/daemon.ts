@@ -1,6 +1,6 @@
 import './env';
 import { loadConfig, log, logError } from './config';
-import { closeStore, insertEvent, markNotified } from './store';
+import { closeStore, getWatchItems, insertEvent, markNotified, seedWatchItems } from './store';
 import { notify } from './notify';
 import { collectClinicalTrials } from './collectors/clinicaltrials';
 import { collectEdgar } from './collectors/edgar';
@@ -16,7 +16,13 @@ interface CollectorDef {
 
 async function runCollector(def: CollectorDef, config: MonitorConfig): Promise<void> {
   try {
-    const candidates = await def.run(config);
+    // 每轮都从数据库取最新监控清单——网页端改动无需重启 daemon
+    const watchlist = await getWatchItems();
+    if (watchlist.length === 0) {
+      log(def.name, '监控清单为空，跳过本轮');
+      return;
+    }
+    const candidates = await def.run({ ...config, watchlist });
     for (const ev of candidates) {
       const stored = await insertEvent(ev);
       if (!stored) continue; // 已见过、无变化
@@ -46,9 +52,17 @@ async function main(): Promise<void> {
     { name: 'clinicaltrials', intervalMinutes: config.poll.clinicaltrialsMinutes, run: collectClinicalTrials },
   ];
 
+  // 首次运行：把 config.yaml 里的条目迁移入库，此后以数据库（网页端管理）为准
+  let watchItems = await getWatchItems();
+  if (watchItems.length === 0 && config.watchlist.length > 0) {
+    await seedWatchItems(config.watchlist);
+    watchItems = config.watchlist;
+    log('daemon', `监控清单已从 config.yaml 迁移入库（${watchItems.length} 条）`);
+  }
+
   log(
     'daemon',
-    `启动，监控 ${config.watchlist.map((w) => w.symbol).join(', ')}；` +
+    `启动，监控 ${watchItems.map((w) => w.symbol).join(', ') || '（空）'}；` +
       `推送渠道: ${[config.env.barkUrl && 'Bark', config.env.feishuWebhookUrl && '飞书'].filter(Boolean).join('+') || '未配置'}`
   );
 

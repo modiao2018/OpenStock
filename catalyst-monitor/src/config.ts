@@ -11,11 +11,8 @@ export function loadConfig(): MonitorConfig {
   const rawText = readFileSync(join(MODULE_ROOT, 'config.yaml'), 'utf8');
   const raw = parse(rawText) as Record<string, any>;
 
-  if (!Array.isArray(raw.watchlist) || raw.watchlist.length === 0) {
-    throw new Error('config.yaml 缺少 watchlist，至少配置一只股票');
-  }
-
-  const watchlist: WatchItem[] = raw.watchlist.map((item: any) => {
+  // watchlist 可为空：清单以数据库为准，yaml 里的条目只作首次迁移的种子
+  const watchlist: WatchItem[] = (Array.isArray(raw.watchlist) ? raw.watchlist : []).map((item: any) => {
     if (!item.symbol || !item.company) {
       throw new Error(`watchlist 条目缺少 symbol/company: ${JSON.stringify(item)}`);
     }

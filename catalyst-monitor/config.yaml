@@ -3,15 +3,15 @@
 # keywords 会用于 RSS 新闻标题/摘要的匹配（不区分大小写），
 # 建议同时放：药物代号、通用名、靶点、适应症、合作方名称
 watchlist:
-  # 示例条目（Sarepta，随便选的医药股示例）——替换成你实际关注的公司
-  - symbol: SRPT
-    company: Sarepta Therapeutics
+  - symbol: ABCL
+    company: AbCellera Biologics
     nct_ids:
-      - NCT05096221
+      - NCT07118891   # ABCL635 更年期血管舒缩症状，Phase 1/2，主要完成 2027-02
+      - NCT07108894   # ABCL575 首次人体 Phase 1（OX40L），主要完成 2027-04
     keywords:
-      - Sarepta
-      - Elevidys
-      - SRP-9001
+      - AbCellera
+      - ABCL635
+      - ABCL575
 
 # EDGAR 监控的申报类型（8-K 重大事件公告；外国公司用 6-K）
 edgar:

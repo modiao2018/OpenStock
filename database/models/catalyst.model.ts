@@ -69,6 +69,24 @@ const CatalystTrialSchema = new Schema<ICatalystTrial>(
     { timestamps: true }
 );
 
+/** 监控清单：网页端管理，daemon 每轮采集前读取，改动无需重启 */
+export interface ICatalystWatchItem extends Document {
+    symbol: string;
+    company: string;
+    nctIds: string[];
+    keywords: string[];
+}
+
+const CatalystWatchItemSchema = new Schema<ICatalystWatchItem>(
+    {
+        symbol: { type: String, required: true, unique: true, uppercase: true, trim: true },
+        company: { type: String, required: true, trim: true },
+        nctIds: { type: [String], default: [] },
+        keywords: { type: [String], default: [] },
+    },
+    { timestamps: true }
+);
+
 export interface ICatalystKv extends Document {
     key: string;
     value: string;
@@ -89,3 +107,6 @@ export const CatalystTrial: Model<ICatalystTrial> =
     (models?.CatalystTrial as Model<ICatalystTrial>) || model<ICatalystTrial>('CatalystTrial', CatalystTrialSchema);
 export const CatalystKv: Model<ICatalystKv> =
     (models?.CatalystKv as Model<ICatalystKv>) || model<ICatalystKv>('CatalystKv', CatalystKvSchema);
+export const CatalystWatchItem: Model<ICatalystWatchItem> =
+    (models?.CatalystWatchItem as Model<ICatalystWatchItem>) ||
+    model<ICatalystWatchItem>('CatalystWatchItem', CatalystWatchItemSchema);

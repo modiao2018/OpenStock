@@ -344,7 +344,53 @@
     "Dashboard": "Dashboard",
     "Search": "Search",
     "Watchlist": "Watchlist",
+    "Catalyst": "Catalyst",
     "API Docs": "API Docs"
+  },
+  "catalyst": {
+    "page": {
+      "title": "Catalyst Monitor",
+      "subtitle": "Clinical event watchlist, catalyst calendar and event timeline"
+    },
+    "manager": {
+      "title": "Watch List",
+      "add": "Add Company",
+      "edit": "Edit",
+      "delete": "Delete",
+      "empty": "No entries yet. Click \"Add Company\" to start.",
+      "dialogTitle": "Watch Entry",
+      "symbol": "Ticker",
+      "company": "Company Name",
+      "keywords": "News keywords (comma separated)",
+      "searchTrials": "Search Clinical Trials",
+      "noTrials": "No trials found. Try adjusting the company name.",
+      "trialsSelected": "{count} trials selected",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saveFailed": "Save failed. Please retry.",
+      "deleteConfirm": "Remove {symbol}? Historical events are kept, but it will no longer be monitored."
+    },
+    "calendar": {
+      "title": "Catalyst Calendar",
+      "empty": "No trials archived yet. They appear after the daemon's first run.",
+      "primaryCompletion": "Primary completion",
+      "daysLeft": "in {days} days",
+      "daysPast": "{days} days ago",
+      "hasResults": "Results posted",
+      "lastUpdate": "Last update"
+    },
+    "timeline": {
+      "title": "Event Timeline",
+      "empty": "No events yet",
+      "publishedAt": "Published",
+      "fetchedAt": "Fetched",
+      "source": {
+        "clinicaltrials": "Clinical Trial",
+        "edgar": "SEC Filing",
+        "halts": "Halt",
+        "rss": "News"
+      }
+    }
   },
   "userMenu": {
     "logout": "Logout"

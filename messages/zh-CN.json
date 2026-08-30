@@ -344,7 +344,53 @@
     "Dashboard": "仪表盘",
     "Search": "搜索",
     "Watchlist": "自选股",
+    "Catalyst": "催化剂监控",
     "API Docs": "API 文档"
+  },
+  "catalyst": {
+    "page": {
+      "title": "催化剂监控",
+      "subtitle": "临床事件监控清单、催化剂日历与事件时间线"
+    },
+    "manager": {
+      "title": "监控清单",
+      "add": "添加公司",
+      "edit": "编辑",
+      "delete": "删除",
+      "empty": "暂无监控条目，点击\"添加公司\"开始",
+      "dialogTitle": "监控条目",
+      "symbol": "股票代码",
+      "company": "公司名称",
+      "keywords": "新闻关键词（逗号分隔）",
+      "searchTrials": "搜索临床试验",
+      "noTrials": "未找到相关试验，可调整公司名后重试",
+      "trialsSelected": "已选 {count} 个试验",
+      "save": "保存",
+      "cancel": "取消",
+      "saveFailed": "保存失败，请重试",
+      "deleteConfirm": "确定移除 {symbol}？历史事件会保留，但不再监控。"
+    },
+    "calendar": {
+      "title": "催化剂日历",
+      "empty": "暂无试验建档，daemon 运行一轮后出现",
+      "primaryCompletion": "主要完成",
+      "daysLeft": "{days} 天后",
+      "daysPast": "已过 {days} 天",
+      "hasResults": "已有结果",
+      "lastUpdate": "最近更新"
+    },
+    "timeline": {
+      "title": "事件时间线",
+      "empty": "暂无事件",
+      "publishedAt": "源发布",
+      "fetchedAt": "抓取",
+      "source": {
+        "clinicaltrials": "临床试验",
+        "edgar": "SEC 申报",
+        "halts": "停牌",
+        "rss": "新闻"
+      }
+    }
   },
   "userMenu": {
     "logout": "退出登录"

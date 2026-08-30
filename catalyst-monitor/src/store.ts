@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto';
 import mongoose from 'mongoose';
 import { connectToDatabase } from '@/database/mongoose';
-import { CatalystEvent, CatalystTrial, CatalystKv } from '@/database/models/catalyst.model';
+import { CatalystEvent, CatalystTrial, CatalystKv, CatalystWatchItem } from '@/database/models/catalyst.model';
 import { log } from './config';
-import type { NewEvent, StoredEvent } from './types';
+import type { NewEvent, StoredEvent, WatchItem } from './types';
 
 export function sha256(input: unknown): string {
   return createHash('sha256').update(JSON.stringify(input)).digest('hex');
@@ -92,6 +92,25 @@ export async function getKv(key: string, maxAgeMs?: number): Promise<string | nu
 export async function setKv(key: string, value: string): Promise<void> {
   await connectToDatabase();
   await CatalystKv.findOneAndUpdate({ key }, { $set: { value } }, { upsert: true });
+}
+
+/** 监控清单以数据库为准（网页端可改）；config.yaml 仅用于首次迁移种子 */
+export async function getWatchItems(): Promise<WatchItem[]> {
+  await connectToDatabase();
+  const docs = await CatalystWatchItem.find().lean();
+  return docs.map((d) => ({
+    symbol: d.symbol,
+    company: d.company,
+    nctIds: d.nctIds ?? [],
+    keywords: d.keywords ?? [],
+  }));
+}
+
+export async function seedWatchItems(items: WatchItem[]): Promise<void> {
+  await connectToDatabase();
+  for (const item of items) {
+    await CatalystWatchItem.findOneAndUpdate({ symbol: item.symbol }, { $set: item }, { upsert: true });
+  }
 }
 
 export async function closeStore(): Promise<void> {
