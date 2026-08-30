@@ -1,4 +1,5 @@
 import { log, logError } from '../config';
+import { fetchWithRetry } from '../http';
 import { getKv, setKv, sha256 } from '../store';
 import type { MonitorConfig, NewEvent } from '../types';
 
@@ -48,10 +49,7 @@ async function getCikMap(config: MonitorConfig): Promise<Record<string, string>>
   const cached = await getKv('edgar_cik_map', CIK_MAP_TTL_MS);
   if (cached) return JSON.parse(cached);
 
-  const res = await fetch(CIK_MAP_URL, {
-    headers: edgarHeaders(config.env.edgarContact),
-    signal: AbortSignal.timeout(30_000),
-  });
+  const res = await fetchWithRetry(CIK_MAP_URL, { headers: edgarHeaders(config.env.edgarContact) }, { timeoutMs: 30_000 });
   if (!res.ok) throw new Error(`company_tickers.json HTTP ${res.status}`);
   const data = (await res.json()) as Record<string, { cik_str: number; ticker: string }>;
 
@@ -80,10 +78,11 @@ export async function collectEdgar(config: MonitorConfig): Promise<NewEvent[]> {
     }
     try {
       const cik10 = cik.padStart(10, '0');
-      const res = await fetch(`https://data.sec.gov/submissions/CIK${cik10}.json`, {
-        headers: edgarHeaders(config.env.edgarContact),
-        signal: AbortSignal.timeout(30_000),
-      });
+      const res = await fetchWithRetry(
+        `https://data.sec.gov/submissions/CIK${cik10}.json`,
+        { headers: edgarHeaders(config.env.edgarContact) },
+        { timeoutMs: 30_000 }
+      );
       if (!res.ok) throw new Error(`${item.symbol} submissions HTTP ${res.status}`);
       const data = (await res.json()) as any;
 

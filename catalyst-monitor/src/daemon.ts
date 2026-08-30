@@ -1,7 +1,7 @@
 import './env';
 import { loadConfig, log, logError } from './config';
 import { closeStore, getWatchItems, insertEvent, markNotified, seedWatchItems, setEventAnalysis, setKv } from './store';
-import { notify } from './notify';
+import { notify, pushMessage } from './notify';
 import { analyzeEvent } from './analyze';
 import { collectClinicalTrials } from './collectors/clinicaltrials';
 import { collectEdgar } from './collectors/edgar';
@@ -34,14 +34,30 @@ async function runCollector(def: CollectorDef, config: MonitorConfig): Promise<v
         continue;
       }
       log(def.name, `新事件: ${stored.title}`);
-      // 报告类事件先做 LLM 中文分析（失败/未配置则跳过，不阻塞推送）
-      const analysis = await analyzeEvent(config, stored);
-      if (analysis) {
-        stored.analysis = analysis;
-        await setEventAnalysis(stored.id, analysis);
+      if (stored.severity === 'urgent') {
+        // 紧急事件：先推送再分析——LLM 的秒级延迟不能拖慢告警
+        const delivered = await notify(config, stored);
+        if (delivered) await markNotified(stored.id);
+        const analysis = await analyzeEvent(config, stored);
+        if (analysis) {
+          await setEventAnalysis(stored.id, analysis);
+          await pushMessage(config, {
+            title: `AI 分析｜${stored.title}`,
+            body: analysis,
+            urgent: false,
+            url: stored.url,
+          });
+        }
+      } else {
+        // 普通事件时效性要求低，分析随首条推送一起发，避免打扰两次
+        const analysis = await analyzeEvent(config, stored);
+        if (analysis) {
+          stored.analysis = analysis;
+          await setEventAnalysis(stored.id, analysis);
+        }
+        const delivered = await notify(config, stored);
+        if (delivered) await markNotified(stored.id);
       }
-      const delivered = await notify(config, stored);
-      if (delivered) await markNotified(stored.id);
     }
   } catch (err) {
     logError(def.name, err);
@@ -90,6 +106,17 @@ async function main(): Promise<void> {
   }
 
   const timers: NodeJS.Timeout[] = [];
+
+  // dead man's switch：定期 ping 外部健康检查服务（如 healthchecks.io），
+  // daemon 挂掉后由对方超时告警——监控系统自身的掉线不能靠自己发现
+  const healthcheckUrl = process.env.HEALTHCHECK_URL;
+  if (healthcheckUrl) {
+    const ping = () => void fetch(healthcheckUrl, { signal: AbortSignal.timeout(10_000) }).catch(() => {});
+    ping();
+    timers.push(setInterval(ping, 5 * 60_000));
+    log('daemon', 'healthcheck 心跳已启用（每 5 分钟）');
+  }
+
   for (const def of collectors) {
     void runCollector(def, config);
     timers.push(setInterval(() => void runCollector(def, config), def.intervalMinutes * 60_000));

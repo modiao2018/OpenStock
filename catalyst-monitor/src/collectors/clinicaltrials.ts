@@ -1,4 +1,5 @@
 import { log, logError } from '../config';
+import { fetchWithRetry } from '../http';
 import { sha256, upsertTrial } from '../store';
 import type { MonitorConfig, NewEvent } from '../types';
 
@@ -34,9 +35,8 @@ export async function collectClinicalTrials(config: MonitorConfig): Promise<NewE
   for (const item of config.watchlist) {
     for (const nctId of item.nctIds) {
       try {
-        const res = await fetch(`${API_BASE}/${nctId}`, {
+        const res = await fetchWithRetry(`${API_BASE}/${nctId}`, {
           headers: { Accept: 'application/json' },
-          signal: AbortSignal.timeout(20_000),
         });
         if (!res.ok) throw new Error(`${nctId} HTTP ${res.status}`);
         const study = (await res.json()) as any;

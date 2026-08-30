@@ -1,5 +1,6 @@
 import { XMLParser } from 'fast-xml-parser';
 import { log, logError } from '../config';
+import { fetchWithRetry } from '../http';
 import { sha256 } from '../store';
 import type { MonitorConfig, NewEvent, WatchItem } from '../types';
 
@@ -36,9 +37,8 @@ export async function collectRss(config: MonitorConfig): Promise<NewEvent[]> {
 
   for (const feed of config.feeds) {
     try {
-      const res = await fetch(feed.url, {
+      const res = await fetchWithRetry(feed.url, {
         headers: { Accept: 'application/rss+xml, application/xml, text/xml', 'User-Agent': 'catalyst-monitor/0.1' },
-        signal: AbortSignal.timeout(20_000),
       });
       if (!res.ok) throw new Error(`${feed.name} HTTP ${res.status}`);
       const doc = parser.parse(await res.text());

@@ -1,3 +1,4 @@
+import { transporter } from '@/lib/nodemailer';
 import { log, logError } from './config';
 import type { MonitorConfig, StoredEvent } from './types';
 
@@ -6,6 +7,7 @@ const SOURCE_LABEL: Record<string, string> = {
   edgar: 'SEC 申报',
   halts: '停牌',
   rss: '新闻',
+  market: '盘面异动',
 };
 
 /** ISO 时间转北京时间显示；纯日期（如 2026-06-15）原样返回 */
@@ -57,29 +59,58 @@ export async function sendBark(barkUrl: string, msg: PushMessage): Promise<void>
   if (!res.ok) throw new Error(`Bark HTTP ${res.status}`);
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+/** 邮件兜底：Bark 彻底失败且事件紧急时使用；未配置 SMTP 则静默跳过 */
+async function emailFallback(msg: PushMessage): Promise<boolean> {
+  const to = process.env.ALERT_EMAIL || process.env.NODEMAILER_EMAIL;
+  if (!transporter || !to) return false;
+  try {
+    await transporter.sendMail({
+      from: `"Catalyst Monitor" <${process.env.NODEMAILER_EMAIL}>`,
+      to,
+      subject: `🚨 ${msg.title}`,
+      text: `${msg.body}\n\n（Bark 推送失败，本邮件为兜底通知）`,
+    });
+    log('notify', '已通过邮件兜底送达');
+    return true;
+  } catch (err) {
+    logError('notify:email', err);
+    return false;
+  }
+}
+
 /**
- * 推送策略：全部走 Bark，urgent 用 critical 级别（绕过静音/勿扰）。
- * 渠道未配置或发送失败只记日志，不中断采集主流程。
+ * 推送一条消息：Bark 重试 3 次（1.5s/3s 退避），
+ * 仍失败且为紧急消息时走邮件兜底。返回是否成功送达任一渠道。
  */
-export async function notify(config: MonitorConfig, ev: StoredEvent): Promise<boolean> {
+export async function pushMessage(config: MonitorConfig, msg: PushMessage): Promise<boolean> {
   const { barkUrl } = config.env;
   if (!barkUrl) {
-    log('notify', `(未配置推送渠道，仅记录) ${ev.title}`);
+    log('notify', `(未配置推送渠道，仅记录) ${msg.title}`);
     return false;
   }
 
-  const msg: PushMessage = {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      await sendBark(barkUrl, msg);
+      return true;
+    } catch (err) {
+      logError(`notify:bark(第${attempt}次)`, err);
+      if (attempt < 3) await sleep(1500 * attempt);
+    }
+  }
+  if (msg.urgent) return emailFallback(msg);
+  return false;
+}
+
+export async function notify(config: MonitorConfig, ev: StoredEvent): Promise<boolean> {
+  return pushMessage(config, {
     title: `[${SOURCE_LABEL[ev.source] ?? ev.source}] ${ev.title}`,
     body: formatBody(ev),
     urgent: ev.severity === 'urgent',
     url: ev.url,
-  };
-
-  try {
-    await sendBark(barkUrl, msg);
-    return true;
-  } catch (err) {
-    logError('notify:bark', err);
-    return false;
-  }
+  });
 }

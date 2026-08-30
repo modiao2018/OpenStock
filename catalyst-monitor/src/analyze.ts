@@ -1,6 +1,7 @@
 import { callAIProviderWithConfig } from '@/lib/ai-provider';
 import { resolveLlmConfig } from '@/lib/llm-config';
 import { log, logError } from './config';
+import { fetchWithRetry } from './http';
 import type { MonitorConfig, StoredEvent } from './types';
 
 const MAX_DOC_CHARS = 6000;
@@ -18,9 +19,8 @@ function stripHtml(html: string): string {
 
 /** EDGAR 申报原文（SEC 要求 User-Agent 带联系方式） */
 async function fetchEdgarDoc(url: string, contact: string): Promise<string> {
-  const res = await fetch(url, {
+  const res = await fetchWithRetry(url, {
     headers: { 'User-Agent': `catalyst-monitor/0.1 (${contact})` },
-    signal: AbortSignal.timeout(20_000),
   });
   if (!res.ok) throw new Error(`EDGAR doc HTTP ${res.status}`);
   return stripHtml(await res.text()).slice(0, MAX_DOC_CHARS);

@@ -1,5 +1,6 @@
 import { XMLParser } from 'fast-xml-parser';
 import { log } from '../config';
+import { fetchWithRetry } from '../http';
 import { sha256 } from '../store';
 import type { MonitorConfig, NewEvent } from '../types';
 
@@ -39,9 +40,8 @@ function reasonZh(code: string): string {
  * 临床数据公告是最强的"官方即将发布"信号——只推 watchlist 内的标的。
  */
 export async function collectHalts(config: MonitorConfig): Promise<NewEvent[]> {
-  const res = await fetch(HALTS_RSS, {
+  const res = await fetchWithRetry(HALTS_RSS, {
     headers: { Accept: 'application/rss+xml, application/xml, text/xml' },
-    signal: AbortSignal.timeout(20_000),
   });
   if (!res.ok) throw new Error(`halts RSS HTTP ${res.status}`);
   const xml = await res.text();
