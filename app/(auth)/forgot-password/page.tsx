@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import InputField from '@/components/forms/InputField';
 import FooterLink from '@/components/forms/FooterLink';
-import OpenDevSocietyBranding from '@/components/OpenDevSocietyBranding';
+import AuthContact from '@/components/AuthContact';
 import { requestPasswordResetEmail } from '@/lib/actions/auth.actions';
 
 type ForgotPasswordFormData = {
@@ -57,7 +57,7 @@ const ForgotPasswordPage = () => {
                 <InputField
                     name="email"
                     label={t('emailLabel')}
-                    placeholder="opendevsociety@cc.cc"
+                    placeholder="you@example.com"
                     register={register}
                     error={errors.email}
                     validation={{
@@ -74,7 +74,7 @@ const ForgotPasswordPage = () => {
                 </Button>
 
                 <FooterLink text={t('footerText')} linkText={t('footerLink')} href="/sign-in" />
-                <OpenDevSocietyBranding outerClassName="mt-10 flex justify-center" />
+                <AuthContact />
             </form>
         </>
     );

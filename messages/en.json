@@ -9,17 +9,13 @@
     "help": {
       "title": "Help Center | HappyStock",
       "description": "Community-driven support for HappyStock. No paywalls, just help."
-    },
-    "apiDocs": {
-      "title": "API & Architecture | HappyStock",
-      "description": "Technical documentation for HappyStock architecture, AI integrations, and background jobs."
     }
   },
   "common": {
     "loading": "Loading..."
   },
   "home": {
-    "stockHeatmap": "Stock Heatmap"
+    "stockHeatmap": "Heatmap"
   },
   "heatmap": {
     "marketCap": "Market Cap",
@@ -94,9 +90,8 @@
   },
   "auth": {
     "layout": {
-      "quote": "“For me, HappyStock isn’t just another stock app. It’s about giving people clarity and control in the market, without barriers or subscriptions.”",
-      "founder": "Founder @opendevsociety",
-      "dashboardAlt": "Dashboard Preview"
+      "quote": "HappyStock — market clarity for everyone. No gatekeeping, no subscriptions.",
+      "contact": "Contact us: "
     },
     "signIn": {
       "title": "Welcome back",
@@ -242,11 +237,6 @@
     "title": "How can we help?",
     "subtitle": "Community-powered support for everyone.",
     "cards": {
-      "docs": {
-        "title": "Read Docs",
-        "desc": "Deep dive into features and API integration.",
-        "linkText": "View Documentation"
-      },
       "chat": {
         "title": "Community Chat",
         "desc": "Get real-time answers from other users.",
@@ -285,67 +275,11 @@
     "stuckDesc": "Our team (and community) answers emails, usually entirely for free.",
     "contactButton": "Contact Support"
   },
-  "apiDocs": {
-    "heroTitle": "HappyStock Architecture",
-    "heroSubtitle": "A transparent look at the event-driven, multi-provider system powering your market insights.",
-    "badgeVersion": "v1.0.0 Active",
-    "badgeAi": "Gemini + Siray AI",
-    "badgeLicense": "Open Source AGPL-3.0",
-    "aiTitle": "Intelligent UI",
-    "aiDesc": "We prioritize uptime for generative features (Welcome Emails, News Summaries) using a robust multi-provider strategy. Our system automatically routes around outages.",
-    "primaryTitle": "Primary: Google Gemini",
-    "primaryDesc": "Handles high-volume inference for news summarization and personalization.",
-    "fallbackTitle": "Fallback: Siray.ai",
-    "fallbackDesc": "Instant failover protection. If Gemini wavers, Siray takes over to ensure zero dropped requests.",
-    "flowTrigger": "User Action / Cron Job",
-    "flowAttempt": "Attempt Gemini",
-    "flowFallback": "Fallback to Siray",
-    "flowDelivered": "Content Delivered",
-    "jobsTitle": "Serverless Infrastructure",
-    "jobs": [
-      {
-        "title": "Sign Up Email",
-        "trigger": "Event",
-        "desc": "Generates personalized welcome/onboarding email via AI."
-      },
-      {
-        "title": "Weekly News",
-        "trigger": "Cron: Mon 9am",
-        "desc": "Summarizes market news and broadcasts via ConvertKit."
-      },
-      {
-        "title": "Stock Alerts",
-        "trigger": "Cron: 5m",
-        "desc": "Checks user price targets against real-time data."
-      },
-      {
-        "title": "Re-engagement",
-        "trigger": "Cron: Daily",
-        "desc": "Identifies dormant users and sends nudges."
-      }
-    ],
-    "stackTitle": "Tech Stack & Data",
-    "stack": [
-      {
-        "title": "Finnhub",
-        "desc": "Real-time quotes, technical indicators, and market news."
-      },
-      {
-        "title": "ConvertKit (Kit)",
-        "desc": "High-volume newsletter broadcasts and user tagging."
-      },
-      {
-        "title": "MongoDB Atlas",
-        "desc": "Distributed data on AWS. SRV-bypassed connection for maximum reliability."
-      }
-    ]
-  },
   "nav": {
     "Dashboard": "Dashboard",
     "Search": "Search",
     "Watchlist": "Watchlist",
-    "Catalyst": "Catalyst",
-    "API Docs": "API Docs"
+    "Catalyst": "Catalyst"
   },
   "catalyst": {
     "page": {
@@ -570,7 +504,6 @@
   "footer": {
     "tagline": "HappyStock is an open-source alternative to expensive market platforms. Track real-time prices, set personalized alerts, and explore detailed company insights — built openly, for everyone, forever free.",
     "resources": "Resources",
-    "apiDocumentation": "API Documentation",
     "helpCenter": "Help Center"
   },
   "sentiment": {

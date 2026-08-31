@@ -34,20 +34,6 @@ const Layout = async ({ children }: { children : React.ReactNode }) => {
                     <blockquote className="auth-blockquote">
                         {t('quote')}
                     </blockquote>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <cite className="auth-testimonial-author">- Ravi Pratap Singh (@ravixalgorithm)</cite>
-                            <p className="max-md:text-xs text-gray-500">{t('founder')}</p>
-                        </div>
-                        <div className="flex items-center gap-0.5">
-                            {[1,2,3,4,5].map((star) => (
-                                <Image src="/assets/icons/star.svg" alt="star" key={star} width={20} height={20} className="w-4 h-4"/>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-                <div className="flex-1 relative">
-                    <Image src="/assets/images/dashboard.png" alt={t('dashboardAlt')} width={1440} height={1150} className="auth-dashboard-preview absolute top-0" />
                 </div>
             </section>
 

@@ -9,7 +9,7 @@ import { useTranslations } from 'next-intl';
 import FooterLink from '@/components/forms/FooterLink';
 import InputField from '@/components/forms/InputField';
 import PasswordRequirements from '@/components/forms/PasswordRequirements';
-import OpenDevSocietyBranding from '@/components/OpenDevSocietyBranding';
+import AuthContact from '@/components/AuthContact';
 import { Button } from '@/components/ui/button';
 import { resetPasswordWithToken } from '@/lib/actions/auth.actions';
 import { buildPasswordValidation } from '@/lib/constants';
@@ -118,7 +118,7 @@ const ResetPasswordForm = () => {
                 </Button>
 
                 <FooterLink text={t('footerText')} linkText={t('footerLink')} href="/forgot-password" />
-                <OpenDevSocietyBranding outerClassName="mt-10 flex justify-center" />
+                <AuthContact />
             </form>
         </>
     );

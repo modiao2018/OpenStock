@@ -9,17 +9,13 @@
     "help": {
       "title": "帮助中心 | HappyStock",
       "description": "HappyStock 的社区互助支持。没有付费墙，只有帮助。"
-    },
-    "apiDocs": {
-      "title": "API 与架构 | HappyStock",
-      "description": "HappyStock 系统架构、AI 集成与后台任务的技术文档。"
     }
   },
   "common": {
     "loading": "加载中…"
   },
   "home": {
-    "stockHeatmap": "股票热力图"
+    "stockHeatmap": "热力图"
   },
   "heatmap": {
     "marketCap": "市值",
@@ -94,9 +90,8 @@
   },
   "auth": {
     "layout": {
-      "quote": "“对我来说，HappyStock 不只是又一个股票应用。它的意义在于让每个人都能清晰、自主地掌握市场，没有门槛，也无需订阅。”",
-      "founder": "@opendevsociety 创始人",
-      "dashboardAlt": "仪表盘预览"
+      "quote": "HappyStock —— 让每个人都能清晰、自主地掌握市场，没有门槛，也无需订阅。",
+      "contact": "联系我们："
     },
     "signIn": {
       "title": "欢迎回来",
@@ -242,11 +237,6 @@
     "title": "需要什么帮助？",
     "subtitle": "面向所有人的社区互助支持。",
     "cards": {
-      "docs": {
-        "title": "阅读文档",
-        "desc": "深入了解各项功能与 API 集成。",
-        "linkText": "查看文档"
-      },
       "chat": {
         "title": "社区交流",
         "desc": "从其他用户那里获得实时解答。",
@@ -285,67 +275,11 @@
     "stuckDesc": "我们的团队（以及社区）会回复邮件，而且通常完全免费。",
     "contactButton": "联系支持"
   },
-  "apiDocs": {
-    "heroTitle": "HappyStock 系统架构",
-    "heroSubtitle": "透明呈现为您的市场洞察提供动力的事件驱动、多供应商系统。",
-    "badgeVersion": "v1.0.0 运行中",
-    "badgeAi": "Gemini + Siray AI",
-    "badgeLicense": "开源 AGPL-3.0",
-    "aiTitle": "智能 UI",
-    "aiDesc": "我们通过稳健的多供应商策略，为生成式功能（欢迎邮件、新闻摘要）优先保障可用性。系统会自动绕开故障服务进行路由。",
-    "primaryTitle": "主用：Google Gemini",
-    "primaryDesc": "承担新闻摘要与个性化等大规模推理任务。",
-    "fallbackTitle": "备用：Siray.ai",
-    "fallbackDesc": "即时故障切换保护。一旦 Gemini 出现波动，Siray 会立即接管，确保请求零丢失。",
-    "flowTrigger": "用户操作 / Cron 任务",
-    "flowAttempt": "尝试调用 Gemini",
-    "flowFallback": "回退至 Siray",
-    "flowDelivered": "内容已送达",
-    "jobsTitle": "Serverless 基础设施",
-    "jobs": [
-      {
-        "title": "Sign Up Email",
-        "trigger": "Event",
-        "desc": "通过 AI 生成个性化的欢迎与引导邮件。"
-      },
-      {
-        "title": "Weekly News",
-        "trigger": "Cron: Mon 9am",
-        "desc": "汇总市场新闻，并通过 ConvertKit 群发。"
-      },
-      {
-        "title": "Stock Alerts",
-        "trigger": "Cron: 5m",
-        "desc": "将用户设定的目标价与实时数据进行比对。"
-      },
-      {
-        "title": "Re-engagement",
-        "trigger": "Cron: Daily",
-        "desc": "识别沉睡用户并发送唤回提醒。"
-      }
-    ],
-    "stackTitle": "技术栈与数据",
-    "stack": [
-      {
-        "title": "Finnhub",
-        "desc": "实时报价、技术指标与市场新闻。"
-      },
-      {
-        "title": "ConvertKit (Kit)",
-        "desc": "大规模 newsletter 群发与用户标签管理。"
-      },
-      {
-        "title": "MongoDB Atlas",
-        "desc": "部署在 AWS 上的分布式数据存储。采用绕过 SRV 的连接方式，以获得最高可靠性。"
-      }
-    ]
-  },
   "nav": {
     "Dashboard": "仪表盘",
     "Search": "搜索",
     "Watchlist": "自选股",
-    "Catalyst": "催化剂监控",
-    "API Docs": "API 文档"
+    "Catalyst": "催化剂监控"
   },
   "catalyst": {
     "page": {
@@ -570,7 +504,6 @@
   "footer": {
     "tagline": "HappyStock 是昂贵行情平台的开源替代品。实时跟踪股价、设置个性化提醒、深入了解公司动态——开放共建，人人可用，永久免费。",
     "resources": "资源",
-    "apiDocumentation": "API 文档",
     "helpCenter": "帮助中心"
   },
   "sentiment": {

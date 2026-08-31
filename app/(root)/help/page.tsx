@@ -3,7 +3,6 @@ import { getTranslations } from 'next-intl/server';
 import {
   HelpCircle,
   MessageCircle,
-  BookOpen,
   Lightbulb,
   Mail,
   Github,
@@ -35,14 +34,7 @@ export default async function HelpPage() {
       </div>
 
       {/* Quick Action Grid */}
-      <div className="grid md:grid-cols-3 gap-4 mb-16">
-        <HelpCard
-          icon={<BookOpen className="text-teal-400" />}
-          title={t('cards.docs.title')}
-          desc={t('cards.docs.desc')}
-          link="/api-docs"
-          linkText={t('cards.docs.linkText')}
-        />
+      <div className="grid md:grid-cols-2 gap-4 mb-16">
         <HelpCard
           icon={<MessageCircle className="text-purple-400" />}
           title={t('cards.chat.title')}
@@ -82,7 +74,7 @@ export default async function HelpPage() {
         <h3 className="text-xl font-bold text-white mb-2">{t('stuckTitle')}</h3>
         <p className="text-gray-400 mb-6">{t('stuckDesc')}</p>
         <a
-          href="mailto:opendevsociety@gmail.com"
+          href="mailto:lxutong2026@gmail.com"
           className="inline-flex items-center gap-2 bg-white text-black px-6 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors"
         >
           <Mail size={18} />

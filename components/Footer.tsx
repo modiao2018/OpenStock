@@ -30,14 +30,6 @@ const Footer = async () => {
                         <h3 className="text-lg font-semibold mb-4">{t('resources')}</h3>
                         <ul className="space-y-2">
                             <li>
-                                <Link href="/api-docs" className="text-gray-400 hover:text-white transition-colors duration-200 relative group">
-                                    <span className="relative">
-                                        {t('apiDocumentation')}
-                                        <span className="absolute left-0 bottom-0 w-0 h-0.5 bg-white transition-all duration-300 group-hover:w-full"></span>
-                                    </span>
-                                </Link>
-                            </li>
-                            <li>
                                 <Link href="/help" className="text-gray-400 hover:text-white transition-colors duration-200 relative group">
                                     <span className="relative">
                                         {t('helpCenter')}

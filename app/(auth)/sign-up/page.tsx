@@ -11,7 +11,7 @@ import FooterLink from "@/components/forms/FooterLink";
 import { signUpWithEmail } from "@/lib/actions/auth.actions";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import OpenDevSocietyBranding from "@/components/OpenDevSocietyBranding";
+import AuthContact from "@/components/AuthContact";
 import React from "react";
 import { useTranslations } from "next-intl";
 
@@ -82,7 +82,7 @@ const SignUp = () => {
                 <InputField
                     name="email"
                     label={t('emailLabel')}
-                    placeholder="opendevsociety@cc.cc"
+                    placeholder="you@example.com"
                     register={register}
                     error={errors.email}
                     validation={{
@@ -156,16 +156,7 @@ const SignUp = () => {
 
                 <FooterLink text={t('footerText')} linkText={t('footerLink')} href="/sign-in" />
 
-                <OpenDevSocietyBranding outerClassName="mt-10 flex justify-center" />
-                <div className="mt-5 flex justify-center">
-                    <a href="https://peerlist.io/ravixalgorithm/project/happystock" target="_blank" rel="noreferrer">
-                        <img
-                            src="https://peerlist.io/api/v1/projects/embed/PRJH8OED7MBL9MGB9HRMKAKLM66KNN?showUpvote=true&theme=light"
-                            alt="HappyStock"
-                            style={{ width: 'auto', height: '72px' }}
-                        />
-                    </a>
-                </div>
+                <AuthContact />
             </form>
         </>
     )
