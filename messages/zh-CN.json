@@ -5,10 +5,6 @@
     "about": {
       "title": "关于我们 | HappyStock",
       "description": "HappyStock 与 Open Dev Society 背后的故事。"
-    },
-    "help": {
-      "title": "帮助中心 | HappyStock",
-      "description": "HappyStock 的社区互助支持。没有付费墙，只有帮助。"
     }
   },
   "common": {
@@ -232,48 +228,6 @@
     "storyP2": "我们是一群开发者、设计师与金融爱好者，共同汇聚在 <ods>Open Dev Society</ods> 的旗帜之下。我们的使命是让软件回归大众：打造高质量的开源产品，替代封闭的专有平台。",
     "githubCta": "访问我们的 GitHub",
     "partnersTitle": "来自优秀伙伴的支持"
-  },
-  "help": {
-    "title": "需要什么帮助？",
-    "subtitle": "面向所有人的社区互助支持。",
-    "cards": {
-      "chat": {
-        "title": "社区交流",
-        "desc": "从其他用户那里获得实时解答。",
-        "linkText": "加入 Discord"
-      },
-      "bugs": {
-        "title": "报告 Bug",
-        "desc": "发现问题？告诉我们的开发者。",
-        "linkText": "提交 Issue"
-      }
-    },
-    "faqTitle": "常见问题",
-    "faq": [
-      {
-        "question": "HappyStock 真的永久免费吗？",
-        "answer": "是的！我们依靠捐赠和社区贡献运转。核心功能（行情跟踪、提醒、分析）将始终免费。我们相信金融工具不应该是奢侈品。"
-      },
-      {
-        "question": "如何把股票加入自选列表？",
-        "answer": "使用页面顶部或页头的搜索栏查找公司，在股票详情页点击“心形”或“星形”图标，即可立即将它加入你的仪表盘。"
-      },
-      {
-        "question": "行情数据来自哪里？",
-        "answer": "我们与 Finnhub 等数据提供方合作，提供实时和延时数据。数据足够可靠，但请将其用于分析研究，而不是高频交易。"
-      },
-      {
-        "question": "我可以贡献代码或设计吗？",
-        "answer": "当然可以！欢迎查看我们的 GitHub 仓库，我们会为新手标记 “good first issue”。设计师、开发者和写作者，我们都欢迎。"
-      },
-      {
-        "question": "我的提醒没有触发。",
-        "answer": "提醒由后台任务每 5 分钟运行一次。请确认你已验证邮箱地址，因为通知主要通过邮件发送。"
-      }
-    ],
-    "stuckTitle": "还是没解决？",
-    "stuckDesc": "我们的团队（以及社区）会回复邮件，而且通常完全免费。",
-    "contactButton": "联系支持"
   },
   "nav": {
     "Dashboard": "仪表盘",
@@ -503,8 +457,7 @@
   },
   "footer": {
     "tagline": "HappyStock 是昂贵行情平台的开源替代品。实时跟踪股价、设置个性化提醒、深入了解公司动态——开放共建，人人可用，永久免费。",
-    "resources": "资源",
-    "helpCenter": "帮助中心"
+    "contact": "联系方式"
   },
   "sentiment": {
     "title": "情绪洞察",

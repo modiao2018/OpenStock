@@ -5,10 +5,6 @@
     "about": {
       "title": "About Us | HappyStock",
       "description": "The story behind HappyStock and the Open Dev Society."
-    },
-    "help": {
-      "title": "Help Center | HappyStock",
-      "description": "Community-driven support for HappyStock. No paywalls, just help."
     }
   },
   "common": {
@@ -232,48 +228,6 @@
     "storyP2": "We are a collective of developers, designers, and financial enthusiasts working under the <ods>Open Dev Society</ods> banner. Our mission is to democratize software by building high-quality, open-source alternatives to proprietary platforms.",
     "githubCta": "Visit our GitHub",
     "partnersTitle": "Backed by Amazing Partners"
-  },
-  "help": {
-    "title": "How can we help?",
-    "subtitle": "Community-powered support for everyone.",
-    "cards": {
-      "chat": {
-        "title": "Community Chat",
-        "desc": "Get real-time answers from other users.",
-        "linkText": "Join Discord"
-      },
-      "bugs": {
-        "title": "Report Bugs",
-        "desc": "Found an issue? Let our developers know.",
-        "linkText": "Open Issue"
-      }
-    },
-    "faqTitle": "Frequently Asked Questions",
-    "faq": [
-      {
-        "question": "Is HappyStock really free forever?",
-        "answer": "Yes! We run on donations and community contribution. Core features (tracking, alerts, analysis) will remain free. We believe financial tools shouldn't be luxury items."
-      },
-      {
-        "question": "How do I add stocks to my watchlist?",
-        "answer": "Use the search bar at the top or in the header to find a company. On the stock's detail page, click the 'Heart' or 'Star' icon to instantly add it to your dashboard."
-      },
-      {
-        "question": "Where does the market data come from?",
-        "answer": "We partner with Finnhub and other providers to offer real-time and delayed data. While robust, please use it for analysis rather than high-frequency trading."
-      },
-      {
-        "question": "Can I contribute code or designs?",
-        "answer": "Absolutely! Check our GitHub repository. We label issues as 'good first issue' for beginners. We welcome designers, developers, and writers alike."
-      },
-      {
-        "question": "My alerts aren't triggering.",
-        "answer": "Alerts run every 5 minutes via our background jobs. Ensure you've confirmed your email address, as we send notifications primarily via email."
-      }
-    ],
-    "stuckTitle": "Still stuck?",
-    "stuckDesc": "Our team (and community) answers emails, usually entirely for free.",
-    "contactButton": "Contact Support"
   },
   "nav": {
     "Dashboard": "Dashboard",
@@ -503,8 +457,7 @@
   },
   "footer": {
     "tagline": "HappyStock is an open-source alternative to expensive market platforms. Track real-time prices, set personalized alerts, and explore detailed company insights — built openly, for everyone, forever free.",
-    "resources": "Resources",
-    "helpCenter": "Help Center"
+    "contact": "Contact"
   },
   "sentiment": {
     "title": "Sentiment Insights",

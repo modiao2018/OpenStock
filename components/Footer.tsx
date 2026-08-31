@@ -25,17 +25,17 @@ const Footer = async () => {
                         </p>
                     </div>
 
-                    {/* Resources */}
+                    {/* Contact */}
                     <div>
-                        <h3 className="text-lg font-semibold mb-4">{t('resources')}</h3>
+                        <h3 className="text-lg font-semibold mb-4">{t('contact')}</h3>
                         <ul className="space-y-2">
                             <li>
-                                <Link href="/help" className="text-gray-400 hover:text-white transition-colors duration-200 relative group">
+                                <a href="mailto:lxutong2026@gmail.com" className="text-gray-400 hover:text-white transition-colors duration-200 relative group">
                                     <span className="relative">
-                                        {t('helpCenter')}
+                                        lxutong2026@gmail.com
                                         <span className="absolute left-0 bottom-0 w-0 h-0.5 bg-white transition-all duration-300 group-hover:w-full"></span>
                                     </span>
-                                </Link>
+                                </a>
                             </li>
                         </ul>
                     </div>
