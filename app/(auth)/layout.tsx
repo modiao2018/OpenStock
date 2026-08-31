@@ -6,6 +6,7 @@ import {redirect} from "next/navigation";
 import {getTranslations} from "next-intl/server";
 import {auth} from "@/lib/better-auth/auth";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import AuthShowcase from "@/components/AuthShowcase";
 
 const Layout = async ({ children }: { children : React.ReactNode }) => {
 
@@ -30,11 +31,12 @@ const Layout = async ({ children }: { children : React.ReactNode }) => {
                 </div>
             </section>
             <section className="auth-right-section">
-                <div className="z-10 relative lg:mt-4 lg:mb-16">
+                <div className="z-10 relative lg:mt-4">
                     <blockquote className="auth-blockquote">
                         {t('quote')}
                     </blockquote>
                 </div>
+                <AuthShowcase />
             </section>
 
         </main>

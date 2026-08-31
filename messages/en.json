@@ -87,7 +87,11 @@
   "auth": {
     "layout": {
       "quote": "HappyStock — market clarity for everyone. No gatekeeping, no subscriptions.",
-      "contact": "Contact us: "
+      "contact": "Contact us: ",
+      "showcaseHeatmap": "Heatmap",
+      "showcaseAlertTitle": "Price alert triggered",
+      "showcaseAlertBody": "NVDA crossed $950.00",
+      "showcaseCatalyst": "Catalyst · MRNA FDA decision"
     },
     "signIn": {
       "title": "Welcome back",

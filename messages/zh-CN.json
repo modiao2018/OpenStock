@@ -87,7 +87,11 @@
   "auth": {
     "layout": {
       "quote": "HappyStock —— 让每个人都能清晰、自主地掌握市场，没有门槛，也无需订阅。",
-      "contact": "联系我们："
+      "contact": "联系我们：",
+      "showcaseHeatmap": "热力图",
+      "showcaseAlertTitle": "价格提醒已触发",
+      "showcaseAlertBody": "NVDA 突破 $950.00",
+      "showcaseCatalyst": "催化剂 · MRNA FDA 决议"
     },
     "signIn": {
       "title": "欢迎回来",

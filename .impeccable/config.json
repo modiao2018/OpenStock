@@ -17,6 +17,15 @@
         ],
         "createdAt": "2026-08-31T09:03:07.882Z",
         "reason": "pre-existing page title style shipped before this session; not introduced by this change"
+      },
+      {
+        "rule": "gray-on-color",
+        "value": "*",
+        "files": [
+          "app/globals.css"
+        ],
+        "createdAt": "2026-08-31T11:39:34.180Z",
+        "reason": "pre-existing button styles (near-black gray-900 on teal/red brand buttons, adequate contrast); untouched by this change"
       }
     ]
   }
