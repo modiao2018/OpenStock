@@ -40,7 +40,7 @@ MONITOR_ON="$(remote_env MONITOR_ENABLED)"
 [ -n "$FINNHUB_KEY" ] || die "服务器上的 .env.production 缺 NEXT_PUBLIC_FINNHUB_API_KEY（或 ssh 连不上）"
 
 # ---------- 本机构建 ----------
-info "构建 web 镜像（$PLATFORM，版本 $TAG）"
+info "构建 web 镜像（${PLATFORM}，版本 ${TAG}）"
 docker build --platform "$PLATFORM" -f "$ROOT/deploy/Dockerfile" --target web \
     --build-arg NEXT_PUBLIC_FINNHUB_API_KEY="$FINNHUB_KEY" \
     -t "$WEB_IMAGE:$TAG" "$ROOT"
@@ -75,4 +75,4 @@ rsync -az --exclude releases.log --exclude local.env --exclude images.tar \
 info "在服务器上切换到新版本"
 ssh "$DEPLOY_HOST" "cd '$DEPLOY_PATH' && bash deploy/update.sh --tag $TAG"
 
-ok "发版完成：$TAG（服务器未参与构建）"
+ok "发版完成：${TAG}（服务器未参与构建）"

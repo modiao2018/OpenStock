@@ -10,7 +10,7 @@ set -euo pipefail
 . "$(dirname "$0")/_common.sh"
 
 check_prereqs
-[ -f "$ENV_FILE" ] || die "找不到 $ENV_FILE，请先执行 bash deploy/first-deploy.sh"
+[ -f "$ENV_FILE" ] || die "找不到 ${ENV_FILE}，请先执行 bash deploy/first-deploy.sh"
 validate_env
 
 NO_PULL=false
@@ -35,7 +35,7 @@ if [ -n "$EXPLICIT_TAG" ]; then
     # ---------- 镜像已在本机构建好并 docker load 过，直接切换 ----------
     TAG="$EXPLICIT_TAG"; export TAG
     docker image inspect "$WEB_IMAGE:$TAG" >/dev/null 2>&1 \
-        || die "本地没有镜像 $WEB_IMAGE:$TAG，请先在开发机执行 deploy/release-local.sh"
+        || die "本地没有镜像 $WEB_IMAGE:${TAG}，请先在开发机执行 deploy/release-local.sh"
     if [ "$(get_env MONITOR_ENABLED)" = "true" ]; then
         docker image inspect "$MONITOR_IMAGE:$TAG" >/dev/null 2>&1 \
             || die "MONITOR_ENABLED=true 但缺少镜像 $MONITOR_IMAGE:$TAG"
@@ -55,10 +55,10 @@ else
 
     TAG="$(git_tag)"; export TAG
     if [ -n "$prev_tag" ] && [ "$TAG" = "$prev_tag" ]; then
-        info "代码版本没变（$TAG），仍会重新构建并重启（适用于只改了 .env.production 的情况）"
+        info "代码版本没变（${TAG}），仍会重新构建并重启（适用于只改了 .env.production 的情况）"
     fi
 
-    info "构建镜像（版本 $TAG）"
+    info "构建镜像（版本 ${TAG}）"
     compose build
 
     info "以新镜像重启服务（数据库不受影响）"

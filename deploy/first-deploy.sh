@@ -25,7 +25,7 @@ if [ ! -f "$ENV_FILE" ]; then
 
     cat <<EOF
 
-接下来请编辑 $ENV_FILE，至少填写：
+接下来请编辑 ${ENV_FILE}，至少填写：
   - BETTER_AUTH_URL           网站对外访问地址（如 http://服务器IP:3000）
   - NEXT_PUBLIC_FINNHUB_API_KEY  Finnhub 行情 key
 需要催化剂监控的话，把 MONITOR_ENABLED 改为 true 并填 BARK_URL、EDGAR_CONTACT。
@@ -49,7 +49,7 @@ fi
 #   bash deploy/release-local.sh user@服务器 /部署目录
 # 它会本机构建镜像推上来并完成首次启动，服务器零构建压力。
 TAG="$(git_tag)"; export TAG
-info "构建镜像（版本 $TAG，首次构建需拉取基础镜像，可能较慢）"
+info "构建镜像（版本 ${TAG}，首次构建需拉取基础镜像，可能较慢）"
 compose build
 
 info "启动服务"

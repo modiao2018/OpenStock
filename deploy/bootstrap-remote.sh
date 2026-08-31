@@ -23,7 +23,7 @@ SITE_URL="${SITE_URL:-http://152.53.176.254}"
 # ---------- 前置检查 ----------
 info "检查服务器环境"
 ssh -o BatchMode=yes -o ConnectTimeout=10 "$DEPLOY_HOST" true \
-    || die "ssh 连不上 $DEPLOY_HOST（需要免密登录，先 ssh-copy-id）"
+    || die "ssh 连不上 ${DEPLOY_HOST}（需要免密登录，先 ssh-copy-id）"
 ssh "$DEPLOY_HOST" "docker info >/dev/null 2>&1" \
     || die "服务器 docker 不可用（未安装 / 未启动 / 当前用户无权限）"
 ssh "$DEPLOY_HOST" "docker compose version >/dev/null 2>&1" \
@@ -72,7 +72,7 @@ else
     ssh "$DEPLOY_HOST" "chmod 600 '$DEPLOY_PATH/.env.production'"
     rm -f "$tmp_env"
     ok "配置已上传；沿用了本地的:${copied:- （无）}"
-    echo "   BETTER_AUTH_URL=$SITE_URL，MONGO_ROOT_PASSWORD/BETTER_AUTH_SECRET 已自动生成"
+    echo "   BETTER_AUTH_URL=${SITE_URL}，MONGO_ROOT_PASSWORD/BETTER_AUTH_SECRET 已自动生成"
 fi
 
 # ---------- 构建、推送、启动 ----------

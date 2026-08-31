@@ -10,7 +10,7 @@ check_prereqs
 
 target="${1:-}"
 if [ -z "$target" ]; then
-    [ -f "$RELEASES_LOG" ] || die "没有发版记录（$RELEASES_LOG），请手动指定 tag"
+    [ -f "$RELEASES_LOG" ] || die "没有发版记录（${RELEASES_LOG}），请手动指定 tag"
     # 取最近一条与当前不同的发版记录（倒数第二个版本）
     current="$(tail -n1 "$RELEASES_LOG" | awk '{print $3}')"
     target="$(awk '{print $3}' "$RELEASES_LOG" | grep -v "^$current\$" | tail -n1 || true)"
@@ -18,7 +18,7 @@ if [ -z "$target" ]; then
 fi
 
 docker image inspect "$WEB_IMAGE:$target" >/dev/null 2>&1 \
-    || die "本地没有镜像 $WEB_IMAGE:$target（可能已被清理），只能重新构建：git checkout <版本> && bash deploy/update.sh --no-pull"
+    || die "本地没有镜像 $WEB_IMAGE:${target}（可能已被清理），只能重新构建：git checkout <版本> && bash deploy/update.sh --no-pull"
 if [ "$(get_env MONITOR_ENABLED)" = "true" ]; then
     docker image inspect "$MONITOR_IMAGE:$target" >/dev/null 2>&1 \
         || die "MONITOR_ENABLED=true 但缺少镜像 $MONITOR_IMAGE:$target"

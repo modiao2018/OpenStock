@@ -87,7 +87,7 @@ validate_env() {
     for key in MONGO_ROOT_PASSWORD BETTER_AUTH_SECRET BETTER_AUTH_URL NEXT_PUBLIC_FINNHUB_API_KEY; do
         [ -n "$(get_env "$key")" ] || missing="$missing $key"
     done
-    [ -z "$missing" ] || die "以下必填项还没填，请编辑 $ENV_FILE：$missing"
+    [ -z "$missing" ] || die "以下必填项还没填，请编辑 ${ENV_FILE}：$missing"
 }
 
 # 只保留最近 5 个版本的镜像 tag，避免磁盘被旧镜像塞满（小服务器磁盘金贵）
