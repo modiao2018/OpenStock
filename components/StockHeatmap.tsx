@@ -332,14 +332,22 @@ const StockHeatmap = ({ data, height = 600, grouped = false, showLegend = true, 
 
     const formatPercent = (dp: number) => `${dp > 0 ? '+' : ''}${dp.toFixed(2)}%`;
 
+    // Matches w-[240px] on the tooltip card; height is an estimate of the tallest card
+    const TOOLTIP_W = 240;
+    const TOOLTIP_H = 200;
+
     const handleMove = (e: React.MouseEvent, stock: HeatmapStock) => {
         if (dragState.current?.moved) return;
         const bounds = containerRef.current?.getBoundingClientRect();
         if (!bounds) return;
+        const x = e.clientX - bounds.left;
+        const y = e.clientY - bounds.top;
+        // Flip above the cursor near the bottom edge, then clamp inside the container
+        const top = y + 14 + TOOLTIP_H > height ? y - TOOLTIP_H - 10 : y + 14;
         setTooltip({
             stock,
-            left: Math.min(e.clientX - bounds.left + 12, width - 250),
-            top: e.clientY - bounds.top + 14,
+            left: Math.max(0, Math.min(x + 12, width - TOOLTIP_W - 8)),
+            top: Math.max(0, Math.min(top, height - TOOLTIP_H)),
         });
     };
 
