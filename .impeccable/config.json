@@ -1,0 +1,23 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "gradient-text",
+        "value": "bg-gradient-to-r from-white to-gray-500",
+        "createdAt": "2026-08-31T09:02:56.806Z",
+        "reason": "pre-existing page title style shipped repo-wide before this session; not introduced by this change"
+      },
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          "app/(root)/watchlist/page.tsx"
+        ],
+        "createdAt": "2026-08-31T09:03:07.882Z",
+        "reason": "pre-existing page title style shipped before this session; not introduced by this change"
+      }
+    ]
+  }
+}

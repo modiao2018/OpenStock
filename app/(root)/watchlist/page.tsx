@@ -12,6 +12,12 @@ import SearchCommand from '@/components/SearchCommand';
 import { Loader2 } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 
+// Rendered inside Suspense: news arrives after the table, never blocking it
+async function WatchlistNews({ symbols }: { symbols: string[] }) {
+    const news = await getNews(symbols.length > 0 ? symbols : undefined);
+    return <NewsGrid news={news || []} />;
+}
+
 export default async function WatchlistPage() {
     const t = await getTranslations('watchlist.page');
     const session = await auth.api.getSession({
@@ -25,19 +31,15 @@ export default async function WatchlistPage() {
     const userId = session.user.id;
 
     // Parallel data fetching
-    const [watchlistItems, alerts, news] = await Promise.all([
+    const [watchlistItems, alerts] = await Promise.all([
         getUserWatchlist(userId),
         getUserAlerts(userId),
-        getNews() // Initial news fetch
     ]);
 
     const watchlistSymbols = watchlistItems.map((item: any) => item.symbol);
 
-    // Quotes for the self-rendered table + news relevant to the watchlist
-    const [tableData, relevantNews] = await Promise.all([
-        watchlistSymbols.length > 0 ? getWatchlistData(watchlistSymbols) : Promise.resolve([]),
-        watchlistSymbols.length > 0 ? getNews(watchlistSymbols) : Promise.resolve(news),
-    ]);
+    // Quotes for the self-rendered table; news streams in later via Suspense
+    const tableData = watchlistSymbols.length > 0 ? await getWatchlistData(watchlistSymbols) : [];
 
     return (
         <div className="min-h-screen bg-black text-gray-100 p-6 md:p-8">
@@ -61,9 +63,9 @@ export default async function WatchlistPage() {
                         <WatchlistManager initialItems={watchlistItems} initialTableData={tableData} userId={userId} />
                     </div>
 
-                    {/* News Section */}
+                    {/* News Section — streamed so slow news fetches never block the table */}
                     <Suspense fallback={<div className="flex justify-center p-12"><Loader2 className="animate-spin text-gray-500" /></div>}>
-                        <NewsGrid news={relevantNews || []} />
+                        <WatchlistNews symbols={watchlistSymbols} />
                     </Suspense>
                 </div>
 

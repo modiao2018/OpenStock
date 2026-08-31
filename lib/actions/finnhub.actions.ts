@@ -38,7 +38,8 @@ async function fetchJSON<T>(url: string, revalidateSeconds?: number): Promise<T>
         ? { cache: 'force-cache', next: { revalidate: revalidateSeconds } }
         : { cache: 'no-store' };
 
-    const res = await fetch(url, options);
+    // Bound every upstream call — a hanging Finnhub connection must not stall SSR
+    const res = await fetch(url, { ...options, signal: AbortSignal.timeout(8000) });
     if (!res.ok) {
         const text = await res.text().catch(() => '');
         throw new Error(`Fetch failed ${res.status}: ${text}`);
@@ -202,8 +203,9 @@ export async function getNews(symbols?: string[]): Promise<MarketNewsArticle[]> 
         const formatted = unique.slice(0, maxArticles).map((a, idx) => formatArticle(a, false, undefined, idx));
         return formatted;
     } catch (err) {
+        // Degrade to an empty news list — a Finnhub outage must not crash the whole page
         console.error('getNews error:', err);
-        throw new Error('Failed to fetch news');
+        return [];
     }
 }
 
