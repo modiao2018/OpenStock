@@ -62,7 +62,11 @@ COPY package.json tsconfig.json ./
 COPY catalyst-monitor ./catalyst-monitor
 COPY database ./database
 COPY lib ./lib
-# 构建期自检：依赖缺失/别名失效会让构建直接失败，而不是部署后才崩
+# 构建期自检：依赖缺失/别名失效会让构建直接失败，而不是部署后才崩。
+# esbuild（Go 二进制）在 Apple 芯片 qemu x86 仿真下会随机崩溃
+# （concurrent map writes / transform panic）：GOMAXPROCS=1 关并发、
+# GODEBUG=asyncpreemptoff=1 关异步抢占信号（qemu 处理不了 SIGURG），
+# 两者都只影响这一构建步骤，不影响服务器上的运行时
 COPY deploy/check-monitor-imports.mts ./deploy/
-RUN tsx deploy/check-monitor-imports.mts
+RUN GOMAXPROCS=1 GODEBUG=asyncpreemptoff=1 tsx deploy/check-monitor-imports.mts
 CMD ["tsx", "catalyst-monitor/src/daemon.ts"]
