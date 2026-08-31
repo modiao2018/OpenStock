@@ -67,8 +67,8 @@ export async function getQuote(symbol: string) {
     try {
         const token = NEXT_PUBLIC_FINNHUB_API_KEY;
         const url = `${FINNHUB_BASE_URL}/quote?symbol=${encodeURIComponent(symbol)}&token=${token}`;
-        // No caching for real-time price
-        return await fetchJSON<FinnhubQuote>(url, 0);
+        // Short server-side cache so concurrent renders/polls share one Finnhub call per symbol
+        return await fetchJSON<FinnhubQuote>(url, 30);
     } catch (e) {
         console.error('Error fetching quote for', symbol, e);
         return null;
@@ -99,18 +99,35 @@ export async function getWatchlistData(symbols: string[]) {
 
         return {
             symbol: sym,
-            price: quote?.c || 0,
-            change: quote?.d || 0,
-            changePercent: quote?.dp || 0,
+            // null (not 0) when the fetch failed or Finnhub has no data, so the UI can keep stale values
+            price: quote?.c ? quote.c : null,
+            change: quote?.d ?? null,
+            changePercent: quote?.dp ?? null,
             currency: profile?.currency || 'USD',
             name: profile?.name || sym,
             logo: profile?.logo,
-            marketCap: profile?.marketCapitalization,
+            marketCap: profile?.marketCapitalization || null,
             peRatio: 0 // Finnhub 'quote' and 'profile2' don't easily give real-time PE. Might need 'metric' endpoint, but skipping for now to save rate limits.
         };
     });
 
     return await Promise.all(promises);
+}
+
+// Lightweight variant for client-side polling: quotes only, no profile calls
+// (name/logo/market cap barely change — refetching them per poll wastes rate limit).
+export async function getWatchlistQuotes(symbols: string[]) {
+    if (!symbols || symbols.length === 0) return [];
+
+    return await Promise.all(symbols.map(async (sym) => {
+        const quote = await getQuote(sym);
+        return {
+            symbol: sym,
+            price: quote?.c ? quote.c : null,
+            change: quote?.d ?? null,
+            changePercent: quote?.dp ?? null,
+        };
+    }));
 }
 
 

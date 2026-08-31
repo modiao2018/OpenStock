@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUp, ArrowDown, Bell } from "lucide-react";
@@ -28,18 +28,22 @@ export default function WatchlistTable({ data, userId, onRefresh }: WatchlistTab
         setStocks(data);
     }, [data]);
 
+    // Symbols kept in a ref so the polling interval survives state updates
+    const stocksRef = useRef(stocks);
     useEffect(() => {
-        if (!stocks || stocks.length === 0) return;
+        stocksRef.current = stocks;
+    }, [stocks]);
 
-        // Poll for price updates every 15 seconds
+    useEffect(() => {
+        // Poll for price updates every 30 seconds (quotes only — profiles are static)
         const interval = setInterval(async () => {
             try {
-                const symbols = stocks.map(s => s.symbol);
+                const symbols = (stocksRef.current || []).map((s: any) => s.symbol);
                 if (symbols.length === 0) return;
 
                 // Dynamic import to avoid server-action issues if directly imported in client component sometimes
-                const { getWatchlistData } = await import('@/lib/actions/finnhub.actions');
-                const updatedData = await getWatchlistData(symbols);
+                const { getWatchlistQuotes } = await import('@/lib/actions/finnhub.actions');
+                const updatedData = await getWatchlistQuotes(symbols);
 
                 if (updatedData && updatedData.length > 0) {
                     setStocks(current => {
@@ -47,11 +51,12 @@ export default function WatchlistTable({ data, userId, onRefresh }: WatchlistTab
                         return current.map(existing => {
                             const fresh = map.get(existing.symbol);
                             if (fresh) {
+                                // ?? keeps the last known value when a fetch fails (rate limit etc.)
                                 return {
                                     ...existing,
-                                    price: fresh.price,
-                                    change: fresh.change,
-                                    changePercent: fresh.changePercent,
+                                    price: fresh.price ?? existing.price,
+                                    change: fresh.change ?? existing.change,
+                                    changePercent: fresh.changePercent ?? existing.changePercent,
                                 };
                             }
                             return existing;
@@ -61,10 +66,10 @@ export default function WatchlistTable({ data, userId, onRefresh }: WatchlistTab
             } catch (err) {
                 console.error("Failed to poll watchlist prices", err);
             }
-        }, 5000);
+        }, 30000);
 
         return () => clearInterval(interval);
-    }, [stocks]); // Re-create interval if list size changes
+    }, []);
 
     if (!stocks || stocks.length === 0) {
         return (
@@ -92,7 +97,7 @@ export default function WatchlistTable({ data, userId, onRefresh }: WatchlistTab
                 </thead>
                 <tbody className="divide-y divide-white/10">
                     {stocks.map((stock: any) => {
-                        const isPositive = stock.change >= 0;
+                        const isPositive = (stock.change ?? 0) >= 0;
                         return (
                             <tr key={stock.symbol} className="hover:bg-white/5 transition-colors group">
                                 <td className="px-6 py-4">
@@ -127,7 +132,7 @@ export default function WatchlistTable({ data, userId, onRefresh }: WatchlistTab
                                 <td className={`px-6 py-4 font-medium`}>
                                     <div className={`flex items-center w-fit px-2 py-1 rounded-md ${(redUp ? !isPositive : isPositive) ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"}`}>
                                         {isPositive ? <ArrowUp className="w-3.5 h-3.5 mr-1.5" /> : <ArrowDown className="w-3.5 h-3.5 mr-1.5" />}
-                                        {Math.abs(stock.changePercent).toFixed(2)}%
+                                        {stock.changePercent != null ? `${Math.abs(stock.changePercent).toFixed(2)}%` : '—'}
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 text-gray-400 font-medium">
@@ -138,7 +143,7 @@ export default function WatchlistTable({ data, userId, onRefresh }: WatchlistTab
                                         <CreateAlertModal
                                             userId={userId}
                                             symbol={stock.symbol}
-                                            currentPrice={stock.price}
+                                            currentPrice={stock.price ?? 0}
                                             onAlertCreated={onRefresh}
                                         >
                                             <button className="p-2.5 rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-all border border-transparent hover:border-white/10" title={t("addAlert")}>

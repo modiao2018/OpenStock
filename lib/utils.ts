@@ -113,7 +113,8 @@ export const getChangeColorClass = (changePercent?: number, locale: string = 'en
     return positive ? 'text-green-500' : 'text-red-500';
 };
 
-export const formatPrice = (price: number) => {
+export const formatPrice = (price?: number | null) => {
+    if (price == null || !Number.isFinite(price)) return '—';
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: 'USD',
@@ -124,7 +125,9 @@ export const formatPrice = (price: number) => {
 // Alias for consistency
 export const formatCurrency = formatPrice;
 
-export function formatNumber(num: number): string {
+export function formatNumber(num?: number | null): string {
+    // Finnhub profile2 has no data for ETFs/funds — show a dash instead of NaN
+    if (num == null || !Number.isFinite(num) || num <= 0) return '—';
     // If number is small (likely already in millions from Finnhub), multiply by 1M to get actual value
     // Typical mega-cap is > 100B. 100B in millions is 100,000.
     // If we assume typical market cap input IS millions:
