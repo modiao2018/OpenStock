@@ -28,7 +28,7 @@
 连 git clone 都不用；本机需要能 ssh 免密登录服务器（`ssh-copy-id`）。
 
 ```bash
-bash deploy/bootstrap-remote.sh user@152.53.176.254 /opt/happystock
+bash deploy/bootstrap-remote.sh lingpeng@152.53.176.254 /opt/happystock
 ```
 
 它自动完成：上传编排文件 → 生成服务器 `.env.production`（**API key 全部沿用本地
