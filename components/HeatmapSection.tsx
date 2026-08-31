@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Check, Loader2, Maximize2, Minimize2, Settings2, SlidersHorizontal } from 'lucide-react';
 import DashboardConfigDialog from '@/components/DashboardConfigDialog';
@@ -60,12 +60,12 @@ const HeatmapSection = ({ initialData, watchlistSymbols, configuredSymbols, heig
     const tSectors = useTranslations('sectors');
 
     const [prefs, setPrefs] = useState<HeatmapPrefs>(DEFAULT_PREFS);
+    const [popularData, setPopularData] = useState<HeatmapStock[]>(initialData);
     const [watchlistData, setWatchlistData] = useState<HeatmapStock[] | null>(null);
     const [sector, setSector] = useState<string | null>(null);
     const [configOpen, setConfigOpen] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [viewportHeight, setViewportHeight] = useState(0);
-    const [isPending, startTransition] = useTransition();
 
     // Fullscreen: track viewport height, lock body scroll, exit on Esc
     useEffect(() => {
@@ -90,13 +90,31 @@ const HeatmapSection = ({ initialData, watchlistSymbols, configuredSymbols, heig
         setPrefs(loadPrefs());
     }, []);
 
+    // Keep the active source fresh: refetch on mount (the SSR payload can be a
+    // stale cache hit), then poll every minute while the tab is visible
     useEffect(() => {
-        if (prefs.source !== 'watchlist' || watchlistData !== null || watchlistSymbols.length === 0) return;
-        startTransition(async () => {
-            const data = await getHeatmapData(watchlistSymbols);
-            setWatchlistData(data);
-        });
-    }, [prefs.source, watchlistData, watchlistSymbols]);
+        const usingWatchlist = prefs.source === 'watchlist';
+        if (usingWatchlist && watchlistSymbols.length === 0) return;
+        const symbols = usingWatchlist ? watchlistSymbols : configuredSymbols;
+        let cancelled = false;
+        const refresh = async () => {
+            if (document.hidden) return;
+            const data = await getHeatmapData(symbols);
+            if (cancelled || data.length === 0) return;
+            if (usingWatchlist) setWatchlistData(data);
+            else setPopularData(data);
+        };
+        refresh();
+        const id = setInterval(refresh, 60_000);
+        // Catch up right away when the user comes back to the tab
+        const onVisible = () => { if (!document.hidden) refresh(); };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => {
+            cancelled = true;
+            clearInterval(id);
+            document.removeEventListener('visibilitychange', onVisible);
+        };
+    }, [prefs.source, watchlistSymbols, configuredSymbols]);
 
     const updatePrefs = (patch: Partial<HeatmapPrefs>) => {
         setPrefs((current) => {
@@ -111,7 +129,7 @@ const HeatmapSection = ({ initialData, watchlistSymbols, configuredSymbols, heig
     };
 
     const usingWatchlist = prefs.source === 'watchlist';
-    const data = usingWatchlist ? (watchlistData ?? []) : initialData;
+    const data = usingWatchlist ? (watchlistData ?? []) : popularData;
 
     // Popular sectors of the active dataset, biggest total market cap first
     const industries = useMemo(() => {
@@ -233,15 +251,13 @@ const HeatmapSection = ({ initialData, watchlistSymbols, configuredSymbols, heig
                     <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
                 </div>
             ) : (
-                <div className={isPending ? 'opacity-70 transition-opacity' : undefined}>
-                    <StockHeatmap
-                        data={visibleData}
-                        height={effectiveHeight}
-                        grouped={prefs.grouped}
-                        showLegend={prefs.legend}
-                        showZoomControls={prefs.showZoom}
-                    />
-                </div>
+                <StockHeatmap
+                    data={visibleData}
+                    height={effectiveHeight}
+                    grouped={prefs.grouped}
+                    showLegend={prefs.legend}
+                    showZoomControls={prefs.showZoom}
+                />
             )}
 
             <DashboardConfigDialog open={configOpen} onOpenChange={setConfigOpen} currentSymbols={configuredSymbols} />

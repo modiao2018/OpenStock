@@ -34,6 +34,7 @@
     "open": "今开",
     "prevClose": "昨收",
     "dayRange": "当日区间",
+    "quoteTime": "行情时间",
     "clearFilter": "清除筛选",
     "watchlistEmpty": "自选股为空，先去添加几只股票吧。"
   },

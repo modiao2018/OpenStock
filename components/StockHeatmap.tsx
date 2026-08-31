@@ -334,7 +334,7 @@ const StockHeatmap = ({ data, height = 600, grouped = false, showLegend = true, 
 
     // Matches w-[240px] on the tooltip card; height is an estimate of the tallest card
     const TOOLTIP_W = 240;
-    const TOOLTIP_H = 200;
+    const TOOLTIP_H = 220;
 
     const handleMove = (e: React.MouseEvent, stock: HeatmapStock) => {
         if (dragState.current?.moved) return;
@@ -506,6 +506,11 @@ const StockHeatmap = ({ data, height = 600, grouped = false, showLegend = true, 
                     [t('prevClose'), s.prevClose > 0 ? `$${s.prevClose.toFixed(2)}` : '—'],
                     [t('dayRange'), s.low > 0 && s.high > 0 ? `$${s.low.toFixed(2)} – $${s.high.toFixed(2)}` : '—'],
                     [t('marketCap'), formatMarketCapValue(s.marketCap)],
+                    [t('quoteTime'), s.quoteTime > 0
+                        ? new Date(s.quoteTime * 1000).toLocaleString(locale, {
+                            month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit',
+                        })
+                        : '—'],
                 ];
                 return (
                     <div

@@ -33,9 +33,11 @@ export interface HeatmapStock {
     marketCap: number;
     // Raw finnhubIndustry value; translated at render time, '' when unknown
     industry: string;
+    // Unix seconds of the quote's last trade, 0 when the upstream omits it
+    quoteTime: number;
 }
 
-type Quote = { c?: number; d?: number; dp?: number; o?: number; h?: number; l?: number; pc?: number };
+type Quote = { c?: number; d?: number; dp?: number; o?: number; h?: number; l?: number; pc?: number; t?: number };
 type Profile = { name?: string; currency?: string; marketCapitalization?: number; finnhubIndustry?: string };
 
 export async function getHeatmapData(symbols?: string[]): Promise<HeatmapStock[]> {
@@ -52,11 +54,12 @@ export async function getHeatmapData(symbols?: string[]): Promise<HeatmapStock[]
         list.map(async (symbol) => {
             try {
                 const [quote, profile] = await Promise.all([
-                    // A heatmap doesn't need tick-level prices; the 5-minute cache
-                    // keeps repeat page loads off the rate limit
+                    // Short cache: Next serves stale-while-revalidate, so a longer
+                    // TTL means infrequent visits keep seeing the previous visit's
+                    // data. 60s still dedupes concurrent renders and client polls.
                     fetchJSON<Quote>(
                         `${FINNHUB_BASE_URL}/quote?symbol=${encodeURIComponent(symbol)}&token=${token}`,
-                        300,
+                        60,
                     ),
                     fetchJSON<Profile>(
                         `${FINNHUB_BASE_URL}/stock/profile2?symbol=${encodeURIComponent(symbol)}&token=${token}`,
@@ -84,6 +87,7 @@ export async function getHeatmapData(symbols?: string[]): Promise<HeatmapStock[]
                     prevClose: quote?.pc ?? 0,
                     marketCap: marketCapMillions * 1e6,
                     industry: profile?.finnhubIndustry ?? '',
+                    quoteTime: quote?.t ?? 0,
                 } satisfies HeatmapStock;
             } catch (e) {
                 console.error('Heatmap fetch failed for', symbol, e);
