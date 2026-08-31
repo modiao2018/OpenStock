@@ -11,6 +11,14 @@ const nextConfig: NextConfig = {
     // they don't clobber the .next dir a running dev server depends on
     distDir: process.env.NEXT_DIST_DIR || '.next',
     devIndicators: false,
+    // Client router cache for dynamic pages: re-visiting a nav item within 30s
+    // reuses the cached render instead of re-running the full server waterfall.
+    // router.refresh() and server-action revalidations still bypass this.
+    experimental: {
+        staleTimes: {
+            dynamic: 30,
+        },
+    },
     turbopack: {
         root: process.cwd(),
     },

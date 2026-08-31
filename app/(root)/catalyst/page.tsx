@@ -1,6 +1,5 @@
 import React from 'react';
-import { auth } from '@/lib/better-auth/auth';
-import { headers } from 'next/headers';
+import { getSession } from '@/lib/get-session';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import {
@@ -27,7 +26,7 @@ import SymbolTiles from '@/components/catalyst/SymbolTiles';
 export default async function CatalystPage() {
     const t = await getTranslations('catalyst.page');
     const tDebug = await getTranslations('catalyst.debug');
-    const session = await auth.api.getSession({ headers: await headers() });
+    const session = await getSession();
     if (!session) {
         redirect('/sign-in');
     }

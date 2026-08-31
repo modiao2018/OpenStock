@@ -1,5 +1,6 @@
 'use server';
 
+import { cache } from 'react';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
@@ -560,7 +561,9 @@ export interface MarketSnapshotData {
     symbols: MarketSymbolSnapshot[];
 }
 
-export async function getMarketSnapshot(): Promise<MarketSnapshotData> {
+// React cache(): the page calls this directly AND via getDashboardOverview —
+// dedupe so the heavy bar aggregation runs once per request
+export const getMarketSnapshot = cache(async (): Promise<MarketSnapshotData> => {
     const { benchmark, sigmaThreshold, rvolThreshold } = await getMarketConfig();
     const base: MarketSnapshotData = {
         configured: Boolean(process.env.ALPACA_API_KEY && process.env.ALPACA_API_SECRET),
@@ -578,7 +581,10 @@ export async function getMarketSnapshot(): Promise<MarketSnapshotData> {
                 'APCA-API-SECRET-KEY': process.env.ALPACA_API_SECRET!,
             },
             signal: AbortSignal.timeout(5_000),
-            cache: 'no-store',
+            // 30s cache: AutoRefresh re-renders every 60s; market open/close
+            // doesn't need a fresh upstream call each time
+            cache: 'force-cache',
+            next: { revalidate: 30 },
         });
         if (res.ok) base.marketOpen = ((await res.json()) as { is_open: boolean }).is_open;
     } catch {
@@ -605,24 +611,18 @@ export async function getMarketSnapshot(): Promise<MarketSnapshotData> {
             fresh: false,
         });
 
-        for (const item of watchItems) {
+        base.symbols = await Promise.all(watchItems.map(async (item): Promise<MarketSymbolSnapshot> => {
             const docs = await CatalystBar.find({ symbol: item.symbol, t: { $gte: since } }).sort({ t: 1 }).lean();
-            if (docs.length === 0) {
-                base.symbols.push(noData(item.symbol));
-                continue;
-            }
+            if (docs.length === 0) return noData(item.symbol);
             const ars = abnormalSeries(rollingWindows(docs.map(toBar)), benchWindows);
-            if (ars.length < 10) {
-                base.symbols.push(noData(item.symbol));
-                continue;
-            }
+            if (ars.length < 10) return noData(item.symbol);
 
             const current = ars[ars.length - 1];
             const baseline = ars.slice(0, -6);
             const sigma = baseline.length >= 100 ? stddev(baseline.map((w) => w.ret)) : 0;
             const volAvg = baseline.length ? baseline.reduce((a, w) => a + w.vol, 0) / baseline.length : 0;
 
-            base.symbols.push({
+            return {
                 symbol: item.symbol,
                 hasData: true,
                 arPct: Number((current.ret * 100).toFixed(2)),
@@ -631,13 +631,13 @@ export async function getMarketSnapshot(): Promise<MarketSnapshotData> {
                 lastBarAt: new Date(current.t).toISOString(),
                 baselineSamples: baseline.length,
                 fresh: Date.now() - current.t < 10 * 60_000,
-            });
-        }
+            };
+        }));
     } catch (error) {
         console.error('Error building market snapshot:', error);
     }
     return base;
-}
+});
 
 async function getMarketConfig(): Promise<{ benchmark: string; sigmaThreshold: number; rvolThreshold: number }> {
     try {
@@ -717,7 +717,7 @@ export async function getDashboardOverview(): Promise<DashboardOverview> {
         const nextBySymbol = new Map<string, UpcomingCatalyst>();
         for (const c of catalysts) if (!nextBySymbol.has(c.symbol)) nextBySymbol.set(c.symbol, c);
 
-        for (const item of watchItems) {
+        overview.tiles = await Promise.all(watchItems.map(async (item) => {
             const tile: SymbolTileData = {
                 symbol: item.symbol,
                 company: item.company,
@@ -753,8 +753,8 @@ export async function getDashboardOverview(): Promise<DashboardOverview> {
                     tile.sparkChangePct = Number((((tile.lastClose! - tile.spark[0]) / tile.spark[0]) * 100).toFixed(1));
                 }
             }
-            overview.tiles.push(tile);
-        }
+            return tile;
+        }));
     } catch (error) {
         console.error('Error building dashboard overview:', error);
     }

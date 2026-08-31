@@ -2,6 +2,7 @@
 
 import { fetchJSON } from '@/lib/actions/finnhub.actions';
 import { marketCapToUsdMillions } from '@/lib/market-cap';
+import { readSnapshot, snapshotKey, writeSnapshot } from '@/lib/snapshot';
 
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
 const NEXT_PUBLIC_FINNHUB_API_KEY = process.env.NEXT_PUBLIC_FINNHUB_API_KEY ?? '';
@@ -40,15 +41,27 @@ export interface HeatmapStock {
 type Quote = { c?: number; d?: number; dp?: number; o?: number; h?: number; l?: number; pc?: number; t?: number };
 type Profile = { name?: string; currency?: string; marketCapitalization?: number; finnhubIndustry?: string };
 
+function normalizeSymbols(symbols?: string[]): string[] {
+    return symbols && symbols.length > 0
+        ? [...new Set(symbols.map((s) => s.trim().toUpperCase()))]
+              .filter((s) => SYMBOL_PATTERN.test(s))
+              .slice(0, MAX_CUSTOM_SYMBOLS)
+        : HEATMAP_SYMBOLS;
+}
+
+// Last successful getHeatmapData payload; lets SSR paint instantly (≤~60s
+// stale) while the client's mount refresh + poll fetches live data
+export async function getHeatmapSnapshot(symbols?: string[]): Promise<HeatmapStock[]> {
+    const list = normalizeSymbols(symbols);
+    const snapshot = await readSnapshot<HeatmapStock[]>(snapshotKey('heatmap', list));
+    return snapshot?.data ?? [];
+}
+
 export async function getHeatmapData(symbols?: string[]): Promise<HeatmapStock[]> {
     const token = NEXT_PUBLIC_FINNHUB_API_KEY;
     if (!token) return [];
 
-    const list = (symbols && symbols.length > 0
-        ? [...new Set(symbols.map((s) => s.trim().toUpperCase()))]
-              .filter((s) => SYMBOL_PATTERN.test(s))
-              .slice(0, MAX_CUSTOM_SYMBOLS)
-        : HEATMAP_SYMBOLS);
+    const list = normalizeSymbols(symbols);
 
     const results = await Promise.all(
         list.map(async (symbol) => {
@@ -96,7 +109,15 @@ export async function getHeatmapData(symbols?: string[]): Promise<HeatmapStock[]
         }),
     );
 
-    return results
+    const data = results
         .filter((s): s is HeatmapStock => s !== null)
         .sort((a, b) => b.marketCap - a.marketCap);
+
+    // Every fetch (SSR or the client's 60s poll) refreshes the snapshot,
+    // so the next SSR serves it instantly instead of re-fanning out
+    if (data.length > 0) {
+        void writeSnapshot(snapshotKey('heatmap', list), data);
+    }
+
+    return data;
 }

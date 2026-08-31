@@ -35,21 +35,25 @@ export default function WatchlistTable({ data, userId, onRefresh }: WatchlistTab
     }, [stocks]);
 
     useEffect(() => {
-        // Poll for price updates every 30 seconds (quotes only — profiles are static)
-        const interval = setInterval(async () => {
+        // SSR serves a last-known snapshot; `full` fetches live rows on mount
+        // (also refreshing the server snapshot), then quotes-only polls keep
+        // prices moving without extra profile calls
+        const refresh = async (full: boolean) => {
             try {
                 const symbols = (stocksRef.current || []).map((s: any) => s.symbol);
                 if (symbols.length === 0) return;
 
                 // Dynamic import to avoid server-action issues if directly imported in client component sometimes
-                const { getWatchlistQuotes } = await import('@/lib/actions/finnhub.actions');
-                const updatedData = await getWatchlistQuotes(symbols);
+                const actions = await import('@/lib/actions/finnhub.actions');
+                const updatedData = full
+                    ? await actions.getWatchlistData(symbols)
+                    : await actions.getWatchlistQuotes(symbols);
 
                 if (updatedData && updatedData.length > 0) {
                     setStocks(current => {
-                        const map = new Map(updatedData.map(item => [item.symbol, item]));
+                        const map = new Map(updatedData.map((item: any) => [item.symbol, item]));
                         return current.map(existing => {
-                            const fresh = map.get(existing.symbol);
+                            const fresh: any = map.get(existing.symbol);
                             if (fresh) {
                                 // ?? keeps the last known value when a fetch fails (rate limit etc.)
                                 return {
@@ -57,6 +61,12 @@ export default function WatchlistTable({ data, userId, onRefresh }: WatchlistTab
                                     price: fresh.price ?? existing.price,
                                     change: fresh.change ?? existing.change,
                                     changePercent: fresh.changePercent ?? existing.changePercent,
+                                    ...(full ? {
+                                        name: fresh.name ?? existing.name,
+                                        logo: fresh.logo ?? existing.logo,
+                                        marketCap: fresh.marketCap ?? existing.marketCap,
+                                        currency: fresh.currency ?? existing.currency,
+                                    } : {}),
                                 };
                             }
                             return existing;
@@ -64,10 +74,12 @@ export default function WatchlistTable({ data, userId, onRefresh }: WatchlistTab
                     });
                 }
             } catch (err) {
-                console.error("Failed to poll watchlist prices", err);
+                console.error("Failed to refresh watchlist prices", err);
             }
-        }, 30000);
+        };
 
+        refresh(true);
+        const interval = setInterval(() => refresh(false), 30000);
         return () => clearInterval(interval);
     }, []);
 

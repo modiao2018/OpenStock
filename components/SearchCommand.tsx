@@ -15,10 +15,28 @@ export default function SearchCommand({ renderAs = 'button', label, initialStock
     const [open, setOpen] = useState(false)
     const [searchTerm, setSearchTerm] = useState("")
     const [loading, setLoading] = useState(false)
+    // Popular list loads lazily on first open so the layout never blocks on it
+    const [popular, setPopular] = useState<StockWithWatchlistStatus[]>(initialStocks);
     const [stocks, setStocks] = useState<StockWithWatchlistStatus[]>(initialStocks);
 
     const isSearchMode = !!searchTerm.trim();
     const displayStocks = isSearchMode ? stocks : stocks?.slice(0, 10);
+
+    useEffect(() => {
+        if (!open || popular.length > 0) return;
+        let cancelled = false;
+        setLoading(true);
+        searchStocks()
+            .then((results) => {
+                if (cancelled) return;
+                setPopular(results);
+                setStocks((current) => (current.length === 0 ? results : current));
+            })
+            .catch(() => {})
+            .finally(() => { if (!cancelled) setLoading(false); });
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open]);
 
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
@@ -32,7 +50,7 @@ export default function SearchCommand({ renderAs = 'button', label, initialStock
     }, [])
 
     const handleSearch = async () => {
-        if(!isSearchMode) return setStocks(initialStocks);
+        if(!isSearchMode) return setStocks(popular);
 
         setLoading(true)
         try {
@@ -54,7 +72,7 @@ export default function SearchCommand({ renderAs = 'button', label, initialStock
     const handleSelectStock = () => {
         setOpen(false);
         setSearchTerm("");
-        setStocks(initialStocks);
+        setStocks(popular);
     }
 
     return (

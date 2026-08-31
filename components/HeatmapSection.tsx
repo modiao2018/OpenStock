@@ -61,6 +61,8 @@ const HeatmapSection = ({ initialData, watchlistSymbols, configuredSymbols, heig
 
     const [prefs, setPrefs] = useState<HeatmapPrefs>(DEFAULT_PREFS);
     const [popularData, setPopularData] = useState<HeatmapStock[]>(initialData);
+    // False only while the SSR snapshot was empty and the first live fetch is in flight
+    const [popularLoaded, setPopularLoaded] = useState(initialData.length > 0);
     const [watchlistData, setWatchlistData] = useState<HeatmapStock[] | null>(null);
     const [sector, setSector] = useState<string | null>(null);
     const [configOpen, setConfigOpen] = useState(false);
@@ -100,7 +102,9 @@ const HeatmapSection = ({ initialData, watchlistSymbols, configuredSymbols, heig
         const refresh = async () => {
             if (document.hidden) return;
             const data = await getHeatmapData(symbols);
-            if (cancelled || data.length === 0) return;
+            if (cancelled) return;
+            if (!usingWatchlist) setPopularLoaded(true);
+            if (data.length === 0) return;
             if (usingWatchlist) setWatchlistData(data);
             else setPopularData(data);
         };
@@ -246,7 +250,7 @@ const HeatmapSection = ({ initialData, watchlistSymbols, configuredSymbols, heig
                 <div className="flex items-center justify-center rounded-xl border border-gray-800 bg-gray-950/40 text-gray-500" style={{ height: effectiveHeight }}>
                     {t('watchlistEmpty')}
                 </div>
-            ) : usingWatchlist && watchlistData === null ? (
+            ) : (usingWatchlist && watchlistData === null) || (!usingWatchlist && !popularLoaded && popularData.length === 0) ? (
                 <div className="flex items-center justify-center rounded-xl border border-gray-800 bg-gray-950/40" style={{ height: effectiveHeight }}>
                     <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
                 </div>

@@ -4,6 +4,7 @@ import { getDateRange, validateArticle, formatArticle } from '@/lib/utils';
 import { marketCapToUsdMillions } from '@/lib/market-cap';
 import { POPULAR_STOCK_SYMBOLS } from '@/lib/constants';
 import { cache } from 'react';
+import { readSnapshot, snapshotKey, writeSnapshot } from '@/lib/snapshot';
 
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
 const NEXT_PUBLIC_FINNHUB_API_KEY = process.env.NEXT_PUBLIC_FINNHUB_API_KEY ?? '';
@@ -89,6 +90,17 @@ export async function getCompanyProfile(symbol: string) {
     }
 }
 
+// Serve the last-known table rows instantly at SSR; the table's mount refresh
+// fetches live data and writes the snapshot back. Falls back to a live fetch
+// on the very first visit (no snapshot yet).
+export async function getWatchlistDataCached(symbols: string[]) {
+    if (!symbols || symbols.length === 0) return [];
+    type Rows = Awaited<ReturnType<typeof getWatchlistData>>;
+    const snapshot = await readSnapshot<Rows>(snapshotKey('watchlist', symbols));
+    if (snapshot) return snapshot.data;
+    return getWatchlistData(symbols);
+}
+
 export async function getWatchlistData(symbols: string[]) {
     if (!symbols || symbols.length === 0) return [];
 
@@ -116,7 +128,11 @@ export async function getWatchlistData(symbols: string[]) {
         };
     });
 
-    return await Promise.all(promises);
+    const rows = await Promise.all(promises);
+    if (rows.some((r) => r.price !== null)) {
+        void writeSnapshot(snapshotKey('watchlist', symbols), rows);
+    }
+    return rows;
 }
 
 // Lightweight variant for client-side polling: quotes only, no profile calls

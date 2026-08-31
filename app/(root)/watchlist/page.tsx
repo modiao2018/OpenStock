@@ -1,28 +1,30 @@
 import React, { Suspense } from 'react';
-import { auth } from '@/lib/better-auth/auth';
-import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { getSession } from '@/lib/get-session';
 import { getUserWatchlist } from '@/lib/actions/watchlist.actions';
 import { getUserAlerts } from '@/lib/actions/alert.actions';
-import { getNews, getWatchlistData } from '@/lib/actions/finnhub.actions';
+import { getNews, getWatchlistDataCached } from '@/lib/actions/finnhub.actions';
+import { localizeNews } from '@/lib/news-translation';
 import WatchlistManager from '@/components/watchlist/WatchlistManager';
 import AlertsPanel from '@/components/watchlist/AlertsPanel';
 import NewsGrid from '@/components/watchlist/NewsGrid';
 import SearchCommand from '@/components/SearchCommand';
 import { Loader2 } from 'lucide-react';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 
 // Rendered inside Suspense: news arrives after the table, never blocking it
 async function WatchlistNews({ symbols }: { symbols: string[] }) {
-    const news = await getNews(symbols.length > 0 ? symbols : undefined);
-    return <NewsGrid news={news || []} />;
+    const [locale, news] = await Promise.all([
+        getLocale(),
+        getNews(symbols.length > 0 ? symbols : undefined),
+    ]);
+    const localized = locale === 'zh-CN' ? await localizeNews(news || []) : (news || []);
+    return <NewsGrid news={localized} />;
 }
 
 export default async function WatchlistPage() {
     const t = await getTranslations('watchlist.page');
-    const session = await auth.api.getSession({
-        headers: await headers()
-    });
+    const session = await getSession();
 
     if (!session) {
         redirect('/sign-in');
@@ -38,8 +40,9 @@ export default async function WatchlistPage() {
 
     const watchlistSymbols = watchlistItems.map((item: any) => item.symbol);
 
-    // Quotes for the self-rendered table; news streams in later via Suspense
-    const tableData = watchlistSymbols.length > 0 ? await getWatchlistData(watchlistSymbols) : [];
+    // Last-known-good snapshot serves instantly; the table's client refresh
+    // fetches live quotes right after mount. News streams in via Suspense.
+    const tableData = watchlistSymbols.length > 0 ? await getWatchlistDataCached(watchlistSymbols) : [];
 
     return (
         <div className="min-h-screen bg-black text-gray-100 p-6 md:p-8">

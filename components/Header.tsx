@@ -2,10 +2,11 @@ import Link from "next/link";
 import Image from "next/image";
 import NavItems from "@/components/NavItems";
 import UserDropdown from "@/components/UserDropdown";
-import {searchStocks} from "@/lib/actions/finnhub.actions";
 
-const Header = async ({ user }: { user: User }) => {
-    const initialStocks = await searchStocks();
+// The popular-stock list loads lazily when the search dialog first opens —
+// awaiting 10 Finnhub profile calls here would block the shell on every hard load
+const Header = ({ user }: { user: User }) => {
+    const initialStocks: StockWithWatchlistStatus[] = [];
 
     return (
         <header className="sticky top-0 header">

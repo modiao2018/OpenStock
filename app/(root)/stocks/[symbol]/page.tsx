@@ -10,8 +10,7 @@ import {
     COMPANY_FINANCIALS_WIDGET_CONFIG,
 } from "@/lib/constants";
 
-import { auth } from '@/lib/better-auth/auth';
-import { headers } from 'next/headers';
+import { getSession } from '@/lib/get-session';
 import { isStockInWatchlist } from '@/lib/actions/watchlist.actions';
 import { getStockSentimentInsights } from '@/lib/actions/adanos.actions';
 import { formatSymbolForTradingView } from '@/lib/utils';
@@ -25,9 +24,7 @@ export default async function StockDetails({ params }: StockDetailsPageProps) {
     const locale = await getLocale();
     const tvLocale = toTradingViewLocale(locale);
 
-    const session = await auth.api.getSession({
-        headers: await headers()
-    });
+    const session = await getSession();
     const userId = session?.user?.id;
     const [isInWatchlist, sentimentInsights] = await Promise.all([
         userId ? isStockInWatchlist(userId, symbol) : Promise.resolve(false),

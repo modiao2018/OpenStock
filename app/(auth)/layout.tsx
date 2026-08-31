@@ -1,16 +1,15 @@
 import Link from "next/link";
 import React from "react";
 import Image from "next/image";
-import {headers} from "next/headers";
 import {redirect} from "next/navigation";
 import {getTranslations} from "next-intl/server";
-import {auth} from "@/lib/better-auth/auth";
+import {getSession} from "@/lib/get-session";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import AuthShowcase from "@/components/AuthShowcase";
 
 const Layout = async ({ children }: { children : React.ReactNode }) => {
 
-    const session = await auth.api.getSession({headers: await headers()});
+    const session = await getSession();
 
     if (session?.user) redirect('/')
 
