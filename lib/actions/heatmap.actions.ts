@@ -1,6 +1,7 @@
 'use server';
 
 import { fetchJSON } from '@/lib/actions/finnhub.actions';
+import { marketCapToUsdMillions } from '@/lib/market-cap';
 
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
 const NEXT_PUBLIC_FINNHUB_API_KEY = process.env.NEXT_PUBLIC_FINNHUB_API_KEY ?? '';
@@ -35,7 +36,7 @@ export interface HeatmapStock {
 }
 
 type Quote = { c?: number; d?: number; dp?: number; o?: number; h?: number; l?: number; pc?: number };
-type Profile = { name?: string; marketCapitalization?: number; finnhubIndustry?: string };
+type Profile = { name?: string; currency?: string; marketCapitalization?: number; finnhubIndustry?: string };
 
 export async function getHeatmapData(symbols?: string[]): Promise<HeatmapStock[]> {
     const token = NEXT_PUBLIC_FINNHUB_API_KEY;
@@ -64,7 +65,10 @@ export async function getHeatmapData(symbols?: string[]): Promise<HeatmapStock[]
                 ]);
 
                 const price = quote?.c ?? 0;
-                const marketCapMillions = profile?.marketCapitalization ?? 0;
+                const marketCapMillions = await marketCapToUsdMillions(
+                    profile?.marketCapitalization ?? 0,
+                    profile?.currency,
+                );
                 // Delisted/renamed tickers come back with zeroed data — drop them
                 if (price <= 0 || marketCapMillions <= 0) return null;
 

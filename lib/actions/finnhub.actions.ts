@@ -1,6 +1,7 @@
 'use server';
 
 import { getDateRange, validateArticle, formatArticle } from '@/lib/utils';
+import { marketCapToUsdMillions } from '@/lib/market-cap';
 import { POPULAR_STOCK_SYMBOLS } from '@/lib/constants';
 import { cache } from 'react';
 
@@ -107,7 +108,10 @@ export async function getWatchlistData(symbols: string[]) {
             currency: profile?.currency || 'USD',
             name: profile?.name || sym,
             logo: profile?.logo,
-            marketCap: profile?.marketCapitalization || null,
+            // Normalized to USD millions — Finnhub reports in the primary listing's currency
+            marketCap: profile?.marketCapitalization
+                ? await marketCapToUsdMillions(profile.marketCapitalization, profile.currency)
+                : null,
             peRatio: 0 // Finnhub 'quote' and 'profile2' don't easily give real-time PE. Might need 'metric' endpoint, but skipping for now to save rate limits.
         };
     });
