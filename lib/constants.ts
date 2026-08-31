@@ -38,17 +38,6 @@ export const CONDITION_OPTIONS = [
     { value: 'less', label: 'Less than (<)' },
 ];
 
-export const TOP_STORIES_WIDGET_CONFIG = {
-    displayMode: 'regular',
-    feedMode: 'market',
-    colorTheme: 'dark',
-    isTransparent: true,
-    locale: 'en',
-    market: 'stock',
-    width: '100%',
-    height: '600',
-};
-
 export const SYMBOL_INFO_WIDGET_CONFIG = (symbol: string) => ({
     symbol: symbol.toUpperCase(),
     colorTheme: 'dark',
