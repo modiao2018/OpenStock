@@ -11,6 +11,7 @@ import { collectMarket } from './collectors/market';
 import { collectReminders } from './collectors/reminders';
 import { collectWeekly } from './collectors/weekly';
 import { collectDiscovery } from './collectors/discovery';
+import { collectAiDips } from './collectors/aidips';
 import { upsertCustomEvent } from './store';
 import type { AnalysisResult } from './analyze';
 import type { MonitorConfig, NewEvent } from './types';
@@ -150,6 +151,8 @@ async function main(): Promise<void> {
     { name: 'discovery', intervalMinutes: 720, run: collectDiscovery },
     { name: 'reminders', intervalMinutes: 360, run: collectReminders },
     { name: 'weekly', intervalMinutes: 60, run: collectWeekly },
+    // 内部以「最新完成交易日」做门闩，实际每个交易日只处理一次
+    { name: 'aidips', intervalMinutes: 60, run: collectAiDips },
   ];
 
   // 首次运行：把 config.yaml 里的条目迁移入库，此后以数据库（网页端管理）为准

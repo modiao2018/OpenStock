@@ -7,7 +7,7 @@ const modules = [
     'store', 'notify', 'analyze',
     'collectors/clinicaltrials', 'collectors/edgar', 'collectors/halts',
     'collectors/rss', 'collectors/market', 'collectors/reminders',
-    'collectors/weekly', 'collectors/discovery',
+    'collectors/weekly', 'collectors/discovery', 'collectors/aidips',
 ];
 for (const m of modules) {
     await import(`../catalyst-monitor/src/${m}.ts`);
