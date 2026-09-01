@@ -203,8 +203,8 @@ const StockHeatmap = ({ data, height = 600, grouped = false, showLegend = true, 
 
     const [zoom, setZoom] = useState(1);
     const [offset, setOffset] = useState({ x: 0, y: 0 });
-    // Legend buckets toggled on; non-matching tiles are dimmed when non-empty
-    const [activeBuckets, setActiveBuckets] = useState<Set<string>>(new Set());
+    // Legend buckets toggled off; matching tiles are removed from the layout
+    const [hiddenBuckets, setHiddenBuckets] = useState<Set<string>>(new Set());
     const dragState = useRef<{ startX: number; startY: number; offsetX: number; offsetY: number; moved: boolean } | null>(null);
     // Mirrors the state the native (non-passive) wheel listener needs
     const wheelStateRef = useRef({ zoom: 1, offset: { x: 0, y: 0 }, width: 0, mapHeight: 0 });
@@ -325,9 +325,14 @@ const StockHeatmap = ({ data, height = 600, grouped = false, showLegend = true, 
     const sectorLabel = (industry: string) =>
         tSectors.has(industry) ? tSectors(industry) : industry;
 
-    const sectorBlocks: SectorBlock[] = width > 0 && grouped ? layoutGrouped(data, layoutW, layoutH) : [];
+    // Hidden buckets are removed before layout so the remaining tiles refill the map
+    const visibleData = hiddenBuckets.size > 0
+        ? data.filter((s) => !hiddenBuckets.has(bucketOf(s.changePercent)))
+        : data;
+
+    const sectorBlocks: SectorBlock[] = width > 0 && grouped ? layoutGrouped(visibleData, layoutW, layoutH) : [];
     const flatTiles: Rect<HeatmapStock>[] = width > 0 && !grouped
-        ? squarify(data.map((s) => ({ value: s.marketCap, data: s })), layoutW, layoutH)
+        ? squarify(visibleData.map((s) => ({ value: s.marketCap, data: s })), layoutW, layoutH)
         : [];
 
     const formatPercent = (dp: number) => `${dp > 0 ? '+' : ''}${dp.toFixed(2)}%`;
@@ -355,7 +360,6 @@ const StockHeatmap = ({ data, height = 600, grouped = false, showLegend = true, 
         const showSymbol = w > 44 && h > 26;
         const showPercent = w > 58 && h > 44;
         const large = w > 120 && h > 80;
-        const dimmed = activeBuckets.size > 0 && !activeBuckets.has(bucketOf(stock.changePercent));
         return (
             <button
                 key={stock.symbol}
@@ -368,7 +372,6 @@ const StockHeatmap = ({ data, height = 600, grouped = false, showLegend = true, 
                     width: Math.max(w - 2, 0),
                     height: Math.max(h - 2, 0),
                     backgroundColor: tileColor(stock.changePercent, redUp),
-                    opacity: dimmed ? 0.15 : 1,
                 }}
                 onClick={() => router.push(`/stocks/${stock.symbol}`)}
                 onMouseMove={(e) => handleMove(e, stock)}
@@ -399,12 +402,13 @@ const StockHeatmap = ({ data, height = 600, grouped = false, showLegend = true, 
     ];
 
     const toggleBucket = (key: string) => {
-        setActiveBuckets((current) => {
+        setHiddenBuckets((current) => {
             const next = new Set(current);
             if (next.has(key)) next.delete(key);
             else next.add(key);
             return next;
         });
+        setTooltip(null);
     };
 
     return (
@@ -464,18 +468,16 @@ const StockHeatmap = ({ data, height = 600, grouped = false, showLegend = true, 
             {showLegend && (
                 <div className="absolute bottom-0 left-0 flex items-center gap-2" style={{ height: legendHeight }}>
                     {legendCells.map((cell) => {
-                        const active = activeBuckets.has(cell.key);
+                        const hidden = hiddenBuckets.has(cell.key);
                         return (
                             <span key={cell.key} className="flex items-center gap-1 text-xs text-gray-400">
                                 <button
                                     type="button"
                                     title={bucketRangeLabel(cell.key)}
                                     aria-label={bucketRangeLabel(cell.key)}
-                                    aria-pressed={active}
+                                    aria-pressed={hidden}
                                     className={`h-4 w-7 cursor-pointer rounded-[3px] transition-all hover:brightness-125 ${
-                                        active
-                                            ? 'ring-2 ring-white/80 ring-offset-1 ring-offset-black'
-                                            : activeBuckets.size > 0 ? 'opacity-40' : ''
+                                        hidden ? 'opacity-25 ring-1 ring-inset ring-white/30' : ''
                                     }`}
                                     style={{ backgroundColor: cell.color }}
                                     onClick={() => toggleBucket(cell.key)}
@@ -484,11 +486,11 @@ const StockHeatmap = ({ data, height = 600, grouped = false, showLegend = true, 
                             </span>
                         );
                     })}
-                    {activeBuckets.size > 0 && (
+                    {hiddenBuckets.size > 0 && (
                         <button
                             type="button"
                             className="ml-1 text-xs text-gray-500 hover:text-teal-400 cursor-pointer"
-                            onClick={() => setActiveBuckets(new Set())}
+                            onClick={() => setHiddenBuckets(new Set())}
                         >
                             {t('clearFilter')}
                         </button>
