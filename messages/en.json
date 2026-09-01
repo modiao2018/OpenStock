@@ -238,7 +238,42 @@
     "Dashboard": "Dashboard",
     "Search": "Search",
     "Watchlist": "Watchlist",
-    "Catalyst": "Catalyst"
+    "Catalyst": "Catalyst",
+    "AiDips": "AI Dips"
+  },
+  "aiDips": {
+    "page": {
+      "title": "AI Dip Opportunities",
+      "subtitle": "Track persistent decliners across the AI complex — even great fundamentals deserve a cheap entry"
+    },
+    "subSectors": {
+      "chips": "Chips / Semis",
+      "infra": "Compute & Infrastructure",
+      "cloud": "Cloud & Software",
+      "apps": "AI Applications"
+    },
+    "filters": {
+      "all": "All",
+      "minDays": "≥{n}-day slide"
+    },
+    "columns": {
+      "symbol": "Symbol",
+      "trend": "30-day trend",
+      "price": "Price",
+      "todayChange": "Today",
+      "streak": "Down streak",
+      "streakDecline": "Streak total",
+      "drawdown": "30d drawdown"
+    },
+    "streakDaysValue": "{n}-day slide",
+    "streakDaysCapped": "≥{n}-day slide",
+    "noStreak": "No streak",
+    "provisionalToday": "falling today",
+    "notConfigured": "ALPACA_API_KEY / ALPACA_API_SECRET not configured — streak data unavailable, showing live quotes only.",
+    "noData": "No data",
+    "updatedAt": "Updated {time}",
+    "emptyFiltered": "No stock is currently on a ≥{n}-day slide. Full watch pool below:",
+    "dataNote": "Closes come from the free IEX feed and only completed sessions count; an intraday decline shows as \"falling today\"."
   },
   "catalyst": {
     "page": {

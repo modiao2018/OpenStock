@@ -4,6 +4,7 @@ export const NAV_ITEMS = [
     { href: '/search', label: 'Search' },
     { href: '/watchlist', label: 'Watchlist' },
     { href: '/catalyst', label: 'Catalyst' },
+    { href: '/ai-dips', label: 'AiDips' },
 ];
 
 // Sign-up form select options

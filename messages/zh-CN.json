@@ -238,7 +238,42 @@
     "Dashboard": "仪表盘",
     "Search": "搜索",
     "Watchlist": "自选股",
-    "Catalyst": "催化剂监控"
+    "Catalyst": "催化剂监控",
+    "AiDips": "AI 低吸"
+  },
+  "aiDips": {
+    "page": {
+      "title": "AI 低吸机会",
+      "subtitle": "监控 AI 板块连跌标的，基本面再好也要买得便宜"
+    },
+    "subSectors": {
+      "chips": "芯片/半导体",
+      "infra": "算力硬件与基建",
+      "cloud": "云与软件",
+      "apps": "AI 应用"
+    },
+    "filters": {
+      "all": "全部",
+      "minDays": "连跌 ≥{n} 天"
+    },
+    "columns": {
+      "symbol": "标的",
+      "trend": "近 30 日走势",
+      "price": "现价",
+      "todayChange": "今日涨跌",
+      "streak": "连跌天数",
+      "streakDecline": "连跌累计",
+      "drawdown": "30 日回撤"
+    },
+    "streakDaysValue": "连跌 {n} 天",
+    "streakDaysCapped": "连跌 ≥{n} 天",
+    "noStreak": "未连跌",
+    "provisionalToday": "今日续跌",
+    "notConfigured": "未配置 ALPACA_API_KEY / ALPACA_API_SECRET，无法计算连跌数据，当前仅展示实时报价。",
+    "noData": "暂无数据",
+    "updatedAt": "更新于 {time}",
+    "emptyFiltered": "近期没有连跌 ≥{n} 天的标的，以下是全部监控池：",
+    "dataNote": "收盘数据来自 IEX（免费源），仅统计已完成交易日；当日盘中下跌以「今日续跌」标注。"
   },
   "catalyst": {
     "page": {

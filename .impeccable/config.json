@@ -26,6 +26,15 @@
         ],
         "createdAt": "2026-08-31T11:39:34.180Z",
         "reason": "pre-existing button styles (near-black gray-900 on teal/red brand buttons, adequate contrast); untouched by this change"
+      },
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          "app/(root)/ai-dips/page.tsx"
+        ],
+        "createdAt": "2026-09-01T10:29:50.239Z",
+        "reason": "matches existing site-wide h1 pattern (watchlist/page.tsx:52 uses identical gradient heading)"
       }
     ]
   }
