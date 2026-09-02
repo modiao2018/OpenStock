@@ -81,7 +81,8 @@ describe('AI dip catalog', () => {
             expect(AI_SUB_SECTORS).toContain(entry.subSector);
             expect(entry.name.length).toBeGreaterThan(0);
         }
-        // Alpaca batching + Finnhub rate-limit budget both assume ~40
-        expect(symbols.length).toBeLessThanOrEqual(45);
+        // Alpaca batching + Finnhub rate-limit budget (60 req/min free tier,
+        // quotes poll every 60s + insider fetch at 1.1s spacing) assume ~50
+        expect(symbols.length).toBeLessThanOrEqual(55);
     });
 });

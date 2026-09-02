@@ -1,9 +1,14 @@
 'use server';
 
 import { fetchJSON } from '@/lib/actions/finnhub.actions';
-import { AI_DIP_CATALOG, AI_DIP_SYMBOLS, type AiSubSector } from '@/lib/ai-dips-catalog';
+import { AI_DIP_CATALOG, type AiSubSector } from '@/lib/ai-dips-catalog';
+import { getAiDipPool, type AiDipMeta } from '@/lib/ai-dips-pool';
 import { completedBars, computeDipStats, type DailyBar } from '@/lib/ai-dips-math';
-import { readSnapshot, snapshotKey, writeSnapshot } from '@/lib/snapshot';
+import { readSnapshot, writeSnapshot } from '@/lib/snapshot';
+
+// Fixed snapshot key: the pool is a global, editable set — hashing the symbol
+// list (snapshotKey) would orphan the snapshot on every pool edit
+const SNAPSHOT_KEY = 'ai-dips:pool';
 
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
 const NEXT_PUBLIC_FINNHUB_API_KEY = process.env.NEXT_PUBLIC_FINNHUB_API_KEY ?? '';
@@ -138,28 +143,38 @@ async function fetchQuotes(symbols: string[]): Promise<Record<string, Quote>> {
 // Last successful getAiDipsData payload; lets SSR paint instantly while the
 // client's mount refresh + poll fetches live data (same pattern as the heatmap)
 export async function getAiDipsSnapshot(): Promise<AiDipsPayload | null> {
-    const snapshot = await readSnapshot<AiDipsPayload>(snapshotKey('ai-dips', AI_DIP_SYMBOLS));
+    const snapshot = await readSnapshot<AiDipsPayload>(SNAPSHOT_KEY);
     return snapshot?.data ?? null;
 }
 
 export async function getAiDipsData(): Promise<AiDipsPayload> {
     const configured = Boolean(process.env.ALPACA_API_KEY && process.env.ALPACA_API_SECRET);
 
+    // DB-backed pool; static catalog keeps the page alive if the DB is down
+    let pool: AiDipMeta[];
+    try {
+        pool = await getAiDipPool();
+    } catch (e) {
+        console.error('AI dip pool read failed, falling back to catalog', e);
+        pool = AI_DIP_CATALOG;
+    }
+    const symbols = pool.map((s) => s.symbol);
+
     let barsBySymbol: Record<string, DailyBar[]> = {};
     let excludeDate: string | undefined;
     if (configured) {
         try {
             [barsBySymbol, excludeDate] = await Promise.all([
-                fetchDailyBars(AI_DIP_SYMBOLS),
+                fetchDailyBars(symbols),
                 formingSessionDate(),
             ]);
         } catch (e) {
             console.error('AI dips bars fetch failed', e);
         }
     }
-    const quotes = await fetchQuotes(AI_DIP_SYMBOLS);
+    const quotes = await fetchQuotes(symbols);
 
-    const rows: AiDipStock[] = AI_DIP_CATALOG.map(({ symbol, name, subSector }) => {
+    const rows: AiDipStock[] = pool.map(({ symbol, name, subSector }) => {
         const stats = computeDipStats(completedBars(barsBySymbol[symbol] ?? [], excludeDate));
         const price = quotes[symbol]?.c ?? 0;
         return {
@@ -188,7 +203,7 @@ export async function getAiDipsData(): Promise<AiDipsPayload> {
 
     const payload: AiDipsPayload = { configured, updatedAt: Date.now(), rows };
     if (rows.some((r) => r.barsOk || r.price > 0)) {
-        void writeSnapshot(snapshotKey('ai-dips', AI_DIP_SYMBOLS), payload);
+        void writeSnapshot(SNAPSHOT_KEY, payload);
     }
     return payload;
 }

@@ -1,9 +1,10 @@
-// Curated universe for the AI dips module. All symbols are US-listed (incl.
-// ADRs) so the free Alpaca IEX feed covers them — no .HK/.SS suffixes.
-// Company names are hardcoded to avoid ~40 Finnhub profile2 calls per cold
-// load; sub-sector keys double as translation keys under `aiDips.subSectors`.
+// Seed universe for the AI dips module — the runtime pool lives in MongoDB
+// (lib/ai-dips-pool.ts seeds it from this list on first read, then the manage
+// dialog on /ai-dips edits it). All symbols are US-listed (incl. ADRs) so the
+// free Alpaca IEX feed covers them — no .HK/.SS suffixes. Sub-sector keys
+// double as translation keys under `aiDips.subSectors`.
 
-export type AiSubSector = 'chips' | 'infra' | 'cloud' | 'apps';
+export type AiSubSector = 'chips' | 'infra' | 'cloud' | 'apps' | 'health' | 'custom';
 
 export interface AiDipMeta {
     symbol: string;
@@ -58,8 +59,22 @@ export const AI_DIP_CATALOG: AiDipMeta[] = [
     { symbol: 'SOUN', name: 'SoundHound AI', subSector: 'apps' },
     { symbol: 'IOT', name: 'Samsara', subSector: 'apps' },
     { symbol: 'RDDT', name: 'Reddit', subSector: 'apps' },
+    // 医药健康
+    { symbol: 'LLY', name: 'Eli Lilly', subSector: 'health' },
+    { symbol: 'NVO', name: 'Novo Nordisk', subSector: 'health' },
+    { symbol: 'UNH', name: 'UnitedHealth Group', subSector: 'health' },
+    { symbol: 'JNJ', name: 'Johnson & Johnson', subSector: 'health' },
+    { symbol: 'PFE', name: 'Pfizer', subSector: 'health' },
+    { symbol: 'MRK', name: 'Merck', subSector: 'health' },
+    { symbol: 'ABBV', name: 'AbbVie', subSector: 'health' },
+    { symbol: 'AMGN', name: 'Amgen', subSector: 'health' },
+    { symbol: 'VRTX', name: 'Vertex Pharmaceuticals', subSector: 'health' },
+    { symbol: 'ISRG', name: 'Intuitive Surgical', subSector: 'health' },
 ];
 
 export const AI_DIP_SYMBOLS: string[] = AI_DIP_CATALOG.map((s) => s.symbol);
 
-export const AI_SUB_SECTORS: AiSubSector[] = ['chips', 'infra', 'cloud', 'apps'];
+export const AI_SUB_SECTORS: AiSubSector[] = ['chips', 'infra', 'cloud', 'apps', 'health', 'custom'];
+
+// Finnhub free tier (60 req/min) budgets the quote poll — hard cap the pool
+export const AI_DIP_POOL_MAX = 60;

@@ -2,7 +2,7 @@ import { log } from '../config';
 import { getKv, setKv } from '../store';
 import { pushMessage } from '../notify';
 import { fetchDailyBars, formingSessionDate } from '../alpaca-daily';
-import { AI_DIP_CATALOG } from '../../../lib/ai-dips-catalog';
+import { getAiDipPool } from '../../../lib/ai-dips-pool';
 import { completedBars, computeDipStats } from '../../../lib/ai-dips-math';
 import type { MonitorConfig, NewEvent } from '../types';
 
@@ -25,10 +25,12 @@ export async function collectAiDips(config: MonitorConfig): Promise<NewEvent[]> 
   // 16:05 ET 前当日 bar 尚未定稿，剔除后自然回退到上一交易日
   const excludeDate = formingSessionDate();
 
-  const symbols = AI_DIP_CATALOG.map((s) => s.symbol);
+  // 每轮从 DB 读股票池——网页端改动无需重启 daemon
+  const pool = await getAiDipPool();
+  const symbols = pool.map((s) => s.symbol);
   const barsBySymbol = await fetchDailyBars(config, symbols);
 
-  const rows = AI_DIP_CATALOG.map((meta) => ({
+  const rows = pool.map((meta) => ({
     meta,
     stats: computeDipStats(completedBars(barsBySymbol[meta.symbol] ?? [], excludeDate)),
   }));

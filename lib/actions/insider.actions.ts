@@ -2,7 +2,7 @@
 
 import { connectToDatabase } from '@/database/mongoose';
 import { InsiderInsight, InsiderTrade } from '@/database/models/insider.model';
-import { AI_DIP_SYMBOLS } from '@/lib/ai-dips-catalog';
+import { getAiDipPool } from '@/lib/ai-dips-pool';
 import { shiftDate, summarizeInsiderTxs, type InsiderSummary } from '@/lib/insider-math';
 
 const WINDOW_DAYS = 90;
@@ -32,13 +32,14 @@ export interface InsiderRowData {
 export async function getInsiderOverview(): Promise<Record<string, InsiderRowData>> {
     try {
         await connectToDatabase();
+        const poolSymbols = (await getAiDipPool()).map((s) => s.symbol);
         const today = new Date().toISOString().slice(0, 10);
         const from = shiftDate(today, -WINDOW_DAYS);
         const [trades, insights] = await Promise.all([
-            InsiderTrade.find({ symbol: { $in: AI_DIP_SYMBOLS }, transactionDate: { $gte: from } })
+            InsiderTrade.find({ symbol: { $in: poolSymbols }, transactionDate: { $gte: from } })
                 .sort({ transactionDate: -1 })
                 .lean(),
-            InsiderInsight.find({ symbol: { $in: AI_DIP_SYMBOLS } }).lean(),
+            InsiderInsight.find({ symbol: { $in: poolSymbols } }).lean(),
         ]);
 
         const bySymbol = new Map<string, InsiderTradeRow[]>();

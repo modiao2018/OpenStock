@@ -8,7 +8,7 @@ import { connectToDatabase } from '@/database/mongoose';
 import { InsiderInsight, InsiderTrade } from '@/database/models/insider.model';
 import { resolveLlmConfig } from '@/lib/llm-config';
 import { callAIProviderWithConfig } from '@/lib/ai-provider';
-import { AI_DIP_CATALOG } from '../../../lib/ai-dips-catalog';
+import { getAiDipPool } from '../../../lib/ai-dips-pool';
 import { completedBars, computeDipStats, type DipStats } from '../../../lib/ai-dips-math';
 import {
   decideNotify,
@@ -138,12 +138,16 @@ export async function collectInsider(config: MonitorConfig): Promise<NewEvent[]>
 
   const today = etToday();
   const from = shiftDate(today, -WINDOW_DAYS);
-  const seeded = (await getKv('insider_seeded')) !== null;
+  // 每轮从 DB 读股票池——网页端改动无需重启 daemon
+  const pool = await getAiDipPool();
+  // 按 symbol 判断是否已建档：库里没有该股任何记录 = 新加入池子的标的，
+  // 其 90 天存量只入库不推送——扩池时不会把历史申报一次性刷屏
+  const seededSymbols = new Set<string>(await InsiderTrade.distinct('symbol'));
 
   // 逐 symbol 串行拉取；单只失败不废掉整轮
   const fetched: InsiderTx[] = [];
   let fetchErrors = 0;
-  for (const meta of AI_DIP_CATALOG) {
+  for (const meta of pool) {
     try {
       fetched.push(...(await fetchSymbolTxs(config.env.finnhubKey, meta.symbol, from, today)));
     } catch (err) {
@@ -152,13 +156,15 @@ export async function collectInsider(config: MonitorConfig): Promise<NewEvent[]>
     }
     await sleep(1100);
   }
-  if (fetched.length === 0 && fetchErrors === AI_DIP_CATALOG.length) {
+  if (fetched.length === 0 && fetchErrors === pool.length && pool.length > 0) {
     throw new Error('Finnhub insider-transactions 全部失败');
   }
 
   // 唯一索引幂等入库，11000 冲突 = 已见过
   const newTxs: Array<{ id: string; tx: InsiderTx }> = [];
+  let seedCount = 0;
   for (const tx of fetched) {
+    const isSeed = !seededSymbols.has(tx.symbol);
     try {
       const doc = await InsiderTrade.create({
         symbol: tx.symbol,
@@ -170,23 +176,19 @@ export async function collectInsider(config: MonitorConfig): Promise<NewEvent[]>
         amountUsd: txAmountUsd(tx),
         transactionDate: tx.transactionDate,
         filingDate: tx.filingDate,
-        firstSeen: !seeded,
+        firstSeen: isSeed,
       });
-      newTxs.push({ id: String(doc._id), tx });
+      if (isSeed) seedCount++;
+      else newTxs.push({ id: String(doc._id), tx });
     } catch (err: unknown) {
       if (err && typeof err === 'object' && (err as { code?: number }).code === 11000) continue;
       throw err;
     }
   }
 
-  // 首轮建档：90 天存量只入库不推送，避免部署当天刷屏
-  if (!seeded) {
-    await setKv('insider_seeded', today);
-    log('insider', `首轮建档 ${newTxs.length} 笔（不推送）`);
-    return [];
-  }
+  if (seedCount > 0) log('insider', `建档 ${seedCount} 笔（新标的存量，不推送）`);
   if (newTxs.length === 0) {
-    log('insider', '无新增内部人交易');
+    if (seedCount === 0) log('insider', '无新增内部人交易');
     return [];
   }
   log('insider', `新增 ${newTxs.length} 笔内部人交易`);
@@ -233,7 +235,7 @@ export async function collectInsider(config: MonitorConfig): Promise<NewEvent[]>
 
   const siteUrl = process.env.BETTER_AUTH_URL;
   for (const [symbol, items] of triggers) {
-    const meta = AI_DIP_CATALOG.find((m) => m.symbol === symbol) ?? { symbol, name: symbol };
+    const meta = pool.find((m) => m.symbol === symbol) ?? { symbol, name: symbol };
     const stats = computeDipStats(completedBars(barsBySymbol[symbol] ?? [], excludeDate));
     const docs = await InsiderTrade.find({ symbol, transactionDate: { $gte: from } }).lean();
     const summary = summarizeInsiderTxs(
