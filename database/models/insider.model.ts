@@ -71,7 +71,43 @@ const InsiderInsightSchema = new Schema<IInsiderInsight>(
     { timestamps: true }
 );
 
+/** EDGAR 即时监控见过的 Form 4/144 申报（按 accession 去重，与 Finnhub 交易表独立） */
+export interface IInsiderFiling extends Document {
+    symbol: string;
+    /** EDGAR accession number，全局唯一 */
+    accessionNumber: string;
+    form: '4' | '144';
+    /** YYYY-MM-DD */
+    filingDate: string;
+    /** SEC 受理时刻——"最早公开时点"的权威锚点 */
+    acceptedAt: Date | null;
+    url: string;
+    notified: boolean;
+    /** 首访建档的存量申报（不推送） */
+    firstSeen: boolean;
+    createdAt: Date;
+}
+
+const InsiderFilingSchema = new Schema<IInsiderFiling>(
+    {
+        symbol: { type: String, required: true, uppercase: true, trim: true },
+        accessionNumber: { type: String, required: true },
+        form: { type: String, enum: ['4', '144'], required: true },
+        filingDate: { type: String, required: true },
+        acceptedAt: { type: Date, default: null },
+        url: { type: String, required: true },
+        notified: { type: Boolean, default: false },
+        firstSeen: { type: Boolean, default: false },
+    },
+    { timestamps: true }
+);
+InsiderFilingSchema.index({ accessionNumber: 1 }, { unique: true });
+InsiderFilingSchema.index({ symbol: 1, filingDate: -1 });
+InsiderFilingSchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 86400 });
+
 export const InsiderTrade: Model<IInsiderTrade> =
     (models?.InsiderTrade as Model<IInsiderTrade>) || model<IInsiderTrade>('InsiderTrade', InsiderTradeSchema);
 export const InsiderInsight: Model<IInsiderInsight> =
     (models?.InsiderInsight as Model<IInsiderInsight>) || model<IInsiderInsight>('InsiderInsight', InsiderInsightSchema);
+export const InsiderFiling: Model<IInsiderFiling> =
+    (models?.InsiderFiling as Model<IInsiderFiling>) || model<IInsiderFiling>('InsiderFiling', InsiderFilingSchema);

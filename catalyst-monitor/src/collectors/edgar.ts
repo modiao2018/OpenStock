@@ -40,12 +40,12 @@ function itemsZh(items: string): string {
     .join('、');
 }
 
-function edgarHeaders(contact: string): Record<string, string> {
+export function edgarHeaders(contact: string): Record<string, string> {
   // SEC 要求 User-Agent 里带可联系方式，否则可能被封
   return { 'User-Agent': `catalyst-monitor/0.1 (${contact})`, Accept: 'application/json' };
 }
 
-async function getCikMap(config: MonitorConfig): Promise<Record<string, string>> {
+export async function getCikMap(config: MonitorConfig): Promise<Record<string, string>> {
   const cached = await getKv('edgar_cik_map', CIK_MAP_TTL_MS);
   if (cached) return JSON.parse(cached);
 

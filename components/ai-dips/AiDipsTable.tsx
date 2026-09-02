@@ -147,11 +147,10 @@ const AiDipsTable = ({ rows, showStreakColumns, insiderBySymbol, pendingInsider 
                     amount: formatUsdCompact(Math.abs(summary.netUsd)), n: total,
                 })
                 : t('insider.countOnly', { buy: summary.buyCount, sell: summary.sellCount });
-        const tone = total === 0
-            ? 'bg-gray-800/60 text-gray-400'
-            : netBuy
-                ? 'bg-teal-500/10 text-teal-400'
-                : 'bg-rose-500/10 text-rose-400';
+        // 买卖方向沿用站内红涨绿跌的本地化惯例（zh-CN 买入=红，en 反转）
+        const buyTone = isRedUpLocale(locale) ? 'bg-red-500/10 text-red-400' : 'bg-green-500/10 text-green-400';
+        const sellTone = isRedUpLocale(locale) ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400';
+        const tone = total === 0 ? 'bg-gray-800/60 text-gray-400' : netBuy ? buyTone : sellTone;
         return (
             <button
                 type="button"
@@ -195,7 +194,7 @@ const AiDipsTable = ({ rows, showStreakColumns, insiderBySymbol, pendingInsider 
                                             <tr key={i} className="border-t border-gray-800/60 text-gray-300">
                                                 <td className="max-w-[180px] truncate py-1.5 pr-3" title={trade.name}>{trade.name}</td>
                                                 <td className="py-1.5 pr-3 text-gray-500">{trade.transactionDate}</td>
-                                                <td className={`py-1.5 pr-3 font-medium ${trade.transactionCode === 'P' ? 'text-teal-400' : 'text-rose-400'}`}>
+                                                <td className={`py-1.5 pr-3 font-medium ${getChangeColorClass(trade.transactionCode === 'P' ? 1 : -1, locale)}`}>
                                                     {t(trade.transactionCode === 'P' ? 'insider.buy' : 'insider.sell')}
                                                 </td>
                                                 <td className="py-1.5 pr-3 text-right">{Math.abs(trade.change).toLocaleString(locale)}</td>

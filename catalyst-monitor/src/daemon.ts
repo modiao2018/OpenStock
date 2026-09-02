@@ -13,6 +13,7 @@ import { collectWeekly } from './collectors/weekly';
 import { collectDiscovery } from './collectors/discovery';
 import { collectAiDips } from './collectors/aidips';
 import { collectInsider } from './collectors/insider';
+import { collectInsiderEdgar } from './collectors/insider-edgar';
 import { upsertCustomEvent } from './store';
 import type { AnalysisResult } from './analyze';
 import type { MonitorConfig, NewEvent } from './types';
@@ -156,6 +157,9 @@ async function main(): Promise<void> {
     { name: 'aidips', intervalMinutes: 60, run: collectAiDips },
     // Form 4 本身有 T+2 申报延迟，90 分钟足够及时；靠唯一索引对新交易去重
     { name: 'insider', intervalMinutes: 90, run: collectInsider },
+    // EDGAR 即时链路：Form 4 申报即知 + Form 144 拟卖预告（当天可见），
+    // 与上面的 Finnhub 链路按申报日跨源去重；ET 受理时段外自动空转
+    { name: 'insider-edgar', intervalMinutes: 10, run: collectInsiderEdgar },
   ];
 
   // 首次运行：把 config.yaml 里的条目迁移入库，此后以数据库（网页端管理）为准
