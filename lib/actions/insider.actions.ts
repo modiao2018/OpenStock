@@ -2,6 +2,8 @@
 
 import { connectToDatabase } from '@/database/mongoose';
 import { InsiderInsight, InsiderTrade } from '@/database/models/insider.model';
+import { CatalystKv } from '@/database/models/catalyst.model';
+import { AiDipPoolStock } from '@/database/models/ai-dip-pool.model';
 import { getAiDipPool } from '@/lib/ai-dips-pool';
 import { shiftDate, summarizeInsiderTxs, type InsiderSummary } from '@/lib/insider-math';
 
@@ -24,6 +26,75 @@ export interface InsiderRowData {
     // Newest first
     trades: InsiderTradeRow[];
     insight: { analysis: string; action: string | null; updatedAt: number } | null;
+}
+
+// Data-source health for the /ai-dips status banner, from the daemon's
+// per-collector heartbeat keys in CatalystKv (written by runCollector)
+export interface AiDipsHealth {
+    // Epoch ms of the collectors' last completed round; null = never ran
+    insiderLastRun: number | null;
+    aidipsLastRun: number | null;
+    insiderErrorCount: number;
+    aidipsErrorCount: number;
+    insiderLastError: string | null;
+    // symbol -> epoch ms it entered the pool; lets the UI tell "awaiting
+    // first collection" apart from "genuinely no insider activity"
+    poolAddedAt: Record<string, number>;
+    // Symbols already seeded by the immediate web-side fetch (even when it
+    // found zero trades — ETFs etc.), so the UI can drop the pending badge
+    seededSymbols: string[];
+}
+
+async function readHeartbeat(name: string): Promise<{ lastRun: number | null; errorCount: number; lastError: string | null }> {
+    const keys = [`collector_last_run:${name}`, `collector_error_count:${name}`, `collector_last_error:${name}`];
+    const docs = await CatalystKv.find({ key: { $in: keys } }).lean();
+    const byKey = new Map(docs.map((d) => [d.key, d.value]));
+    const lastRunRaw = byKey.get(keys[0]);
+    const lastRun = lastRunRaw ? new Date(lastRunRaw).getTime() : null;
+    let lastError: string | null = null;
+    const errRaw = byKey.get(keys[2]);
+    if (errRaw) {
+        try {
+            lastError = (JSON.parse(errRaw) as { message?: string }).message ?? null;
+        } catch {
+            lastError = errRaw;
+        }
+    }
+    return {
+        lastRun: lastRun && !Number.isNaN(lastRun) ? lastRun : null,
+        errorCount: Number(byKey.get(keys[1]) ?? '0') || 0,
+        lastError,
+    };
+}
+
+export async function getAiDipsHealth(): Promise<AiDipsHealth> {
+    try {
+        await connectToDatabase();
+        const [insider, aidips, poolDocs, seedMarkers] = await Promise.all([
+            readHeartbeat('insider'),
+            readHeartbeat('aidips'),
+            AiDipPoolStock.find({}, { symbol: 1, addedAt: 1 }).lean(),
+            CatalystKv.find({ key: { $regex: '^insider_symbol_seeded:' } }, { key: 1 }).lean(),
+        ]);
+        const poolAddedAt: Record<string, number> = {};
+        for (const d of poolDocs) poolAddedAt[d.symbol] = d.addedAt ? new Date(d.addedAt).getTime() : 0;
+        return {
+            insiderLastRun: insider.lastRun,
+            aidipsLastRun: aidips.lastRun,
+            insiderErrorCount: insider.errorCount,
+            aidipsErrorCount: aidips.errorCount,
+            insiderLastError: insider.lastError,
+            poolAddedAt,
+            seededSymbols: seedMarkers.map((d) => d.key.slice('insider_symbol_seeded:'.length)),
+        };
+    } catch (e) {
+        console.error('AI dips health fetch failed', e);
+        return {
+            insiderLastRun: null, aidipsLastRun: null,
+            insiderErrorCount: 0, aidipsErrorCount: 0,
+            insiderLastError: null, poolAddedAt: {}, seededSymbols: [],
+        };
+    }
 }
 
 // 90-day insider activity for the AI dips universe, written by the monitor's

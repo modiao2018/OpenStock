@@ -278,7 +278,7 @@
       "cancel": "Cancel",
       "delete": "Remove {symbol}",
       "deleteConfirm": "Remove {symbol} from the pool? Its streak and insider data will no longer be shown",
-      "added": "Added {n} — quotes and insider data for new stocks appear after the next collection round",
+      "added": "Added {n} — fetching insider data in the background (~30s)",
       "poolFull": "Pool is full ({max} max) — remove some stocks first",
       "saveFailed": "Operation failed, please retry"
     },
@@ -323,7 +323,18 @@
       "aiInsight": "Latest AI insight",
       "insightAt": "Analyzed {time}",
       "noInsight": "No AI insight yet — generated automatically when a new insider trade triggers an alert",
-      "note": "Insider data from SEC Form 4 via Finnhub; open-market buys/sells only, filings lag trades by up to 2 business days"
+      "note": "Insider data from SEC Form 4 via Finnhub; open-market buys/sells only, filings lag trades by up to 2 business days; ETFs have no insider filings",
+      "pending": "Collecting…",
+      "pendingHint": "Recently added to the pool — insider data is being fetched in the background and will appear shortly"
+    },
+    "health": {
+      "barsError": "Alpaca daily bars fetch failed — streak/drawdown data may be stale or missing",
+      "quotesError": "All Finnhub quotes failed — prices may be stale (likely rate limit or outage)",
+      "insiderFailing": "Insider collection failing repeatedly: {error}",
+      "insiderNever": "Insider collection has never run — check that the monitor process is up",
+      "insiderStale": "Insider collection hasn't run for {hours}h — data may lag",
+      "aidipsFailing": "Streak collection (Bark alerts) failing repeatedly — check the monitor process",
+      "aidipsStale": "Streak collection hasn't run for {hours}h — Bark alerts may be down"
     }
   },
   "catalyst": {

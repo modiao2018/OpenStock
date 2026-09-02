@@ -112,6 +112,8 @@ export default function AiDipsManager({ userId }: { userId: string }) {
             toast.success(t('added', { n: res.added }));
             await refreshPool();
             setView('list');
+            // 通知 Board 立即刷新，并在后台建档完成后（~30s）再刷一次
+            window.dispatchEvent(new Event('aidips-pool-changed'));
             router.refresh();
         } catch {
             toast.error(t('saveFailed'));

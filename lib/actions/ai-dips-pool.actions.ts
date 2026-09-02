@@ -7,6 +7,7 @@ import { AiDipPoolStock } from '@/database/models/ai-dip-pool.model';
 import { auth } from '@/lib/better-auth/auth';
 import { AI_SUB_SECTORS, type AiDipMeta, type AiSubSector } from '@/lib/ai-dips-catalog';
 import { AI_DIP_POOL_MAX, getAiDipPool } from '@/lib/ai-dips-pool';
+import { seedInsiderForSymbols } from '@/lib/insider-seed';
 
 export interface AiDipPoolAddItem {
     symbol: string;
@@ -58,6 +59,9 @@ export async function addAiDipStocks(
                 { upsert: true },
             );
         }
+        // 新标的立即后台建档内部人数据，不等 daemon 的下一轮（fire-and-forget，
+        // 与 writeSnapshot 同一模式——web 是常驻容器，响应返回后任务仍会跑完）
+        if (fresh.length > 0) void seedInsiderForSymbols(fresh.map((i) => i.symbol));
         revalidatePath('/ai-dips');
         return { ok: true, added: fresh.length };
     } catch (e) {

@@ -22,6 +22,9 @@ interface AiDipsTableProps {
     // 90-day insider activity keyed by symbol; empty until the monitor's
     // insider collector has populated the database
     insiderBySymbol: Record<string, InsiderRowData>;
+    // Symbols the insider collector hasn't visited yet (freshly added to the
+    // pool) — shown as "awaiting collection" instead of a bare dash
+    pendingInsider: Set<string>;
 }
 
 const COLUMN_COUNT = 8;
@@ -51,7 +54,7 @@ function Sparkline({ closes, locale }: { closes: number[]; locale: string }) {
     );
 }
 
-const AiDipsTable = ({ rows, showStreakColumns, insiderBySymbol }: AiDipsTableProps) => {
+const AiDipsTable = ({ rows, showStreakColumns, insiderBySymbol, pendingInsider }: AiDipsTableProps) => {
     const t = useTranslations('aiDips');
     const locale = useLocale();
     const router = useRouter();
@@ -119,6 +122,17 @@ const AiDipsTable = ({ rows, showStreakColumns, insiderBySymbol }: AiDipsTablePr
         const info = insiderBySymbol[symbol];
         const total = info ? info.summary.buyCount + info.summary.sellCount : 0;
         if (!info || (total === 0 && !info.insight)) {
+            if (pendingInsider.has(symbol)) {
+                return (
+                    <span
+                        className="inline-flex items-center gap-1 rounded-full bg-gray-800/60 px-2.5 py-0.5 text-xs text-gray-400"
+                        title={t('insider.pendingHint')}
+                    >
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-400" />
+                        {t('insider.pending')}
+                    </span>
+                );
+            }
             return <span className="text-gray-600">—</span>;
         }
         const { summary } = info;

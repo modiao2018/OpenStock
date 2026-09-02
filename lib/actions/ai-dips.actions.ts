@@ -44,6 +44,10 @@ export interface AiDipsPayload {
     // Epoch ms of computation
     updatedAt: number;
     rows: AiDipStock[];
+    // Alpaca bars fetch threw while configured — streak data is stale/missing
+    barsError?: boolean;
+    // Finnhub returned no usable quote for any symbol — likely quota/outage
+    quotesError?: boolean;
 }
 
 type AlpacaBar = { t: string; c: number };
@@ -162,6 +166,7 @@ export async function getAiDipsData(): Promise<AiDipsPayload> {
 
     let barsBySymbol: Record<string, DailyBar[]> = {};
     let excludeDate: string | undefined;
+    let barsError = false;
     if (configured) {
         try {
             [barsBySymbol, excludeDate] = await Promise.all([
@@ -169,10 +174,15 @@ export async function getAiDipsData(): Promise<AiDipsPayload> {
                 formingSessionDate(),
             ]);
         } catch (e) {
+            barsError = true;
             console.error('AI dips bars fetch failed', e);
         }
     }
     const quotes = await fetchQuotes(symbols);
+    const quotesError =
+        Boolean(process.env.NEXT_PUBLIC_FINNHUB_API_KEY) &&
+        symbols.length > 0 &&
+        !symbols.some((s) => (quotes[s]?.c ?? 0) > 0);
 
     const rows: AiDipStock[] = pool.map(({ symbol, name, subSector }) => {
         const stats = computeDipStats(completedBars(barsBySymbol[symbol] ?? [], excludeDate));
@@ -201,7 +211,7 @@ export async function getAiDipsData(): Promise<AiDipsPayload> {
         return (a.streakDeclinePct ?? 0) - (b.streakDeclinePct ?? 0);
     });
 
-    const payload: AiDipsPayload = { configured, updatedAt: Date.now(), rows };
+    const payload: AiDipsPayload = { configured, updatedAt: Date.now(), rows, barsError, quotesError };
     if (rows.some((r) => r.barsOk || r.price > 0)) {
         void writeSnapshot(SNAPSHOT_KEY, payload);
     }

@@ -4,7 +4,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Loader2, TriangleAlert } from 'lucide-react';
 import { getAiDipsData, type AiDipsPayload } from '@/lib/actions/ai-dips.actions';
-import { getInsiderOverview, type InsiderRowData } from '@/lib/actions/insider.actions';
+import {
+    getAiDipsHealth,
+    getInsiderOverview,
+    type AiDipsHealth,
+    type InsiderRowData,
+} from '@/lib/actions/insider.actions';
 import { AI_SUB_SECTORS, type AiSubSector } from '@/lib/ai-dips-catalog';
 import AiDipsTable from '@/components/ai-dips/AiDipsTable';
 
@@ -20,6 +25,7 @@ const AiDipsBoard = ({ initialData }: AiDipsBoardProps) => {
 
     const [data, setData] = useState<AiDipsPayload | null>(initialData);
     const [insider, setInsider] = useState<Record<string, InsiderRowData>>({});
+    const [health, setHealth] = useState<AiDipsHealth | null>(null);
     const [minStreak, setMinStreak] = useState<number>(0);
     const [subSector, setSubSector] = useState<AiSubSector | null>(null);
 
@@ -44,19 +50,34 @@ const AiDipsBoard = ({ initialData }: AiDipsBoardProps) => {
     }, []);
 
     // Insider trades change on filing cadence (hours), not quote cadence —
-    // fetch on mount and refresh every 10 minutes, outside the 60s quote poll
+    // fetch on mount and refresh every 10 minutes, outside the 60s quote poll.
+    // Collector health rides the same slow cycle. A pool edit (AiDipsManager
+    // dispatches 'aidips-pool-changed') refreshes immediately and again ~30s
+    // later, when the background insider seeding for new symbols has landed.
     useEffect(() => {
         let cancelled = false;
+        let seedTimer: ReturnType<typeof setTimeout> | undefined;
         const refresh = async () => {
             if (document.hidden) return;
-            const overview = await getInsiderOverview();
-            if (!cancelled) setInsider(overview);
+            const [overview, h] = await Promise.all([getInsiderOverview(), getAiDipsHealth()]);
+            if (!cancelled) {
+                setInsider(overview);
+                setHealth(h);
+            }
+        };
+        const onPoolChanged = () => {
+            refresh();
+            clearTimeout(seedTimer);
+            seedTimer = setTimeout(refresh, 30_000);
         };
         refresh();
         const id = setInterval(refresh, 600_000);
+        window.addEventListener('aidips-pool-changed', onPoolChanged);
         return () => {
             cancelled = true;
             clearInterval(id);
+            clearTimeout(seedTimer);
+            window.removeEventListener('aidips-pool-changed', onPoolChanged);
         };
     }, []);
 
@@ -69,6 +90,48 @@ const AiDipsBoard = ({ initialData }: AiDipsBoardProps) => {
         () => (minStreak > 0 ? rows.filter((r) => r.streakDays >= minStreak) : rows),
         [rows, minStreak],
     );
+
+    // Surface data-source trouble instead of silently showing stale "—" cells:
+    // web-side fetch failures ride the payload, collector trouble rides the
+    // daemon heartbeat (staleness thresholds = 2+ missed rounds)
+    const healthIssues = useMemo(() => {
+        const issues: string[] = [];
+        if (data?.barsError) issues.push(t('health.barsError'));
+        if (data?.quotesError) issues.push(t('health.quotesError'));
+        if (health) {
+            const now = Date.now();
+            if (health.insiderErrorCount >= 3) {
+                issues.push(t('health.insiderFailing', { error: health.insiderLastError ?? '' }));
+            } else if (health.insiderLastRun === null) {
+                issues.push(t('health.insiderNever'));
+            } else if (now - health.insiderLastRun > 4 * 3600_000) {
+                issues.push(t('health.insiderStale', { hours: Math.round((now - health.insiderLastRun) / 3600_000) }));
+            }
+            if (health.aidipsErrorCount >= 3) {
+                issues.push(t('health.aidipsFailing'));
+            } else if (health.aidipsLastRun !== null && now - health.aidipsLastRun > 3 * 3600_000) {
+                issues.push(t('health.aidipsStale', { hours: Math.round((now - health.aidipsLastRun) / 3600_000) }));
+            }
+        }
+        return issues;
+    }, [data, health, t]);
+
+    // Pool entries no collection has visited yet — render "待采集" instead of
+    // a misleading "—". A symbol stops being pending once it has data, once
+    // the immediate web-side seeding marked it (even with zero trades), or
+    // once a daemon round completed after it entered the pool.
+    const pendingInsider = useMemo(() => {
+        const pending = new Set<string>();
+        if (!health) return pending;
+        const seeded = new Set(health.seededSymbols);
+        for (const [sym, added] of Object.entries(health.poolAddedAt)) {
+            if (insider[sym] || seeded.has(sym)) continue;
+            if (health.insiderLastRun === null || added > health.insiderLastRun) {
+                pending.add(sym);
+            }
+        }
+        return pending;
+    }, [health, insider]);
 
     const chipClass = (active: boolean) =>
         `rounded-full border px-3 py-1 text-xs transition-colors cursor-pointer ${
@@ -96,6 +159,15 @@ const AiDipsBoard = ({ initialData }: AiDipsBoardProps) => {
                 <div className="flex items-start gap-2 rounded-lg border border-amber-700/60 bg-amber-950/30 px-4 py-3 text-sm text-amber-300">
                     <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
                     {t('notConfigured')}
+                </div>
+            )}
+
+            {healthIssues.length > 0 && (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-700/60 bg-amber-950/30 px-4 py-3 text-sm text-amber-300">
+                    <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                    <div className="space-y-0.5">
+                        {healthIssues.map((msg) => <p key={msg}>{msg}</p>)}
+                    </div>
                 </div>
             )}
 
@@ -150,7 +222,12 @@ const AiDipsBoard = ({ initialData }: AiDipsBoardProps) => {
                     {t('noData')}
                 </div>
             ) : (
-                <AiDipsTable rows={tableRows} showStreakColumns={data.configured} insiderBySymbol={insider} />
+                <AiDipsTable
+                    rows={tableRows}
+                    showStreakColumns={data.configured}
+                    insiderBySymbol={insider}
+                    pendingInsider={pendingInsider}
+                />
             )}
 
             <p className="text-xs text-gray-600">{t('dataNote')}</p>

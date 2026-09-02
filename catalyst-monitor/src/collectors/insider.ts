@@ -159,6 +159,11 @@ export async function collectInsider(config: MonitorConfig): Promise<NewEvent[]>
   if (fetched.length === 0 && fetchErrors === pool.length && pool.length > 0) {
     throw new Error('Finnhub insider-transactions 全部失败');
   }
+  // ≥1/3 标的拉取失败 = 疑似限流/故障。处理完成功部分后抛错，让 runCollector
+  // 的心跳计数（连续 3 次 → Bark「监控异常」）和网页端健康横幅感知到
+  const fetchDegraded = fetchErrors > 0 && fetchErrors * 3 >= pool.length;
+  const degradedError = () =>
+    new Error(`Finnhub insider 拉取失败 ${fetchErrors}/${pool.length} 只（疑似限流或故障）`);
 
   // 唯一索引幂等入库，11000 冲突 = 已见过
   const newTxs: Array<{ id: string; tx: InsiderTx }> = [];
@@ -189,6 +194,7 @@ export async function collectInsider(config: MonitorConfig): Promise<NewEvent[]>
   if (seedCount > 0) log('insider', `建档 ${seedCount} 笔（新标的存量，不推送）`);
   if (newTxs.length === 0) {
     if (seedCount === 0) log('insider', '无新增内部人交易');
+    if (fetchDegraded) throw degradedError();
     return [];
   }
   log('insider', `新增 ${newTxs.length} 笔内部人交易`);
@@ -290,5 +296,6 @@ export async function collectInsider(config: MonitorConfig): Promise<NewEvent[]>
     log('insider', `${symbol} 触发 ${items.length} 笔（${reason}，推送${delivered ? '成功' : '未送达'}）`);
   }
 
+  if (fetchDegraded) throw degradedError();
   return [];
 }
