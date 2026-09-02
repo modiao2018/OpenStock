@@ -3,6 +3,8 @@
 // with a TWD market cap, ~30x the USD figure. Normalize to USD before using
 // the value for sizing or display.
 
+import { timed } from '@/lib/source-calls';
+
 type UsdRatesResponse = {
     result?: string;
     rates?: Record<string, number>;
@@ -19,17 +21,18 @@ export async function marketCapToUsdMillions(
     if (!marketCapMillions || cur === 'USD') return marketCapMillions;
 
     try {
-        const res = await fetch(RATES_URL, {
-            cache: 'force-cache',
-            next: { revalidate: 86400 },
-            signal: AbortSignal.timeout(8000),
+        const data = await timed('er-api', async () => {
+            const res = await fetch(RATES_URL, {
+                cache: 'force-cache',
+                next: { revalidate: 86400 },
+                signal: AbortSignal.timeout(8000),
+            });
+            if (!res.ok) throw new Error(`FX rates HTTP ${res.status}`);
+            return (await res.json()) as UsdRatesResponse;
         });
-        if (res.ok) {
-            const data = (await res.json()) as UsdRatesResponse;
-            const rate = data?.rates?.[cur];
-            if (typeof rate === 'number' && rate > 0) {
-                return marketCapMillions / rate;
-            }
+        const rate = data?.rates?.[cur];
+        if (typeof rate === 'number' && rate > 0) {
+            return marketCapMillions / rate;
         }
     } catch (e) {
         console.error('FX rates fetch failed, using raw market cap for', cur, e);

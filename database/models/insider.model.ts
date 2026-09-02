@@ -85,6 +85,8 @@ export interface IInsiderFiling extends Document {
     notified: boolean;
     /** 首访建档的存量申报（不推送） */
     firstSeen: boolean;
+    /** Form 4 非衍生表出现的交易代码集合；null = 未解析 XML（建档路径） */
+    txCodes: string[] | null;
     createdAt: Date;
 }
 
@@ -98,6 +100,7 @@ const InsiderFilingSchema = new Schema<IInsiderFiling>(
         url: { type: String, required: true },
         notified: { type: Boolean, default: false },
         firstSeen: { type: Boolean, default: false },
+        txCodes: { type: [String], default: null },
     },
     { timestamps: true }
 );

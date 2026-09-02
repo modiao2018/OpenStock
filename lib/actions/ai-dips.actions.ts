@@ -5,6 +5,7 @@ import { AI_DIP_CATALOG, type AiSubSector } from '@/lib/ai-dips-catalog';
 import { getAiDipPool, type AiDipMeta } from '@/lib/ai-dips-pool';
 import { completedBars, computeDipStats, type DailyBar } from '@/lib/ai-dips-math';
 import { readSnapshot, writeSnapshot } from '@/lib/snapshot';
+import { timed } from '@/lib/source-calls';
 
 // Fixed snapshot key: the pool is a global, editable set — hashing the symbol
 // list (snapshotKey) would orphan the snapshot on every pool edit
@@ -81,14 +82,16 @@ async function fetchDailyBars(symbols: string[]): Promise<Record<string, DailyBa
             `${ALPACA_BARS_URL}?symbols=${symbols.join(',')}&timeframe=1Day&adjustment=split&feed=iex&limit=10000` +
             `&start=${encodeURIComponent(start)}` +
             (pageToken ? `&page_token=${encodeURIComponent(pageToken)}` : '');
-        const res = await fetch(url, {
-            headers: alpacaHeaders(),
-            signal: AbortSignal.timeout(15_000),
-            cache: 'force-cache',
-            next: { revalidate: 3600 },
+        const data = await timed('alpaca', async () => {
+            const res = await fetch(url, {
+                headers: alpacaHeaders(),
+                signal: AbortSignal.timeout(15_000),
+                cache: 'force-cache',
+                next: { revalidate: 3600 },
+            });
+            if (!res.ok) throw new Error(`Alpaca bars HTTP ${res.status}`);
+            return (await res.json()) as AlpacaBarsResponse;
         });
-        if (!res.ok) throw new Error(`Alpaca bars HTTP ${res.status}`);
-        const data = (await res.json()) as AlpacaBarsResponse;
         for (const [symbol, bars] of Object.entries(data.bars ?? {})) {
             const list = (out[symbol] ??= []);
             for (const b of bars) list.push({ date: etDate.format(new Date(b.t)), c: b.c });
@@ -108,16 +111,17 @@ async function formingSessionDate(): Promise<string | undefined> {
     const today = etDate.format(now);
     const pastClose = etClock.format(now) >= '16:00';
     try {
-        const res = await fetch(ALPACA_CLOCK_URL, {
-            headers: alpacaHeaders(),
-            signal: AbortSignal.timeout(5_000),
-            cache: 'force-cache',
-            next: { revalidate: 30 },
+        const clock = await timed('alpaca', async () => {
+            const res = await fetch(ALPACA_CLOCK_URL, {
+                headers: alpacaHeaders(),
+                signal: AbortSignal.timeout(5_000),
+                cache: 'force-cache',
+                next: { revalidate: 30 },
+            });
+            if (!res.ok) throw new Error(`Alpaca clock HTTP ${res.status}`);
+            return (await res.json()) as { is_open: boolean };
         });
-        if (res.ok) {
-            const clock = (await res.json()) as { is_open: boolean };
-            return !clock.is_open && pastClose ? undefined : today;
-        }
+        return !clock.is_open && pastClose ? undefined : today;
     } catch {
         // clock unavailable — fall through to the pure time check
     }

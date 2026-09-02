@@ -17,6 +17,8 @@ import { abnormalSeries, rollingWindows, stddev } from '@/catalyst-monitor/src/m
 import { extractAction } from '@/catalyst-monitor/src/analyze';
 import { notify, pushMessage, sendBark, type PushEnv } from '@/catalyst-monitor/src/notify';
 import { sendWeeklyReport } from '@/catalyst-monitor/src/collectors/weekly';
+import { collectorIntervals } from '@/catalyst-monitor/src/collector-registry';
+import { timed } from '@/lib/source-calls';
 import type { StoredEvent } from '@/catalyst-monitor/src/types';
 import {
     callAIProviderWithConfig,
@@ -143,12 +145,14 @@ export async function searchClinicalTrials(query: string): Promise<TrialSearchRe
             'protocolSection.statusModule.primaryCompletionDateStruct',
             'protocolSection.designModule.phases',
         ].join(',');
-        const res = await fetch(
-            `https://clinicaltrials.gov/api/v2/studies?query.term=${encodeURIComponent(q)}&pageSize=25&fields=${fields}`,
-            { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(20_000) }
-        );
-        if (!res.ok) throw new Error(`ClinicalTrials.gov HTTP ${res.status}`);
-        const data = (await res.json()) as { studies?: any[] };
+        const data = await timed('clinicaltrials', async () => {
+            const res = await fetch(
+                `https://clinicaltrials.gov/api/v2/studies?query.term=${encodeURIComponent(q)}&pageSize=25&fields=${fields}`,
+                { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(20_000) }
+            );
+            if (!res.ok) throw new Error(`ClinicalTrials.gov HTTP ${res.status}`);
+            return (await res.json()) as { studies?: any[] };
+        });
         const results: TrialSearchResult[] = (data.studies ?? []).map((s) => {
             const proto = s.protocolSection ?? {};
             return {
@@ -213,22 +217,26 @@ export interface MonitorStatusData {
 }
 
 export async function getMonitorStatus(): Promise<MonitorStatusData> {
-    // 轮询间隔以 config.yaml 为准（daemon 启动时读取同一文件）
-    const defaults = { market: 2, halts: 2, edgar: 5, rss: 5, clinicaltrials: 15, discovery: 720 };
-    let intervals: Record<string, number> = { ...defaults };
+    // 轮询间隔以 config.yaml 为准（daemon 启动时读取同一文件）；采集器清单来自
+    // collector-registry，与 daemon 共用一份定义
+    let poll: Partial<Parameters<typeof collectorIntervals>[0]> = {};
     try {
         const raw = parseYaml(readFileSync(join(process.cwd(), 'catalyst-monitor', 'config.yaml'), 'utf8')) as any;
-        intervals = {
-            market: Number(raw?.poll?.market_minutes ?? defaults.market),
-            halts: Number(raw?.poll?.halts_minutes ?? defaults.halts),
-            edgar: Number(raw?.poll?.edgar_minutes ?? defaults.edgar),
-            rss: Number(raw?.poll?.rss_minutes ?? defaults.rss),
-            clinicaltrials: Number(raw?.poll?.clinicaltrials_minutes ?? defaults.clinicaltrials),
-            discovery: defaults.discovery,
+        const num = (v: unknown) => (v === undefined || v === null ? undefined : Number(v));
+        poll = {
+            marketMinutes: num(raw?.poll?.market_minutes),
+            haltsMinutes: num(raw?.poll?.halts_minutes),
+            edgarMinutes: num(raw?.poll?.edgar_minutes),
+            rssMinutes: num(raw?.poll?.rss_minutes),
+            clinicaltrialsMinutes: num(raw?.poll?.clinicaltrials_minutes),
         };
+        for (const k of Object.keys(poll) as Array<keyof typeof poll>) {
+            if (poll[k] === undefined || Number.isNaN(poll[k])) delete poll[k];
+        }
     } catch (error) {
         console.error('Error reading catalyst-monitor/config.yaml:', error);
     }
+    const intervals: Record<string, number> = collectorIntervals(poll);
 
     let lastRuns: Record<string, string> = {};
     let errorCounts: Record<string, number> = {};
@@ -575,18 +583,21 @@ export const getMarketSnapshot = cache(async (): Promise<MarketSnapshotData> => 
     if (!base.configured) return base;
 
     try {
-        const res = await fetch('https://paper-api.alpaca.markets/v2/clock', {
-            headers: {
-                'APCA-API-KEY-ID': process.env.ALPACA_API_KEY!,
-                'APCA-API-SECRET-KEY': process.env.ALPACA_API_SECRET!,
-            },
-            signal: AbortSignal.timeout(5_000),
-            // 30s cache: AutoRefresh re-renders every 60s; market open/close
-            // doesn't need a fresh upstream call each time
-            cache: 'force-cache',
-            next: { revalidate: 30 },
+        base.marketOpen = await timed('alpaca', async () => {
+            const res = await fetch('https://paper-api.alpaca.markets/v2/clock', {
+                headers: {
+                    'APCA-API-KEY-ID': process.env.ALPACA_API_KEY!,
+                    'APCA-API-SECRET-KEY': process.env.ALPACA_API_SECRET!,
+                },
+                signal: AbortSignal.timeout(5_000),
+                // 30s cache: AutoRefresh re-renders every 60s; market open/close
+                // doesn't need a fresh upstream call each time
+                cache: 'force-cache',
+                next: { revalidate: 30 },
+            });
+            if (!res.ok) throw new Error(`Alpaca clock HTTP ${res.status}`);
+            return ((await res.json()) as { is_open: boolean }).is_open;
         });
-        if (res.ok) base.marketOpen = ((await res.json()) as { is_open: boolean }).is_open;
     } catch {
         // clock 拉不到不影响快照展示
     }

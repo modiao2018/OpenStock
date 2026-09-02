@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { Activity, BellRing, Loader2 } from 'lucide-react';
+import { Activity, BellRing, ExternalLink, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     sendSimulatedAlert,
@@ -70,17 +71,23 @@ export default function MonitorDebugPanel({ status }: { status: MonitorStatusDat
                     <Activity className="w-5 h-5 text-teal-500" />
                     {t('title')}
                 </h2>
-                <span
-                    className={`text-xs px-2 py-0.5 rounded-full ${
-                        !status.daemonOnline
-                            ? 'bg-red-900/50 text-red-300'
-                            : status.hasErrors
-                              ? 'bg-amber-900/50 text-amber-300'
-                              : 'bg-teal-900/60 text-teal-300'
-                    }`}
-                >
-                    ● {!status.daemonOnline ? t('offline') : status.hasErrors ? t('onlineWithErrors') : t('online')}
-                </span>
+                <div className="flex items-center gap-2">
+                    <Link href="/status" className="flex items-center gap-1 text-xs text-gray-500 hover:text-teal-400">
+                        {t('viewStatus')}
+                        <ExternalLink className="w-3 h-3" />
+                    </Link>
+                    <span
+                        className={`text-xs px-2 py-0.5 rounded-full ${
+                            !status.daemonOnline
+                                ? 'bg-red-900/50 text-red-300'
+                                : status.hasErrors
+                                  ? 'bg-amber-900/50 text-amber-300'
+                                  : 'bg-teal-900/60 text-teal-300'
+                        }`}
+                    >
+                        ● {!status.daemonOnline ? t('offline') : status.hasErrors ? t('onlineWithErrors') : t('online')}
+                    </span>
+                </div>
             </div>
 
             {/* 采集器频率与心跳 */}

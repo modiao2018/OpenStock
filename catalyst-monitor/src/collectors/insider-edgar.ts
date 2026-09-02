@@ -35,7 +35,7 @@ function isEdgarActiveHours(now = new Date()): boolean {
 /** primaryDocument 常带 xslF345X05/ 之类的渲染前缀，去掉才是原始 XML */
 const rawDocName = (primaryDoc: string): string => primaryDoc.split('/').pop() ?? primaryDoc;
 
-async function fetchFilingXml(config: MonitorConfig, cik: string, accession: string, primaryDoc: string): Promise<string> {
+export async function fetchFilingXml(config: MonitorConfig, cik: string, accession: string, primaryDoc: string): Promise<string> {
   const accessionPlain = accession.replace(/-/g, '');
   const url = `https://www.sec.gov/Archives/edgar/data/${cik}/${accessionPlain}/${rawDocName(primaryDoc)}`;
   const res = await fetchWithRetry(url, { headers: edgarHeaders(config.env.edgarContact) }, { timeoutMs: 20_000 });
@@ -114,7 +114,13 @@ export async function collectInsiderEdgar(config: MonitorConfig): Promise<NewEve
         const xml = await fetchFilingXml(config, cik, accession, primaryDoc);
         const items: InsiderAlertItem[] = [];
         if (forms[i] === '4') {
-          for (const parsed of parseForm4Xml(xml)) {
+          const parsedTxs = parseForm4Xml(xml);
+          // 交易代码集合供 xcheck 判断"该申报是否应出现在 Finnhub 的 P/S 表里"
+          await InsiderFiling.updateOne(
+            { accessionNumber: accession },
+            { $set: { txCodes: [...new Set(parsedTxs.map((t) => t.transactionCode))] } }
+          );
+          for (const parsed of parsedTxs) {
             if (parsed.transactionCode !== 'P' && parsed.transactionCode !== 'S') continue;
             const tx: InsiderTx = {
               symbol: meta.symbol,

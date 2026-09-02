@@ -5,11 +5,12 @@
 const modules = [
     'env', 'config', 'types', 'http', 'market-math',
     'store', 'notify', 'analyze', 'alpaca-daily',
-    'form-parse', 'insider-alert',
+    'form-parse', 'insider-alert', 'collector-registry',
     'collectors/clinicaltrials', 'collectors/edgar', 'collectors/halts',
     'collectors/rss', 'collectors/market', 'collectors/reminders',
     'collectors/weekly', 'collectors/discovery', 'collectors/aidips',
     'collectors/insider', 'collectors/insider-edgar',
+    'collectors/sources', 'collectors/xcheck',
 ];
 for (const m of modules) {
     await import(`../catalyst-monitor/src/${m}.ts`);

@@ -2,6 +2,7 @@ import { XMLParser } from 'fast-xml-parser';
 import { log, logError } from '../config';
 import { fetchWithRetry } from '../http';
 import { sha256 } from '../store';
+import { rssSourceId } from '@/lib/sources-registry';
 import type { MonitorConfig, NewEvent, WatchItem } from '../types';
 
 function toArray<T>(v: T | T[] | undefined): T[] {
@@ -39,9 +40,11 @@ export async function collectRss(config: MonitorConfig): Promise<NewEvent[]> {
 
   for (const feed of config.feeds) {
     try {
-      const res = await fetchWithRetry(feed.url, {
-        headers: { Accept: 'application/rss+xml, application/xml, text/xml', 'User-Agent': 'catalyst-monitor/0.1' },
-      });
+      const res = await fetchWithRetry(
+        feed.url,
+        { headers: { Accept: 'application/rss+xml, application/xml, text/xml', 'User-Agent': 'catalyst-monitor/0.1' } },
+        { source: rssSourceId(feed.name) }
+      );
       if (!res.ok) throw new Error(`${feed.name} HTTP ${res.status}`);
       const doc = parser.parse(await res.text());
       const items = toArray<any>(doc?.rss?.channel?.item ?? doc?.feed?.entry);

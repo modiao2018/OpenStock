@@ -14,15 +14,39 @@ import { collectDiscovery } from './collectors/discovery';
 import { collectAiDips } from './collectors/aidips';
 import { collectInsider } from './collectors/insider';
 import { collectInsiderEdgar } from './collectors/insider-edgar';
+import { collectSources } from './collectors/sources';
+import { collectXcheck } from './collectors/xcheck';
+import { COLLECTOR_SPECS, collectorIntervals, type CollectorName } from './collector-registry';
+import { recordSourceCall } from '@/lib/source-calls';
 import { upsertCustomEvent } from './store';
 import type { AnalysisResult } from './analyze';
 import type { MonitorConfig, NewEvent } from './types';
 
+type Runner = (config: MonitorConfig) => Promise<NewEvent[]>;
+
 interface CollectorDef {
-  name: string;
+  name: CollectorName;
   intervalMinutes: number;
-  run: (config: MonitorConfig) => Promise<NewEvent[]>;
+  needsWatchlist: boolean;
+  run: Runner;
 }
+
+// satisfies：注册表里新增采集器而这里漏配 → 编译报错
+const RUNNERS = {
+  market: collectMarket,
+  halts: collectHalts,
+  edgar: collectEdgar,
+  rss: collectRss,
+  clinicaltrials: collectClinicalTrials,
+  discovery: collectDiscovery,
+  reminders: collectReminders,
+  weekly: collectWeekly,
+  aidips: collectAiDips,
+  insider: collectInsider,
+  'insider-edgar': collectInsiderEdgar,
+  sources: collectSources,
+  xcheck: collectXcheck,
+} satisfies Record<CollectorName, Runner>;
 
 /** 公告里给了催化剂时间指引 → 自动补进催化剂日历 */
 async function saveGuidance(
@@ -49,7 +73,7 @@ async function runCollector(def: CollectorDef, config: MonitorConfig): Promise<v
   try {
     // 每轮都从数据库取最新监控清单——网页端改动无需重启 daemon
     const watchlist = await getWatchItems();
-    if (watchlist.length === 0) {
+    if (def.needsWatchlist && watchlist.length === 0) {
       log(def.name, '监控清单为空，跳过本轮');
       return;
     }
@@ -144,23 +168,13 @@ async function main(): Promise<void> {
   const once = process.argv.includes('--once');
   const config = loadConfig();
 
-  const collectors: CollectorDef[] = [
-    { name: 'market', intervalMinutes: config.poll.marketMinutes, run: collectMarket },
-    { name: 'halts', intervalMinutes: config.poll.haltsMinutes, run: collectHalts },
-    { name: 'edgar', intervalMinutes: config.poll.edgarMinutes, run: collectEdgar },
-    { name: 'rss', intervalMinutes: config.poll.rssMinutes, run: collectRss },
-    { name: 'clinicaltrials', intervalMinutes: config.poll.clinicaltrialsMinutes, run: collectClinicalTrials },
-    { name: 'discovery', intervalMinutes: 720, run: collectDiscovery },
-    { name: 'reminders', intervalMinutes: 360, run: collectReminders },
-    { name: 'weekly', intervalMinutes: 60, run: collectWeekly },
-    // 内部以「最新完成交易日」做门闩，实际每个交易日只处理一次
-    { name: 'aidips', intervalMinutes: 60, run: collectAiDips },
-    // Form 4 本身有 T+2 申报延迟，90 分钟足够及时；靠唯一索引对新交易去重
-    { name: 'insider', intervalMinutes: 90, run: collectInsider },
-    // EDGAR 即时链路：Form 4 申报即知 + Form 144 拟卖预告（当天可见），
-    // 与上面的 Finnhub 链路按申报日跨源去重；ET 受理时段外自动空转
-    { name: 'insider-edgar', intervalMinutes: 10, run: collectInsiderEdgar },
-  ];
+  const intervals = collectorIntervals(config.poll);
+  const collectors: CollectorDef[] = COLLECTOR_SPECS.map((spec) => ({
+    name: spec.name,
+    intervalMinutes: intervals[spec.name],
+    needsWatchlist: spec.needsWatchlist,
+    run: RUNNERS[spec.name],
+  }));
 
   // 首次运行：把 config.yaml 里的条目迁移入库，此后以数据库（网页端管理）为准
   let watchItems = await getWatchItems();
@@ -191,7 +205,12 @@ async function main(): Promise<void> {
   // daemon 挂掉后由对方超时告警——监控系统自身的掉线不能靠自己发现
   const healthcheckUrl = process.env.HEALTHCHECK_URL;
   if (healthcheckUrl) {
-    const ping = () => void fetch(healthcheckUrl, { signal: AbortSignal.timeout(10_000) }).catch(() => {});
+    const ping = () => {
+      const start = Date.now();
+      void fetch(healthcheckUrl, { signal: AbortSignal.timeout(10_000) })
+        .then((res) => recordSourceCall('healthcheck', res.ok, Date.now() - start, res.ok ? undefined : `HTTP ${res.status}`))
+        .catch((err) => recordSourceCall('healthcheck', false, Date.now() - start, err));
+    };
     ping();
     timers.push(setInterval(ping, 5 * 60_000));
     log('daemon', 'healthcheck 心跳已启用（每 5 分钟）');

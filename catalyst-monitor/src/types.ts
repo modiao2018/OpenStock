@@ -42,6 +42,8 @@ export interface MonitorConfig {
     alpacaKey?: string;
     alpacaSecret?: string;
     finnhubKey?: string;
+    /** Twelve Data（行情交叉验证第二源，可选） */
+    twelveDataKey?: string;
     /** 内部人单笔卖出金额超过该值（美元）即推送提醒 */
     insiderSellMinUsd: number;
   };

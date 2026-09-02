@@ -37,6 +37,7 @@ const optionalVars = {
     'ADANOS_API_KEY': 'Optional Adanos API key for stock sentiment insights',
     'ADANOS_API_BASE_URL': 'Optional Adanos API base URL override',
     'INSIDER_SELL_MIN_USD': 'Optional insider sell alert threshold in USD (default 10000000)',
+    'TWELVEDATA_API_KEY': 'Optional Twelve Data key for quote cross-checks',
 };
 
 console.log('🔍 Checking Environment Variables...\n');

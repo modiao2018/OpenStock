@@ -8,6 +8,7 @@ import { createHash } from 'node:crypto';
 import { connectToDatabase } from '@/database/mongoose';
 import { InsiderTrade } from '@/database/models/insider.model';
 import { CatalystKv } from '@/database/models/catalyst.model';
+import { timed } from '@/lib/source-calls';
 import {
     filterOpenMarketTxs,
     shiftDate,
@@ -37,9 +38,11 @@ export async function seedInsiderForSymbols(symbols: string[]): Promise<void> {
         for (const symbol of symbols) {
             try {
                 const url = `${FINNHUB_URL}?symbol=${encodeURIComponent(symbol)}&from=${from}&to=${today}&token=${key}`;
-                const res = await fetch(url, { signal: AbortSignal.timeout(15_000), cache: 'no-store' });
-                if (!res.ok) throw new Error(`Finnhub insider HTTP ${res.status}`);
-                const data = (await res.json()) as { data?: RawInsiderTx[] };
+                const data = await timed('finnhub', async () => {
+                    const res = await fetch(url, { signal: AbortSignal.timeout(15_000), cache: 'no-store' });
+                    if (!res.ok) throw new Error(`Finnhub insider HTTP ${res.status}`);
+                    return (await res.json()) as { data?: RawInsiderTx[] };
+                });
                 const txs = filterOpenMarketTxs(symbol, data.data ?? []);
                 for (const tx of txs) {
                     try {

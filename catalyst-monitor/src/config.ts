@@ -50,6 +50,7 @@ export function loadConfig(): MonitorConfig {
       alpacaKey: process.env.ALPACA_API_KEY || undefined,
       alpacaSecret: process.env.ALPACA_API_SECRET || undefined,
       finnhubKey: process.env.NEXT_PUBLIC_FINNHUB_API_KEY || undefined,
+      twelveDataKey: process.env.TWELVEDATA_API_KEY || undefined,
       // 实测 90 天数据：$1M 阈值周均触发 ~37 次（巨头 10b5-1 例行减持），$10M 降到 ~5 次
       insiderSellMinUsd: Number(process.env.INSIDER_SELL_MIN_USD) || 10_000_000,
     },

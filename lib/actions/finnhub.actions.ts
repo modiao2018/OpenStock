@@ -5,6 +5,8 @@ import { marketCapToUsdMillions } from '@/lib/market-cap';
 import { POPULAR_STOCK_SYMBOLS } from '@/lib/constants';
 import { cache } from 'react';
 import { readSnapshot, snapshotKey, writeSnapshot } from '@/lib/snapshot';
+import { recordSourceCall } from '@/lib/source-calls';
+import { inferSourceByHost } from '@/lib/sources-registry';
 
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
 const NEXT_PUBLIC_FINNHUB_API_KEY = process.env.NEXT_PUBLIC_FINNHUB_API_KEY ?? '';
@@ -35,18 +37,29 @@ const FINNHUB_EXCHANGE_SUFFIXES = new Set([
     'TA', 'TO', 'TW', 'TWO', 'V', 'VI', 'WA',
 ]);
 
-async function fetchJSON<T>(url: string, revalidateSeconds?: number): Promise<T> {
+// Shared upstream fetcher; every call lands in the per-source ledger for the
+// /status page (note: Next data-cache hits are counted as fast successes)
+async function fetchJSON<T>(url: string, revalidateSeconds?: number, source?: string): Promise<T> {
     const options: RequestInit & { next?: { revalidate?: number } } = revalidateSeconds
         ? { cache: 'force-cache', next: { revalidate: revalidateSeconds } }
         : { cache: 'no-store' };
 
-    // Bound every upstream call — a hanging Finnhub connection must not stall SSR
-    const res = await fetch(url, { ...options, signal: AbortSignal.timeout(8000) });
-    if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        throw new Error(`Fetch failed ${res.status}: ${text}`);
+    const sourceId = source ?? inferSourceByHost(url) ?? '';
+    const start = Date.now();
+    try {
+        // Bound every upstream call — a hanging Finnhub connection must not stall SSR
+        const res = await fetch(url, { ...options, signal: AbortSignal.timeout(8000) });
+        if (!res.ok) {
+            const text = await res.text().catch(() => '');
+            throw new Error(`Fetch failed ${res.status}: ${text}`);
+        }
+        const data = (await res.json()) as T;
+        void recordSourceCall(sourceId, true, Date.now() - start);
+        return data;
+    } catch (err) {
+        void recordSourceCall(sourceId, false, Date.now() - start, err);
+        throw err;
     }
-    return (await res.json()) as T;
 }
 
 export { fetchJSON };

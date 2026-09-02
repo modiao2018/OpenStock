@@ -9,6 +9,12 @@
  * Each provider returns a plain-text string from the model.
  */
 
+import { timed } from "@/lib/source-calls";
+
+// Generation can legitimately take a while, but a hung upstream must not
+// stall a collector round forever
+const LLM_TIMEOUT_MS = 60_000;
+
 export type AIProviderName = "gemini" | "minimax" | "siray";
 
 export interface AIProviderConfig {
@@ -87,22 +93,25 @@ async function callGemini(
 
   const url = `${config.baseUrl}/${config.model}:generateContent?key=${config.apiKey}`;
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-    }),
+  return timed("llm", async () => {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+      }),
+      signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Gemini API error: ${res.status} ${res.statusText}`);
+    }
+
+    const data = await res.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new Error("Gemini returned empty response");
+    return text as string;
   });
-
-  if (!res.ok) {
-    throw new Error(`Gemini API error: ${res.status} ${res.statusText}`);
-  }
-
-  const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error("Gemini returned empty response");
-  return text;
 }
 
 async function callOpenAICompatible(
@@ -117,31 +126,34 @@ async function callOpenAICompatible(
 
   const url = `${config.baseUrl}/chat/completions`;
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${config.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: config.model,
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.7,
-    }),
+  return timed("llm", async () => {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: config.model,
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+      }),
+      signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
+    });
+
+    if (!res.ok) {
+      throw new Error(
+        `${config.name} API error: ${res.status} ${res.statusText}`
+      );
+    }
+
+    const data = await res.json();
+    const text = data?.choices?.[0]?.message?.content;
+    if (!text) {
+      throw new Error(`${config.name} returned empty response`);
+    }
+    return text as string;
   });
-
-  if (!res.ok) {
-    throw new Error(
-      `${config.name} API error: ${res.status} ${res.statusText}`
-    );
-  }
-
-  const data = await res.json();
-  const text = data?.choices?.[0]?.message?.content;
-  if (!text) {
-    throw new Error(`${config.name} returned empty response`);
-  }
-  return text;
 }
 
 // ── Public API ─────────────────────────────────────────────────────

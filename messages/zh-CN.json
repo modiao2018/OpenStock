@@ -239,7 +239,96 @@
     "Search": "搜索",
     "Watchlist": "自选股",
     "Catalyst": "催化剂监控",
-    "AiDips": "AI 低吸"
+    "AiDips": "AI 低吸",
+    "Status": "数据源状态"
+  },
+  "status": {
+    "page": {
+      "title": "数据源状态",
+      "subtitle": "所有外部 API / 网站的健康状态，以及同类数据的多源交叉验证"
+    },
+    "summary": {
+      "allOk": "全部正常",
+      "down": "{n} 个资源异常",
+      "warn": "{n} 个资源告警"
+    },
+    "sources": {
+      "title": "外部资源",
+      "hint": "网页端统计含 Next 数据缓存命中（延迟偏低）；监控进程侧为真实上游口径。探活每 30 分钟自动一轮，也可手动触发。",
+      "probe": "探活",
+      "probeAll": "全部探活",
+      "probeOk": "正常 · {ms}ms",
+      "probeFail": "失败 {error}",
+      "probeAllDone": "探活完成：{ok}/{total} 正常",
+      "passive": "被动记录",
+      "expand": "展开子源",
+      "keyConfigured": "已配置",
+      "keyMissing": "未配置",
+      "keyNotNeeded": "无需 key",
+      "col": {
+        "source": "资源",
+        "status": "状态",
+        "key": "密钥",
+        "rate24h": "24h 成功率 / 次数",
+        "latency": "平均延迟",
+        "lastOk": "最近成功",
+        "lastFail": "最近失败",
+        "usedBy": "使用功能"
+      },
+      "level": {
+        "ok": "正常",
+        "warn": "告警",
+        "down": "异常",
+        "idle": "无调用",
+        "unconfigured": "未配置"
+      },
+      "group": {
+        "quotes": "行情与汇率",
+        "filings": "监管申报",
+        "clinical": "临床试验",
+        "ai": "AI 与情绪",
+        "other": "推送与其他"
+      }
+    },
+    "features": {
+      "watchlist": "自选股",
+      "search": "搜索",
+      "heatmap": "热力图",
+      "news": "新闻",
+      "aiDips": "AI 低吸",
+      "insider": "内部人",
+      "catalystMarket": "盘面异动",
+      "catalystEdgar": "SEC 申报",
+      "catalystTrials": "临床试验",
+      "catalystHalts": "停牌",
+      "catalystRss": "新闻 RSS",
+      "analysis": "AI 分析",
+      "push": "推送",
+      "xcheck": "交叉验证",
+      "sentiment": "情绪",
+      "fx": "汇率",
+      "monitor": "监控心跳"
+    },
+    "xcheck": {
+      "title": "多源交叉验证",
+      "hint": "行情：每个交易日收盘后从股票池轮换抽样，Alpaca 日线 vs Twelve Data（偏差 >1% 或日期不符即为不一致，Finnhub 作第三参考）；内部人：EDGAR Form 4 vs Finnhub 交易表（超过 2 天仍无对应记录即为缺失）。不一致集合变化时推送 Bark。",
+      "quotesTitle": "行情收盘价",
+      "insiderTitle": "内部人申报",
+      "lastCheck": "核对于 {time}",
+      "session": "交易日 {date}",
+      "sampled": "抽样 {n} 只",
+      "errors": "{n} 个源错误",
+      "never": "尚未运行",
+      "notConfigured": "未配置 TWELVEDATA_API_KEY，行情交叉验证未启用",
+      "noMismatch": "各源一致",
+      "symbol": "标的",
+      "deviation": "偏差",
+      "dateMismatch": "日期不符",
+      "window": "窗口 {from} ~ {to}",
+      "checkedFilings": "核对 {n} 份申报",
+      "noMissing": "Finnhub 无缺失",
+      "openInEdgar": "EDGAR 原文"
+    }
   },
   "aiDips": {
     "page": {
@@ -454,6 +543,7 @@
     },
     "debug": {
       "title": "运行状态与调试",
+      "viewStatus": "数据源状态",
       "online": "在线",
       "onlineWithErrors": "在线·有异常",
       "offline": "离线",
@@ -550,7 +640,14 @@
         "halts": "停牌",
         "rss": "新闻",
         "market": "盘面异动",
-        "discovery": "试验发现"
+        "discovery": "试验发现",
+        "reminders": "催化剂提醒",
+        "weekly": "周报",
+        "aidips": "AI 低吸连跌",
+        "insider": "内部人（Finnhub）",
+        "insider-edgar": "内部人（EDGAR 即时）",
+        "sources": "数据源探活",
+        "xcheck": "多源交叉验证"
       }
     }
   },

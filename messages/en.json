@@ -239,7 +239,96 @@
     "Search": "Search",
     "Watchlist": "Watchlist",
     "Catalyst": "Catalyst",
-    "AiDips": "AI Dips"
+    "AiDips": "AI Dips",
+    "Status": "Data Sources"
+  },
+  "status": {
+    "page": {
+      "title": "Data Source Status",
+      "subtitle": "Health of every external API / site we call, plus multi-source cross-checks"
+    },
+    "summary": {
+      "allOk": "All healthy",
+      "down": "{n} sources down",
+      "warn": "{n} sources degraded"
+    },
+    "sources": {
+      "title": "External resources",
+      "hint": "Web-side stats include Next data-cache hits (latency reads low); the monitor process reflects true upstream calls. Probes run every 30 min automatically and on demand.",
+      "probe": "Probe",
+      "probeAll": "Probe all",
+      "probeOk": "ok · {ms}ms",
+      "probeFail": "failed {error}",
+      "probeAllDone": "Probes done: {ok}/{total} ok",
+      "passive": "passive",
+      "expand": "Expand feeds",
+      "keyConfigured": "configured",
+      "keyMissing": "missing",
+      "keyNotNeeded": "keyless",
+      "col": {
+        "source": "Source",
+        "status": "Status",
+        "key": "Key",
+        "rate24h": "24h ok / calls",
+        "latency": "Avg latency",
+        "lastOk": "Last ok",
+        "lastFail": "Last fail",
+        "usedBy": "Used by"
+      },
+      "level": {
+        "ok": "OK",
+        "warn": "Degraded",
+        "down": "Down",
+        "idle": "No calls",
+        "unconfigured": "Not configured"
+      },
+      "group": {
+        "quotes": "Quotes & FX",
+        "filings": "Regulatory filings",
+        "clinical": "Clinical trials",
+        "ai": "AI & sentiment",
+        "other": "Push & other"
+      }
+    },
+    "features": {
+      "watchlist": "Watchlist",
+      "search": "Search",
+      "heatmap": "Heatmap",
+      "news": "News",
+      "aiDips": "AI Dips",
+      "insider": "Insiders",
+      "catalystMarket": "Market moves",
+      "catalystEdgar": "SEC filings",
+      "catalystTrials": "Clinical trials",
+      "catalystHalts": "Halts",
+      "catalystRss": "News RSS",
+      "analysis": "AI analysis",
+      "push": "Push",
+      "xcheck": "Cross-check",
+      "sentiment": "Sentiment",
+      "fx": "FX",
+      "monitor": "Monitor heartbeat"
+    },
+    "xcheck": {
+      "title": "Multi-source cross-check",
+      "hint": "Quotes: after each close a rotating sample of the pool is compared, Alpaca daily bars vs Twelve Data (>1% deviation or date mismatch = inconsistent; Finnhub is a third reference). Insiders: EDGAR Form 4 vs Finnhub trades (missing after a 2-day grace). Bark alert fires when the mismatch set changes.",
+      "quotesTitle": "Closing prices",
+      "insiderTitle": "Insider filings",
+      "lastCheck": "Checked {time}",
+      "session": "Session {date}",
+      "sampled": "{n} sampled",
+      "errors": "{n} source errors",
+      "never": "Not run yet",
+      "notConfigured": "TWELVEDATA_API_KEY not set — quote cross-check disabled",
+      "noMismatch": "All sources agree",
+      "symbol": "Symbol",
+      "deviation": "Deviation",
+      "dateMismatch": "date mismatch",
+      "window": "Window {from} – {to}",
+      "checkedFilings": "{n} filings checked",
+      "noMissing": "Nothing missing on Finnhub",
+      "openInEdgar": "Open on EDGAR"
+    }
   },
   "aiDips": {
     "page": {
@@ -454,6 +543,7 @@
     },
     "debug": {
       "title": "Status & Debug",
+      "viewStatus": "Data sources",
       "online": "Online",
       "onlineWithErrors": "Online · errors",
       "offline": "Offline",
@@ -550,7 +640,14 @@
         "halts": "Halt",
         "rss": "News",
         "market": "Market Move",
-        "discovery": "Trial Discovery"
+        "discovery": "Trial Discovery",
+        "reminders": "Catalyst Reminders",
+        "weekly": "Weekly Report",
+        "aidips": "AI Dips Streaks",
+        "insider": "Insiders (Finnhub)",
+        "insider-edgar": "Insiders (EDGAR live)",
+        "sources": "Source Probes",
+        "xcheck": "Cross-check"
       }
     }
   },

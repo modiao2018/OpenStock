@@ -9,6 +9,7 @@ import {
     type SourceComparePayload,
     type StockSentimentInsights,
 } from './adanos.helpers';
+import { recordSourceCall } from '@/lib/source-calls';
 
 const DEFAULT_LOOKBACK_DAYS = 7;
 const FETCH_TIMEOUT_MS = 5000;
@@ -33,6 +34,7 @@ async function fetchCompareSource(
 
         const abortController = new AbortController();
         const timeout = setTimeout(() => abortController.abort(), FETCH_TIMEOUT_MS);
+        const start = Date.now();
         let response: Response;
         try {
             response = await fetch(url.toString(), {
@@ -42,9 +44,15 @@ async function fetchCompareSource(
                 signal: abortController.signal,
                 next: { revalidate: 300 },
             });
+        } catch (err) {
+            void recordSourceCall('adanos', false, Date.now() - start, err);
+            throw err;
         } finally {
             clearTimeout(timeout);
         }
+        // 404 = no data for that ticker, the upstream itself is fine
+        const healthy = response.ok || response.status === 404;
+        void recordSourceCall('adanos', healthy, Date.now() - start, healthy ? undefined : `HTTP ${response.status}`);
 
         if (response.status === 404) {
             return null;

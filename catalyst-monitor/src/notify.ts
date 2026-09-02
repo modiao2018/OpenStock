@@ -1,4 +1,5 @@
 import { transporter } from '@/lib/nodemailer';
+import { timed } from '@/lib/source-calls';
 import { log, logError } from './config';
 import type { StoredEvent } from './types';
 
@@ -60,13 +61,15 @@ export async function sendBark(barkUrl: string, msg: PushMessage): Promise<void>
   };
   if (msg.url) payload.url = msg.url;
 
-  const res = await fetch(barkUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(10_000),
+  await timed('bark', async () => {
+    const res = await fetch(barkUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) throw new Error(`Bark HTTP ${res.status}`);
   });
-  if (!res.ok) throw new Error(`Bark HTTP ${res.status}`);
 }
 
 function sleep(ms: number): Promise<void> {
