@@ -4,10 +4,11 @@
 // 或 @/* 别名失效，这里会让 docker build 直接失败。
 const modules = [
     'env', 'config', 'types', 'http', 'market-math',
-    'store', 'notify', 'analyze',
+    'store', 'notify', 'analyze', 'alpaca-daily',
     'collectors/clinicaltrials', 'collectors/edgar', 'collectors/halts',
     'collectors/rss', 'collectors/market', 'collectors/reminders',
     'collectors/weekly', 'collectors/discovery', 'collectors/aidips',
+    'collectors/insider',
 ];
 for (const m of modules) {
     await import(`../catalyst-monitor/src/${m}.ts`);

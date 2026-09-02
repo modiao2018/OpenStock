@@ -41,6 +41,9 @@ export interface MonitorConfig {
     edgarContact: string;
     alpacaKey?: string;
     alpacaSecret?: string;
+    finnhubKey?: string;
+    /** 内部人单笔卖出金额超过该值（美元）即推送提醒 */
+    insiderSellMinUsd: number;
   };
 }
 

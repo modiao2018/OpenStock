@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Loader2, TriangleAlert } from 'lucide-react';
 import { getAiDipsData, type AiDipsPayload } from '@/lib/actions/ai-dips.actions';
+import { getInsiderOverview, type InsiderRowData } from '@/lib/actions/insider.actions';
 import { AI_SUB_SECTORS, type AiSubSector } from '@/lib/ai-dips-catalog';
 import AiDipsTable from '@/components/ai-dips/AiDipsTable';
 
@@ -18,6 +19,7 @@ const AiDipsBoard = ({ initialData }: AiDipsBoardProps) => {
     const locale = useLocale();
 
     const [data, setData] = useState<AiDipsPayload | null>(initialData);
+    const [insider, setInsider] = useState<Record<string, InsiderRowData>>({});
     const [minStreak, setMinStreak] = useState<number>(0);
     const [subSector, setSubSector] = useState<AiSubSector | null>(null);
 
@@ -38,6 +40,23 @@ const AiDipsBoard = ({ initialData }: AiDipsBoardProps) => {
             cancelled = true;
             clearInterval(id);
             document.removeEventListener('visibilitychange', onVisible);
+        };
+    }, []);
+
+    // Insider trades change on filing cadence (hours), not quote cadence —
+    // fetch on mount and refresh every 10 minutes, outside the 60s quote poll
+    useEffect(() => {
+        let cancelled = false;
+        const refresh = async () => {
+            if (document.hidden) return;
+            const overview = await getInsiderOverview();
+            if (!cancelled) setInsider(overview);
+        };
+        refresh();
+        const id = setInterval(refresh, 600_000);
+        return () => {
+            cancelled = true;
+            clearInterval(id);
         };
     }, []);
 
@@ -131,7 +150,7 @@ const AiDipsBoard = ({ initialData }: AiDipsBoardProps) => {
                     {t('noData')}
                 </div>
             ) : (
-                <AiDipsTable rows={tableRows} showStreakColumns={data.configured} />
+                <AiDipsTable rows={tableRows} showStreakColumns={data.configured} insiderBySymbol={insider} />
             )}
 
             <p className="text-xs text-gray-600">{t('dataNote')}</p>

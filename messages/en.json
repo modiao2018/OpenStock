@@ -263,7 +263,8 @@
       "todayChange": "Today",
       "streak": "Down streak",
       "streakDecline": "Streak total",
-      "drawdown": "30d drawdown"
+      "drawdown": "30d drawdown",
+      "insider": "Insiders (90d)"
     },
     "streakDaysValue": "{n}-day slide",
     "streakDaysCapped": "≥{n}-day slide",
@@ -273,7 +274,27 @@
     "noData": "No data",
     "updatedAt": "Updated {time}",
     "emptyFiltered": "No stock is currently on a ≥{n}-day slide. Full watch pool below:",
-    "dataNote": "Closes come from the free IEX feed and only completed sessions count; an intraday decline shows as \"falling today\"."
+    "dataNote": "Closes come from the free IEX feed and only completed sessions count; an intraday decline shows as \"falling today\".",
+    "insider": {
+      "netBuy": "Net buy {amount} · {n}",
+      "netSell": "Net sell {amount} · {n}",
+      "countOnly": "{buy} buys / {sell} sells",
+      "none": "No trades",
+      "buy": "Buy",
+      "sell": "Sell",
+      "detail": {
+        "name": "Insider",
+        "date": "Date",
+        "side": "Side",
+        "shares": "Shares",
+        "price": "Avg price",
+        "amount": "Amount"
+      },
+      "aiInsight": "Latest AI insight",
+      "insightAt": "Analyzed {time}",
+      "noInsight": "No AI insight yet — generated automatically when a new insider trade triggers an alert",
+      "note": "Insider data from SEC Form 4 via Finnhub; open-market buys/sells only, filings lag trades by up to 2 business days"
+    }
   },
   "catalyst": {
     "page": {

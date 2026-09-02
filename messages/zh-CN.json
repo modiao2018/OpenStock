@@ -263,7 +263,8 @@
       "todayChange": "今日涨跌",
       "streak": "连跌天数",
       "streakDecline": "连跌累计",
-      "drawdown": "30 日回撤"
+      "drawdown": "30 日回撤",
+      "insider": "内部人 90 日"
     },
     "streakDaysValue": "连跌 {n} 天",
     "streakDaysCapped": "连跌 ≥{n} 天",
@@ -273,7 +274,27 @@
     "noData": "暂无数据",
     "updatedAt": "更新于 {time}",
     "emptyFiltered": "近期没有连跌 ≥{n} 天的标的，以下是全部监控池：",
-    "dataNote": "收盘数据来自 IEX（免费源），仅统计已完成交易日；当日盘中下跌以「今日续跌」标注。"
+    "dataNote": "收盘数据来自 IEX（免费源），仅统计已完成交易日；当日盘中下跌以「今日续跌」标注。",
+    "insider": {
+      "netBuy": "净买 {amount} · {n} 笔",
+      "netSell": "净卖 {amount} · {n} 笔",
+      "countOnly": "{buy} 买 / {sell} 卖",
+      "none": "无交易",
+      "buy": "买入",
+      "sell": "卖出",
+      "detail": {
+        "name": "内部人",
+        "date": "交易日",
+        "side": "方向",
+        "shares": "股数",
+        "price": "均价",
+        "amount": "金额"
+      },
+      "aiInsight": "最近一次 AI 洞察",
+      "insightAt": "分析于 {time}",
+      "noInsight": "暂无 AI 洞察（新的内部人买卖触发提醒时自动生成）",
+      "note": "内部人数据来自 SEC Form 4（Finnhub），仅含公开市场买卖，申报有 T+2 延迟"
+    }
   },
   "catalyst": {
     "page": {

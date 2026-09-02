@@ -1,54 +1,13 @@
 import { log } from '../config';
-import { fetchWithRetry } from '../http';
 import { getKv, setKv } from '../store';
 import { pushMessage } from '../notify';
+import { fetchDailyBars, formingSessionDate } from '../alpaca-daily';
 import { AI_DIP_CATALOG } from '../../../lib/ai-dips-catalog';
-import { completedBars, computeDipStats, type DailyBar } from '../../../lib/ai-dips-math';
+import { completedBars, computeDipStats } from '../../../lib/ai-dips-math';
 import type { MonitorConfig, NewEvent } from '../types';
 
-const DATA_BASE = 'https://data.alpaca.markets/v2/stocks/bars';
-// 与网页端 ai-dips.actions 相同的回看窗口
-const LOOKBACK_DAYS = 70;
 // 连跌达到 5/7/10 天各推送一次（里程碑制：5→7→10 逐级提醒，中途不刷屏）
 const MILESTONES = [10, 7, 5];
-
-const etDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });
-const etClock = new Intl.DateTimeFormat('en-GB', {
-  timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false,
-});
-
-async function fetchDailyBars(config: MonitorConfig, symbols: string[]): Promise<Record<string, DailyBar[]>> {
-  const headers = {
-    'APCA-API-KEY-ID': config.env.alpacaKey ?? '',
-    'APCA-API-SECRET-KEY': config.env.alpacaSecret ?? '',
-  };
-  const start = new Date(Date.now() - LOOKBACK_DAYS * 24 * 3600_000).toISOString();
-  const out: Record<string, DailyBar[]> = {};
-  let pageToken: string | undefined;
-
-  for (let page = 0; page < 3; page++) {
-    const url =
-      // split 复权：raw 会在拆股日伪造 -50%/-90% 的假下跌
-      `${DATA_BASE}?symbols=${symbols.join(',')}&timeframe=1Day&adjustment=split&feed=iex&limit=10000` +
-      `&start=${encodeURIComponent(start)}` +
-      (pageToken ? `&page_token=${encodeURIComponent(pageToken)}` : '');
-    const res = await fetchWithRetry(url, { headers }, { timeoutMs: 30_000 });
-    if (!res.ok) throw new Error(`Alpaca daily bars HTTP ${res.status}`);
-    const data = (await res.json()) as {
-      bars?: Record<string, Array<{ t: string; c: number }>>;
-      next_page_token?: string | null;
-    };
-    for (const [symbol, bars] of Object.entries(data.bars ?? {})) {
-      const list = (out[symbol] ??= []);
-      for (const b of bars) list.push({ date: etDate.format(new Date(b.t)), c: b.c });
-    }
-    pageToken = data.next_page_token ?? undefined;
-    if (!pageToken) break;
-  }
-
-  for (const list of Object.values(out)) list.sort((a, b) => a.date.localeCompare(b.date));
-  return out;
-}
 
 const fmtPct = (v: number | null) => (v === null ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(1)}%`);
 
@@ -64,8 +23,7 @@ export async function collectAiDips(config: MonitorConfig): Promise<NewEvent[]> 
   }
 
   // 16:05 ET 前当日 bar 尚未定稿，剔除后自然回退到上一交易日
-  const now = new Date();
-  const excludeDate = etClock.format(now) >= '16:05' ? undefined : etDate.format(now);
+  const excludeDate = formingSessionDate();
 
   const symbols = AI_DIP_CATALOG.map((s) => s.symbol);
   const barsBySymbol = await fetchDailyBars(config, symbols);
