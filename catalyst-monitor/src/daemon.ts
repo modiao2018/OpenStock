@@ -1,7 +1,8 @@
 import './env';
 import { loadConfig, log, logError } from './config';
 import { closeStore, getKv, getWatchItems, insertEvent, markNotified, seedWatchItems, setEventAnalysis, setKv } from './store';
-import { notify, pushMessage } from './notify';
+import { eventMessage, notify, pushMessage } from './notify';
+import { pushOrDefer } from './focus-gate';
 import { analyzeEvent, extractAction } from './analyze';
 import { collectClinicalTrials } from './collectors/clinicaltrials';
 import { collectEdgar } from './collectors/edgar';
@@ -17,6 +18,8 @@ import { collectInsiderEdgar } from './collectors/insider-edgar';
 import { collectSources } from './collectors/sources';
 import { collectXcheck } from './collectors/xcheck';
 import { collectOutcomes } from './collectors/outcomes';
+import { collectFocus } from './collectors/focus';
+import { collectDigest } from './collectors/digest';
 import { eventDirection, recordSignal } from './signals';
 import { COLLECTOR_SPECS, collectorIntervals, type CollectorName } from './collector-registry';
 import { recordSourceCall } from '@/lib/source-calls';
@@ -49,6 +52,8 @@ const RUNNERS = {
   sources: collectSources,
   xcheck: collectXcheck,
   outcomes: collectOutcomes,
+  focus: collectFocus,
+  digest: collectDigest,
 } satisfies Record<CollectorName, Runner>;
 
 /** 公告里给了催化剂时间指引 → 自动补进催化剂日历 */
@@ -139,14 +144,21 @@ async function runCollector(def: CollectorDef, config: MonitorConfig): Promise<v
           });
         }
       } else {
-        // 普通事件时效性要求低，分析随首条推送一起发，避免打扰两次
+        // 普通事件时效性要求低，分析随首条推送一起发，避免打扰两次；
+        // 绑定标的的走关注分闸门（低分归入每日摘要），无标的的直推
         result = await analyzeEvent(config, stored);
         if (result.analysis) {
           stored.analysis = result.analysis;
           await setEventAnalysis(stored.id, result.analysis);
         }
-        delivered = await notify(config.env, stored);
-        if (delivered) await markNotified(stored.id);
+        if (stored.symbol) {
+          const gate = await pushOrDefer(config, eventMessage(stored), { symbol: stored.symbol, kind: `event.${stored.source}` });
+          delivered = gate.delivered;
+          if (delivered || gate.deferred) await markNotified(stored.id);
+        } else {
+          delivered = await notify(config.env, stored);
+          if (delivered) await markNotified(stored.id);
+        }
       }
       await saveGuidance(def.name, stored, result);
       await recordEventSignal(config, stored, result, delivered);

@@ -1,6 +1,6 @@
 import { log, logError } from '../config';
 import { getKv, listUpcomingCustomEvents, listTrials, setKv } from '../store';
-import { pushMessage } from '../notify';
+import { pushOrDefer } from '../focus-gate';
 import { recordSignal } from '../signals';
 import type { MonitorConfig, NewEvent } from '../types';
 
@@ -55,14 +55,19 @@ export async function collectReminders(config: MonitorConfig): Promise<NewEvent[
       const dedupeKey = `reminded:${c.id}:${days}`;
       if (await getKv(dedupeKey)) continue;
 
-      const delivered = await pushMessage(config.env, {
-        title: `催化剂提醒｜${c.symbol} ${days} 天后`,
-        body: `${c.label}\n日期: ${c.date}\n事件前请核对情景预案与仓位（二元事件注意 gap 风险）`,
-        urgent: false,
-      });
-      if (delivered) {
+      const gate = await pushOrDefer(
+        config,
+        {
+          title: `催化剂提醒｜${c.symbol} ${days} 天后`,
+          body: `${c.label}\n日期: ${c.date}\n事件前请核对情景预案与仓位（二元事件注意 gap 风险）`,
+          urgent: false,
+        },
+        { symbol: c.symbol, kind: `reminder.t${days}` }
+      );
+      const delivered = gate.delivered;
+      if (delivered || gate.deferred) {
         await setKv(dedupeKey, new Date().toISOString());
-        sent++;
+        if (delivered) sent++;
       }
       // 账本：提醒无方向，只用来量化"催化剂前 N 天"这段时间的实际波动
       await recordSignal({

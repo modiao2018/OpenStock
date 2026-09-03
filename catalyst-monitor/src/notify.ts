@@ -119,11 +119,16 @@ export async function pushMessage(env: PushEnv, msg: PushMessage): Promise<boole
   return false;
 }
 
-export async function notify(env: PushEnv, ev: StoredEvent): Promise<boolean> {
-  return pushMessage(env, {
+/** 时间线事件的推送文案；daemon 里走闸门的路径也用它，保证两条路文案一致 */
+export function eventMessage(ev: StoredEvent): PushMessage {
+  return {
     title: `[${SOURCE_LABEL[ev.source] ?? ev.source}] ${ev.title}`,
     body: formatBody(ev),
     urgent: ev.severity === 'urgent',
     url: ev.url,
-  });
+  };
+}
+
+export async function notify(env: PushEnv, ev: StoredEvent): Promise<boolean> {
+  return pushMessage(env, eventMessage(ev));
 }

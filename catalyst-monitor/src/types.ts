@@ -28,6 +28,14 @@ export interface MonitorConfig {
     rssMinutes: number;
     marketMinutes: number;
   };
+  focus: {
+    /** 安静模式：非紧急提醒按关注分决定实时推送还是归入每日摘要 */
+    quiet: boolean;
+    /** 关注分达到该值：实时推送，且进入关注队列时单独提醒 */
+    threshold: number;
+    /** 每日摘要发送的北京时间小时（0-23） */
+    digestHourBeijing: number;
+  };
   market: {
     /** 行业基准 ETF，用于扣除板块共振（默认 XBI） */
     benchmark: string;

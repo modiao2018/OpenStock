@@ -241,7 +241,8 @@
     "Catalyst": "Catalyst",
     "AiDips": "AI Dips",
     "Status": "Data Sources",
-    "Signals": "Signals"
+    "Signals": "Signals",
+    "Focus": "Focus"
   },
   "status": {
     "page": {
@@ -649,7 +650,9 @@
         "insider-edgar": "Insiders (EDGAR live)",
         "sources": "Source Probes",
         "xcheck": "Cross-check",
-        "outcomes": "Signal outcomes"
+        "outcomes": "Signal outcomes",
+        "focus": "Focus scoring",
+        "digest": "Daily digest"
       }
     }
   },
@@ -847,6 +850,89 @@
       "event.clinicaltrials": "Trial update",
       "reminder.t7": "Catalyst reminder T-7",
       "reminder.t1": "Catalyst reminder T-1"
+    }
+  },
+  "focus": {
+    "page": {
+      "title": "Focus Queue",
+      "subtitle": "Streaks, insiders, AI calls, signal convergence and catalyst proximity fused into one attention score. High scores push in real time, low scores roll into a daily digest"
+    },
+    "summary": {
+      "computedAt": "Updated {time}",
+      "never": "Not scored yet (the monitor runs every 30 min)",
+      "above": "{n} at ≥ {threshold}"
+    },
+    "queue": {
+      "title": "Ranked by attention score",
+      "hint": "The 0-100 score means “worth a look right now”, not a buy/sell rating. Stance comes from the bull/bear balance; bullish confirmation without a real pullback is downgraded to Watch with a warning (discipline: never buy expensive). Click a row for the factor breakdown.",
+      "empty": "No symbol currently scores above zero",
+      "showZero": "Show {n} zero-score symbols",
+      "thresholdLine": "Real-time push threshold {threshold}; below this goes to the daily digest"
+    },
+    "col": {
+      "symbol": "Symbol",
+      "score": "Score",
+      "stance": "Stance",
+      "close": "Close",
+      "streak": "Streak",
+      "drawdown": "30d DD",
+      "catalyst": "Catalyst",
+      "topFactors": "Top factors",
+      "inDays": "in {n}d"
+    },
+    "stance": {
+      "bullish": "Bullish",
+      "bearish": "Bearish",
+      "mixed": "Mixed",
+      "watch": "Watch"
+    },
+    "universe": {
+      "ai": "AI",
+      "catalyst": "Catalyst",
+      "both": "AI+Cat"
+    },
+    "group": {
+      "setup": "Setup (has it fallen enough)",
+      "confirm": "Confirmation (who votes with money)",
+      "urgency": "Urgency (why now)"
+    },
+    "caution": {
+      "notPulledBack": "Bullish evidence, but price has not pulled back — do not chase"
+    },
+    "detail": {
+      "balance": "Bull {bull} / Bear {bear}",
+      "session": "Data as of {date}"
+    },
+    "deferred": {
+      "title": "Deferred alerts (last 3 days)",
+      "hint": "Non-urgent alerts on symbols below the threshold are not pushed live; they are batched into the morning digest. Halts, 8-Ks and other urgent messages always push immediately.",
+      "empty": "Nothing deferred in the last 3 days",
+      "sent": "sent in digest",
+      "queued": "queued"
+    },
+    "factors": {
+      "drawdownDeep": "Deep drawdown",
+      "drawdownMid": "Mid drawdown",
+      "drawdownLight": "Light drawdown",
+      "streak10": "Streak ≥10d",
+      "streak7": "Streak ≥7d",
+      "streak5": "Streak ≥5d",
+      "underperformsBench": "Lagging benchmark",
+      "insiderBuy": "Insider buy",
+      "insiderBuyers": "Multiple buyers",
+      "insiderBuyRecent": "Recent buy",
+      "insiderClusterSell": "Cluster selling",
+      "insiderHeavySell": "Heavy selling",
+      "insiderRoutineSell": "Routine selling",
+      "aiBullish": "AI call",
+      "aiBearish": "AI call",
+      "convergence3": "3 signal families",
+      "convergence2": "2 signal families",
+      "catalyst3d": "Catalyst imminent",
+      "catalyst10d": "Catalyst ≤10d",
+      "catalyst21d": "Catalyst ≤21d",
+      "urgentEvent": "Urgent event",
+      "signal24h": "Signal in 24h"
     }
   }
 }

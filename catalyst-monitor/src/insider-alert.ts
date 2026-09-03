@@ -1,6 +1,6 @@
 import { log, logError } from './config';
 import { getKv, setKv } from './store';
-import { pushMessage } from './notify';
+import { pushOrDefer } from './focus-gate';
 import { ACTION_PREFIX, ACTION_WORDS, extractAction } from './analyze';
 import { fetchDailyBars, formingSessionDate, etToday } from './alpaca-daily';
 import { InsiderInsight, InsiderTrade } from '@/database/models/insider.model';
@@ -225,13 +225,14 @@ export async function notifyInsiderTriggers(
       (analysis ? `AI 分析: ${analysis}\n` : '') +
       '数据源 SEC EDGAR/Finnhub（Form 4 有 T+2 申报延迟），不构成投资建议';
 
-    const ok = await pushMessage(config.env, {
-      title,
-      body,
-      urgent: false,
-      url: siteUrl ? `${siteUrl}/ai-dips` : undefined,
-    });
-    if (ok) {
+    const gate = await pushOrDefer(
+      config,
+      { title, body, urgent: false, url: siteUrl ? `${siteUrl}/ai-dips` : undefined },
+      { symbol, kind: `insider.${reason}` }
+    );
+    const ok = gate.delivered;
+    // 归入摘要也算处理完毕：标记去重键，避免下一轮再次触发
+    if (ok || gate.deferred) {
       delivered.add(symbol);
       for (const item of items) {
         await setKv(alertedKey(symbol, item.tx.filingDate, Boolean(item.intent)), today);
@@ -240,7 +241,7 @@ export async function notifyInsiderTriggers(
         await setKv(`insider_cluster_notified:${symbol}`, today);
       }
     }
-    log(scope, `${symbol} 触发 ${items.length} 笔（${reason}，推送${ok ? '成功' : '未送达'}）`);
+    log(scope, `${symbol} 触发 ${items.length} 笔（${reason}，${ok ? '已推送' : gate.deferred ? '归入摘要' : '未送达'}）`);
     // 账本：买入看多、各类卖出看空；同一 symbol 同一申报日记一条
     await recordSignal({
       kind: `insider.${reason}`,

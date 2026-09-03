@@ -8,7 +8,7 @@ import type { MonitorConfig } from './types';
 export const COLLECTOR_NAMES = [
   'market', 'halts', 'edgar', 'rss', 'clinicaltrials', 'discovery',
   'reminders', 'weekly', 'aidips', 'insider', 'insider-edgar',
-  'sources', 'xcheck', 'outcomes',
+  'sources', 'xcheck', 'outcomes', 'focus', 'digest',
 ] as const;
 export type CollectorName = (typeof COLLECTOR_NAMES)[number];
 
@@ -45,6 +45,10 @@ export const COLLECTOR_SPECS: CollectorSpec[] = [
   { name: 'xcheck', fixedMinutes: 60, needsWatchlist: false },
   // 信号结果回补（T+1/5/20 收益），只处理未完结的账本记录
   { name: 'outcomes', fixedMinutes: 60, needsWatchlist: false },
+  // 关注队列打分（AI 池 ∪ 催化剂清单），推送闸门据此分流
+  { name: 'focus', fixedMinutes: 30, needsWatchlist: false },
+  // 每日摘要：内部按北京时间小时 + 日期门闩，实际每天最多发一次
+  { name: 'digest', fixedMinutes: 60, needsWatchlist: false },
 ];
 
 export const DEFAULT_POLL: MonitorConfig['poll'] = {

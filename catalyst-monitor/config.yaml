@@ -32,6 +32,15 @@ feeds:
   #   url: https://www.globenewswire.com/RssFeed/orgclass/1/feedTitle/GlobeNewswire%20-%20News%20about%20Public%20Companies
   # 也可以加目标公司 IR 页的 RSS（最直接的公告源）
 
+# 关注队列与推送降噪
+# 每 30 分钟对 AI 池 ∪ 催化剂清单的每只标的算一个 0-100 的关注分（回撤深度、连跌、
+# 内部人动向、AI 建议、信号叠加、催化剂临近、紧急事件）。quiet 开启时，非紧急提醒
+# 只有关注分 ≥ threshold 才实时 Bark，其余归入每日摘要；停牌/8-K 等紧急消息不受影响。
+focus:
+  quiet: true
+  threshold: 55
+  digest_hour_beijing: 8
+
 # 盘面异动检测（需在 .env 配置 ALPACA_API_KEY/SECRET）
 market:
   benchmark: XBI          # 行业基准 ETF，扣除板块共振

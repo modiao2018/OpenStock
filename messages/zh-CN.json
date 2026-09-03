@@ -241,7 +241,8 @@
     "Catalyst": "催化剂监控",
     "AiDips": "AI 低吸",
     "Status": "数据源状态",
-    "Signals": "信号记分卡"
+    "Signals": "信号记分卡",
+    "Focus": "关注队列"
   },
   "status": {
     "page": {
@@ -649,7 +650,9 @@
         "insider-edgar": "内部人（EDGAR 即时）",
         "sources": "数据源探活",
         "xcheck": "多源交叉验证",
-        "outcomes": "信号结果回补"
+        "outcomes": "信号结果回补",
+        "focus": "关注队列打分",
+        "digest": "每日摘要"
       }
     }
   },
@@ -847,6 +850,89 @@
       "event.clinicaltrials": "临床试验变更",
       "reminder.t7": "催化剂提醒 T-7",
       "reminder.t1": "催化剂提醒 T-1"
+    }
+  },
+  "focus": {
+    "page": {
+      "title": "关注队列",
+      "subtitle": "把连跌、内部人、AI 建议、信号叠加、催化剂临近合成一个关注分。分高的实时推送，分低的归入每日摘要——少打扰，不漏事"
+    },
+    "summary": {
+      "computedAt": "更新于 {time}",
+      "never": "尚未打分（监控进程每 30 分钟一轮）",
+      "above": "{n} 只 ≥ {threshold} 分"
+    },
+    "queue": {
+      "title": "按关注分排序",
+      "hint": "关注分 0-100 只表示“值得现在看一眼”，不是买卖评级。方向由多空因子净差决定；出现看多确认但价格未充分回撤时，会被降为“观察”并标警示（纪律：不能买贵）。点击行展开因子明细。",
+      "empty": "当前没有得分的标的",
+      "showZero": "显示 {n} 只 0 分标的",
+      "thresholdLine": "实时推送阈值 {threshold} 分，以下归入每日摘要"
+    },
+    "col": {
+      "symbol": "标的",
+      "score": "关注分",
+      "stance": "倾向",
+      "close": "收盘",
+      "streak": "连跌",
+      "drawdown": "30日回撤",
+      "catalyst": "催化剂",
+      "topFactors": "主要因子",
+      "inDays": "{n} 天后"
+    },
+    "stance": {
+      "bullish": "偏多",
+      "bearish": "偏空",
+      "mixed": "多空交织",
+      "watch": "观察"
+    },
+    "universe": {
+      "ai": "AI",
+      "catalyst": "催化剂",
+      "both": "AI+催化剂"
+    },
+    "group": {
+      "setup": "位置（跌得够不够）",
+      "confirm": "确认（谁在用钱投票）",
+      "urgency": "时机（为什么是现在）"
+    },
+    "caution": {
+      "notPulledBack": "看多证据存在，但股价未充分回撤，勿追高"
+    },
+    "detail": {
+      "balance": "多 {bull} 分 / 空 {bear} 分",
+      "session": "数据截至 {date}"
+    },
+    "deferred": {
+      "title": "归入摘要的提醒（近 3 天）",
+      "hint": "关注分低于阈值的非紧急提醒不会实时推送，攒到每天早上的摘要里一起发；停牌、8-K 等紧急消息永远实时。",
+      "empty": "近 3 天没有被拦下的提醒",
+      "sent": "已随摘要发出",
+      "queued": "待发"
+    },
+    "factors": {
+      "drawdownDeep": "深度回撤",
+      "drawdownMid": "中度回撤",
+      "drawdownLight": "轻度回撤",
+      "streak10": "连跌≥10天",
+      "streak7": "连跌≥7天",
+      "streak5": "连跌≥5天",
+      "underperformsBench": "跑输基准",
+      "insiderBuy": "内部人买入",
+      "insiderBuyers": "多名买家",
+      "insiderBuyRecent": "近期买入",
+      "insiderClusterSell": "集中卖出",
+      "insiderHeavySell": "巨额卖出",
+      "insiderRoutineSell": "例行减持",
+      "aiBullish": "AI 建议",
+      "aiBearish": "AI 建议",
+      "convergence3": "三类信号叠加",
+      "convergence2": "两类信号叠加",
+      "catalyst3d": "催化剂临近",
+      "catalyst10d": "催化剂 10 天内",
+      "catalyst21d": "催化剂 21 天内",
+      "urgentEvent": "紧急事件",
+      "signal24h": "24h 内有信号"
     }
   }
 }

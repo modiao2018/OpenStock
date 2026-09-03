@@ -39,6 +39,11 @@ export function loadConfig(): MonitorConfig {
       rssMinutes: Number(raw.poll?.rss_minutes ?? 5),
       marketMinutes: Number(raw.poll?.market_minutes ?? 2),
     },
+    focus: {
+      quiet: raw.focus?.quiet !== false,
+      threshold: Number(raw.focus?.threshold ?? 55),
+      digestHourBeijing: Number(raw.focus?.digest_hour_beijing ?? 8),
+    },
     market: {
       benchmark: String(raw.market?.benchmark ?? 'XBI').toUpperCase(),
       sigmaThreshold: Number(raw.market?.sigma_threshold ?? 2.5),

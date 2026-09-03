@@ -42,6 +42,7 @@ sh scripts/install-monitor-daemon.sh  # 可选：装成 launchd 开机自启服�
 - **变更检测**：同一实体（NCT/停牌）关键字段哈希变化才产生新事件；EDGAR 申报不可变，每份只推一次。
 - **推送分级**：停牌、8-K、试验终止/结果发布 → urgent（Bark critical，绕过静音）；其余 → normal（Bark timeSensitive）。
 - **推送失败不阻塞采集**：渠道报错只记日志，事件仍入库（`notified=false`），可事后补查。
+- **关注队列与降噪**（`config.yaml` 的 `focus` 段）：每 30 分钟对 AI 池 ∪ 催化剂清单打 0-100 关注分（回撤深度、连跌、内部人动向、AI 建议、信号叠加、催化剂临近、紧急事件）。`quiet: true` 时，非紧急提醒（连跌里程碑、内部人、催化剂提醒、普通申报/新闻）只有关注分 ≥ `threshold` 才实时 Bark，其余归入每天 `digest_hour_beijing` 点的摘要；停牌、8-K 等 urgent 事件与不绑定标的的消息不受影响。分数首次越过阈值时单独提醒一次（跌回阈值 −10 后复位）。
 
 ## 数据存储
 
@@ -52,6 +53,8 @@ sh scripts/install-monitor-daemon.sh  # 可选：装成 launchd 开机自启服�
 | `catalystevents` | 信息时间线：source / externalId / publishedAt / fetchedAt / contentHash / raw；`(source, externalId, contentHash)` 唯一索引保证幂等 |
 | `catalysttrials` | 试验最新快照（催化剂日历数据源） |
 | `catalystkvs` | 缓存（EDGAR ticker→CIK 映射，24h 刷新） |
+| `focusentries` | 关注队列：每只标的一条当前关注分与因子明细，整表覆盖；`/focus` 页读取 |
+| `focusdigestitems` | 被闸门拦下的非紧急提醒，随每日摘要发出后标记 `sentAt`，30 天自动清理 |
 | `signals` | 信号结果账本：每条推送（连跌里程碑 / 内部人 / 申报 / 停牌 / 异动 / 提醒）记入场日收盘，`outcomes` 采集器每小时回补 T+1/5/20 收益与相对基准（AI 池 QQQ、医药 XBI）的超额收益；网页 `/signals` 记分卡与周报据此统计 |
 
 查询示例（事后归因，mongosh）：
