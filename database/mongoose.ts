@@ -28,6 +28,11 @@ if (!cached) {
     cached = global.mongooseCache = { conn: null, promise: null };
 }
 
+// Log-safe form of the URI: credentials replaced, host/db kept for diagnostics
+export function redactMongoUri(uri: string): string {
+    return uri.replace(/\/\/([^/@]*)@/, '//***@');
+}
+
 export const connectToDatabase = async () => {
     if (!MONGODB_URI) {
         throw new Error("MongoDB URI is missing");
@@ -47,6 +52,6 @@ export const connectToDatabase = async () => {
         throw err;
     }
 
-    console.log(`MongoDB Connected ${MONGODB_URI} in ${process.env.NODE_ENV}`);
+    console.log(`MongoDB Connected ${redactMongoUri(MONGODB_URI)} in ${process.env.NODE_ENV}`);
     return cached.conn;
 }
