@@ -38,7 +38,7 @@ feeds:
 # 只有关注分 ≥ threshold 才实时 Bark，其余归入每日摘要；停牌/8-K 等紧急消息不受影响。
 focus:
   quiet: true
-  threshold: 55
+  threshold: 45
   digest_hour_beijing: 8
 
 # 盘面异动检测（需在 .env 配置 ALPACA_API_KEY/SECRET）
