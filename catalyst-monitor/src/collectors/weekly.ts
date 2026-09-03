@@ -4,6 +4,8 @@ import { resolveLlmConfig } from '@/lib/llm-config';
 import { log, logError } from '../config';
 import { getKv, getRecentEvents, listTrials, listUpcomingCustomEvents, setKv } from '../store';
 import { pushMessage, type PushEnv } from '../notify';
+import { Signal } from '@/database/models/signal.model';
+import { buildScorecard, MIN_SAMPLES } from '../../../lib/signal-math';
 import type { MonitorConfig, NewEvent } from '../types';
 
 /** 周报只需要监控清单和推送渠道——网页端模拟发送也用这个入口 */
@@ -30,6 +32,31 @@ function isoWeek(d: Date): string {
   const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
   const week = Math.ceil(((date.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
   return `${date.getUTCFullYear()}-W${week}`;
+}
+
+const fmtPct = (v: number | null) => (v === null ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(1)}%`);
+
+/** 近 90 天各类信号的 T+5 命中率与平均超额收益，一类一行；账本为空时返回空数组 */
+async function composeScoreLines(): Promise<string[]> {
+  try {
+    const since = new Date(Date.now() - 90 * 24 * 3600_000);
+    const docs = await Signal.find({ firedAt: { $gte: since }, status: { $in: ['partial', 'complete'] } }).lean();
+    const rows = buildScorecard(
+      docs.map((d) => ({ kind: d.kind, direction: d.direction, horizons: d.horizons ?? {} })),
+      (s) => s.kind
+    );
+    return rows
+      .filter((r) => r.horizons.t5.n > 0)
+      .slice(0, 8)
+      .map((r) => {
+        const h = r.horizons.t5;
+        const hit = h.hitRate === null ? `样本<${MIN_SAMPLES}` : `命中 ${(h.hitRate * 100).toFixed(0)}%`;
+        return `· ${r.key}：${h.n} 条，T+5 ${hit}，超额 ${fmtPct(h.avgExcessPct)}`;
+      });
+  } catch (err) {
+    logError('weekly:scorecard', err);
+    return [];
+  }
 }
 
 /** 组装周报正文（复盘 + 前瞻），供定时任务和手动 CLI 共用 */
@@ -59,8 +86,11 @@ export async function composeWeeklyReport(config: WeeklyContext): Promise<{ subj
   }
   upcoming.sort();
 
+  const scoreLines = await composeScoreLines();
+
   const sections = [
     `【本周事件】共 ${events.length} 条：${statLine}`,
+    scoreLines.length ? `【信号记分卡（近 90 天）】\n${scoreLines.join('\n')}` : null,
     urgentLines.length ? `【重要事件】\n${urgentLines.join('\n')}` : null,
     upcoming.length ? `【未来 21 天催化剂】\n${upcoming.join('\n')}` : '【未来 21 天催化剂】暂无——考虑补充公司指引或手动添加',
   ].filter(Boolean);

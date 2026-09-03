@@ -4,6 +4,7 @@ import { pushMessage } from '../notify';
 import { fetchDailyBars, formingSessionDate } from '../alpaca-daily';
 import { getAiDipPool } from '../../../lib/ai-dips-pool';
 import { completedBars, computeDipStats } from '../../../lib/ai-dips-math';
+import { AI_BENCHMARK, recordSignal } from '../signals';
 import type { MonitorConfig, NewEvent } from '../types';
 
 // 连跌达到 5/7/10 天各推送一次（里程碑制：5→7→10 逐级提醒，中途不刷屏）
@@ -88,6 +89,19 @@ export async function collectAiDips(config: MonitorConfig): Promise<NewEvent[]> 
       url: siteUrl ? `${siteUrl}/ai-dips` : undefined,
     });
     log('aidips', `${sessionDate} 触发 ${triggered.length} 只（推送${delivered ? '成功' : '未送达'}）`);
+    // 账本：连跌里程碑是看多（低吸）信号，按里程碑+交易日去重
+    for (const s of triggered) {
+      const milestone = MILESTONES.find((m) => s.days >= m) ?? s.days;
+      await recordSignal({
+        kind: `aidips.streak${milestone}`,
+        symbol: s.symbol,
+        dedupeKey: `${sessionDate}:${milestone}`,
+        direction: 'up',
+        title: `${s.symbol} 连跌 ${s.days} 天 累计 ${fmtPct(s.declinePct)}`,
+        benchmark: AI_BENCHMARK,
+        delivered,
+      });
+    }
   } else {
     log('aidips', `${sessionDate} 无新增连跌里程碑`);
   }

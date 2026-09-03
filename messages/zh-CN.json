@@ -240,7 +240,8 @@
     "Watchlist": "自选股",
     "Catalyst": "催化剂监控",
     "AiDips": "AI 低吸",
-    "Status": "数据源状态"
+    "Status": "数据源状态",
+    "Signals": "信号记分卡"
   },
   "status": {
     "page": {
@@ -647,7 +648,8 @@
         "insider": "内部人（Finnhub）",
         "insider-edgar": "内部人（EDGAR 即时）",
         "sources": "数据源探活",
-        "xcheck": "多源交叉验证"
+        "xcheck": "多源交叉验证",
+        "outcomes": "信号结果回补"
       }
     }
   },
@@ -788,5 +790,63 @@
     "searchResults": "搜索结果",
     "popularStocks": "热门股票",
     "commonStock": "普通股"
+  },
+  "signals": {
+    "page": {
+      "title": "信号记分卡",
+      "subtitle": "每条推送过的信号事后都记账：入场后 T+1 / T+5 / T+20 相对基准的超额收益，让数据决定哪些提醒值得优先看"
+    },
+    "summary": {
+      "total": "近 {days} 天 {n} 条信号",
+      "pending": "{n} 条待回补",
+      "expired": "{n} 条无行情放弃"
+    },
+    "byKind": {
+      "title": "按信号类型",
+      "hint": "命中率 = 超额收益方向与信号方向一致的比例（样本不足 5 条不显示）；超额收益 = 标的收益 − 基准 ETF 收益（AI 池对 QQQ，医药催化剂对 XBI）。无方向信号只显示平均波动幅度。"
+    },
+    "byAction": {
+      "title": "按 AI 操作建议",
+      "hint": "只统计带 AI 建议的信号：买入/加仓按看多计、卖出/减仓按看空计、持有/观望无方向。这是对 AI 判断本身的校验。"
+    },
+    "recent": {
+      "title": "最近信号",
+      "hint": "入场价取推送后第一个完整交易日的收盘（收盘后推送顺延到下一交易日）；各期显示相对基准的超额收益，悬停看绝对收益。"
+    },
+    "col": {
+      "signal": "信号",
+      "n": "样本",
+      "direction": "方向",
+      "hitExcess": "命中 / 超额",
+      "firedAt": "推送时间",
+      "symbol": "标的",
+      "action": "AI 建议",
+      "entry": "入场价",
+      "status": "状态"
+    },
+    "status": {
+      "pending": "待回补",
+      "partial": "回补中",
+      "complete": "已完结",
+      "expired": "已放弃"
+    },
+    "notDelivered": "推送未送达（仅记录）",
+    "empty": "暂无数据——监控进程推送信号后会在这里累计；T+1 结果需等入场日的下一个交易日收盘",
+    "kinds": {
+      "aidips.streak5": "AI 低吸 · 连跌 5 天",
+      "aidips.streak7": "AI 低吸 · 连跌 7 天",
+      "aidips.streak10": "AI 低吸 · 连跌 10 天",
+      "insider.buy": "内部人买入",
+      "insider.largeSell": "内部人大额卖出",
+      "insider.clusterSell": "内部人集中卖出",
+      "insider.intentSell": "内部人拟卖出（144）",
+      "event.edgar": "SEC 申报",
+      "event.halts": "停牌",
+      "event.market": "盘面异动",
+      "event.rss": "新闻",
+      "event.clinicaltrials": "临床试验变更",
+      "reminder.t7": "催化剂提醒 T-7",
+      "reminder.t1": "催化剂提醒 T-1"
+    }
   }
 }

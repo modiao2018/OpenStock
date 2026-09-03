@@ -16,11 +16,13 @@ import { collectInsider } from './collectors/insider';
 import { collectInsiderEdgar } from './collectors/insider-edgar';
 import { collectSources } from './collectors/sources';
 import { collectXcheck } from './collectors/xcheck';
+import { collectOutcomes } from './collectors/outcomes';
+import { eventDirection, recordSignal } from './signals';
 import { COLLECTOR_SPECS, collectorIntervals, type CollectorName } from './collector-registry';
 import { recordSourceCall } from '@/lib/source-calls';
 import { upsertCustomEvent } from './store';
 import type { AnalysisResult } from './analyze';
-import type { MonitorConfig, NewEvent } from './types';
+import type { MonitorConfig, NewEvent, StoredEvent } from './types';
 
 type Runner = (config: MonitorConfig) => Promise<NewEvent[]>;
 
@@ -46,6 +48,7 @@ const RUNNERS = {
   'insider-edgar': collectInsiderEdgar,
   sources: collectSources,
   xcheck: collectXcheck,
+  outcomes: collectOutcomes,
 } satisfies Record<CollectorName, Runner>;
 
 /** 公告里给了催化剂时间指引 → 自动补进催化剂日历 */
@@ -66,6 +69,28 @@ async function saveGuidance(
     });
     if (isNew) log(scope, `日历新增催化剂: ${stored.symbol} ${g.date} ${g.title}`);
   }
+}
+
+/** 时间线事件同时记入信号账本：方向取 AI 操作建议，基准用行业 ETF */
+async function recordEventSignal(
+  config: MonitorConfig,
+  stored: StoredEvent,
+  result: AnalysisResult,
+  delivered: boolean
+): Promise<void> {
+  if (!stored.symbol) return;
+  const action = extractAction(result.analysis);
+  await recordSignal({
+    kind: `event.${stored.source}`,
+    symbol: stored.symbol,
+    dedupeKey: stored.id,
+    direction: eventDirection(action),
+    action,
+    title: stored.title,
+    benchmark: config.market.benchmark,
+    delivered,
+    firedAt: new Date(stored.fetchedAt),
+  });
 }
 
 async function runCollector(def: CollectorDef, config: MonitorConfig): Promise<void> {
@@ -97,9 +122,10 @@ async function runCollector(def: CollectorDef, config: MonitorConfig): Promise<v
       }
       log(def.name, `新事件: ${stored.title}`);
       let result: AnalysisResult;
+      let delivered = false;
       if (stored.severity === 'urgent') {
         // 紧急事件：先推送再分析——LLM 的秒级延迟不能拖慢告警
-        const delivered = await notify(config.env, stored);
+        delivered = await notify(config.env, stored);
         if (delivered) await markNotified(stored.id);
         result = await analyzeEvent(config, stored);
         if (result.analysis) {
@@ -119,10 +145,11 @@ async function runCollector(def: CollectorDef, config: MonitorConfig): Promise<v
           stored.analysis = result.analysis;
           await setEventAnalysis(stored.id, result.analysis);
         }
-        const delivered = await notify(config.env, stored);
+        delivered = await notify(config.env, stored);
         if (delivered) await markNotified(stored.id);
       }
       await saveGuidance(def.name, stored, result);
+      await recordEventSignal(config, stored, result, delivered);
     }
   } catch (err) {
     logError(def.name, err);

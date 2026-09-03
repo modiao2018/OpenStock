@@ -240,7 +240,8 @@
     "Watchlist": "Watchlist",
     "Catalyst": "Catalyst",
     "AiDips": "AI Dips",
-    "Status": "Data Sources"
+    "Status": "Data Sources",
+    "Signals": "Signals"
   },
   "status": {
     "page": {
@@ -647,7 +648,8 @@
         "insider": "Insiders (Finnhub)",
         "insider-edgar": "Insiders (EDGAR live)",
         "sources": "Source Probes",
-        "xcheck": "Cross-check"
+        "xcheck": "Cross-check",
+        "outcomes": "Signal outcomes"
       }
     }
   },
@@ -788,5 +790,63 @@
     "searchResults": "Search results",
     "popularStocks": "Popular stocks",
     "commonStock": "Common Stock"
+  },
+  "signals": {
+    "page": {
+      "title": "Signal Scorecard",
+      "subtitle": "Every pushed signal is booked and scored: T+1 / T+5 / T+20 excess return vs a benchmark after entry, so data decides which alerts deserve attention"
+    },
+    "summary": {
+      "total": "{n} signals in {days}d",
+      "pending": "{n} awaiting outcomes",
+      "expired": "{n} dropped (no bars)"
+    },
+    "byKind": {
+      "title": "By signal type",
+      "hint": "Hit rate = share of signals whose excess return matched the signal's direction (hidden under 5 samples). Excess = stock return − benchmark ETF return (QQQ for the AI pool, XBI for biotech catalysts). Direction-less signals show mean absolute move only."
+    },
+    "byAction": {
+      "title": "By AI recommendation",
+      "hint": "Signals that carried an AI action only: buy/add count as bullish, sell/trim as bearish, hold/wait as direction-less. This audits the AI's own calls."
+    },
+    "recent": {
+      "title": "Recent signals",
+      "hint": "Entry is the close of the first complete session after the push (after-close pushes roll to the next session). Cells show excess return vs benchmark; hover for the raw return."
+    },
+    "col": {
+      "signal": "Signal",
+      "n": "N",
+      "direction": "Dir",
+      "hitExcess": "hit / excess",
+      "firedAt": "Fired",
+      "symbol": "Symbol",
+      "action": "AI call",
+      "entry": "Entry",
+      "status": "Status"
+    },
+    "status": {
+      "pending": "pending",
+      "partial": "partial",
+      "complete": "complete",
+      "expired": "expired"
+    },
+    "notDelivered": "Push not delivered (booked only)",
+    "empty": "Nothing yet — signals accrue here once the monitor pushes them; T+1 needs the session after entry to close",
+    "kinds": {
+      "aidips.streak5": "AI dips · 5-day streak",
+      "aidips.streak7": "AI dips · 7-day streak",
+      "aidips.streak10": "AI dips · 10-day streak",
+      "insider.buy": "Insider buy",
+      "insider.largeSell": "Insider large sell",
+      "insider.clusterSell": "Insider cluster sell",
+      "insider.intentSell": "Insider intent to sell (144)",
+      "event.edgar": "SEC filing",
+      "event.halts": "Trading halt",
+      "event.market": "Market anomaly",
+      "event.rss": "News",
+      "event.clinicaltrials": "Trial update",
+      "reminder.t7": "Catalyst reminder T-7",
+      "reminder.t1": "Catalyst reminder T-1"
+    }
   }
 }

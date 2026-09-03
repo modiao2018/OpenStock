@@ -52,6 +52,7 @@ sh scripts/install-monitor-daemon.sh  # 可选：装成 launchd 开机自启服�
 | `catalystevents` | 信息时间线：source / externalId / publishedAt / fetchedAt / contentHash / raw；`(source, externalId, contentHash)` 唯一索引保证幂等 |
 | `catalysttrials` | 试验最新快照（催化剂日历数据源） |
 | `catalystkvs` | 缓存（EDGAR ticker→CIK 映射，24h 刷新） |
+| `signals` | 信号结果账本：每条推送（连跌里程碑 / 内部人 / 申报 / 停牌 / 异动 / 提醒）记入场日收盘，`outcomes` 采集器每小时回补 T+1/5/20 收益与相对基准（AI 池 QQQ、医药 XBI）的超额收益；网页 `/signals` 记分卡与周报据此统计 |
 
 查询示例（事后归因，mongosh）：
 

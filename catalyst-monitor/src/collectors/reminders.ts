@@ -1,6 +1,7 @@
 import { log, logError } from '../config';
 import { getKv, listUpcomingCustomEvents, listTrials, setKv } from '../store';
 import { pushMessage } from '../notify';
+import { recordSignal } from '../signals';
 import type { MonitorConfig, NewEvent } from '../types';
 
 const REMIND_DAYS = [7, 1]; // 催化剂前 7 天和前 1 天各提醒一次
@@ -63,6 +64,16 @@ export async function collectReminders(config: MonitorConfig): Promise<NewEvent[
         await setKv(dedupeKey, new Date().toISOString());
         sent++;
       }
+      // 账本：提醒无方向，只用来量化"催化剂前 N 天"这段时间的实际波动
+      await recordSignal({
+        kind: `reminder.t${days}`,
+        symbol: c.symbol,
+        dedupeKey: c.id,
+        direction: 'none',
+        title: `${c.label} ${c.date}`,
+        benchmark: config.market.benchmark,
+        delivered,
+      });
     }
     log('reminders', `${candidates.length} catalysts checked, ${sent} reminders sent`);
   } catch (err) {

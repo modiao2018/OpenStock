@@ -16,6 +16,7 @@ import {
   type InsiderTx,
   type NotifyReason,
 } from '../../lib/insider-math';
+import { AI_BENCHMARK, recordSignal } from './signals';
 import type { MonitorConfig } from './types';
 
 /**
@@ -240,6 +241,17 @@ export async function notifyInsiderTriggers(
       }
     }
     log(scope, `${symbol} 触发 ${items.length} 笔（${reason}，推送${ok ? '成功' : '未送达'}）`);
+    // 账本：买入看多、各类卖出看空；同一 symbol 同一申报日记一条
+    await recordSignal({
+      kind: `insider.${reason}`,
+      symbol,
+      dedupeKey: first.tx.filingDate,
+      direction: reason === 'buy' ? 'up' : 'down',
+      action,
+      title,
+      benchmark: AI_BENCHMARK,
+      delivered: ok,
+    });
   }
   return delivered;
 }
