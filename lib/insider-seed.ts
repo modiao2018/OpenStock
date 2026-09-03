@@ -9,6 +9,7 @@ import { connectToDatabase } from '@/database/mongoose';
 import { InsiderTrade } from '@/database/models/insider.model';
 import { CatalystKv } from '@/database/models/catalyst.model';
 import { timed } from '@/lib/source-calls';
+import { finnhubGate, retryAfterMs } from '@/lib/finnhub-gate';
 import {
     filterOpenMarketTxs,
     shiftDate,
@@ -38,8 +39,10 @@ export async function seedInsiderForSymbols(symbols: string[]): Promise<void> {
         for (const symbol of symbols) {
             try {
                 const url = `${FINNHUB_URL}?symbol=${encodeURIComponent(symbol)}&from=${from}&to=${today}&token=${key}`;
+                await finnhubGate.acquire();
                 const data = await timed('finnhub', async () => {
                     const res = await fetch(url, { signal: AbortSignal.timeout(15_000), cache: 'no-store' });
+                    if (res.status === 429) finnhubGate.reportRateLimited(retryAfterMs(res.headers.get('retry-after')));
                     if (!res.ok) throw new Error(`Finnhub insider HTTP ${res.status}`);
                     return (await res.json()) as { data?: RawInsiderTx[] };
                 });

@@ -14,6 +14,7 @@
  */
 
 import { fetchJson, fetchWithTimeout } from './http.helpers';
+import { fetchJSON as fetchFinnhubJSON } from './finnhub.actions';
 import {
     consensusLabel,
     normalizeFinnhubRecommendations,
@@ -164,9 +165,9 @@ async function fetchFinnhubRecommendations(symbol: string): Promise<FinnhubRecom
     const token = finnhubToken();
     if (!token) return [];
     try {
-        const rows = await fetchJson<FinnhubRecommendationRow[] | { error?: string }>(
+        const rows = await fetchFinnhubJSON<FinnhubRecommendationRow[] | { error?: string }>(
             `${FINNHUB_BASE_URL}/stock/recommendation?symbol=${encodeURIComponent(symbol)}&token=${token}`,
-            { revalidate: 21_600 },
+            21_600,
         );
         return Array.isArray(rows) ? rows : [];
     } catch (error) {
@@ -179,9 +180,9 @@ async function fetchFinnhubEarnings(symbol: string): Promise<FinnhubEarningsRow[
     const token = finnhubToken();
     if (!token) return [];
     try {
-        const rows = await fetchJson<FinnhubEarningsRow[] | { error?: string }>(
+        const rows = await fetchFinnhubJSON<FinnhubEarningsRow[] | { error?: string }>(
             `${FINNHUB_BASE_URL}/stock/earnings?symbol=${encodeURIComponent(symbol)}&token=${token}`,
-            { revalidate: 21_600 },
+            21_600,
         );
         return Array.isArray(rows) ? rows : [];
     } catch (error) {

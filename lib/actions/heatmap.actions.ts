@@ -57,11 +57,22 @@ export async function getHeatmapSnapshot(symbols?: string[]): Promise<HeatmapSto
     return snapshot?.data ?? [];
 }
 
+// Every viewer's 60s poll used to fan out quote+profile per symbol; with two
+// dashboards open that alone exceeded Finnhub's 60/min. A snapshot younger
+// than this is served as-is, so N viewers cost one upstream sweep per minute.
+const SNAPSHOT_FRESH_MS = 45_000;
+
 export async function getHeatmapData(symbols?: string[]): Promise<HeatmapStock[]> {
     const token = NEXT_PUBLIC_FINNHUB_API_KEY;
     if (!token) return [];
 
     const list = normalizeSymbols(symbols);
+
+    const key = snapshotKey('heatmap', list);
+    const snapshot = await readSnapshot<HeatmapStock[]>(key);
+    if (snapshot && snapshot.data.length > 0 && Date.now() - new Date(snapshot.updatedAt).getTime() < SNAPSHOT_FRESH_MS) {
+        return snapshot.data;
+    }
 
     const results = await Promise.all(
         list.map(async (symbol) => {
@@ -116,7 +127,7 @@ export async function getHeatmapData(symbols?: string[]): Promise<HeatmapStock[]
     // Every fetch (SSR or the client's 60s poll) refreshes the snapshot,
     // so the next SSR serves it instantly instead of re-fanning out
     if (data.length > 0) {
-        void writeSnapshot(snapshotKey('heatmap', list), data);
+        void writeSnapshot(key, data);
     }
 
     return data;

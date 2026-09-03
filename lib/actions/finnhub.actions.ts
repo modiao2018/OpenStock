@@ -6,6 +6,7 @@ import { POPULAR_STOCK_SYMBOLS } from '@/lib/constants';
 import { cache } from 'react';
 import { readSnapshot, snapshotKey, writeSnapshot } from '@/lib/snapshot';
 import { recordSourceCall } from '@/lib/source-calls';
+import { finnhubGate, retryAfterMs, throughFinnhubGate } from '@/lib/finnhub-gate';
 import { inferSourceByHost } from '@/lib/sources-registry';
 
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
@@ -37,29 +38,33 @@ const FINNHUB_EXCHANGE_SUFFIXES = new Set([
     'TA', 'TO', 'TW', 'TWO', 'V', 'VI', 'WA',
 ]);
 
-// Shared upstream fetcher; every call lands in the per-source ledger for the
-// /status page (note: Next data-cache hits are counted as fast successes)
+// Shared upstream fetcher for every Finnhub call in the web app. Requests go
+// through the process-wide gate (memo + 50/min pacing + 429 cooldown, see
+// lib/finnhub-gate.ts) and every real upstream call lands in the per-source
+// ledger for the /status page. `revalidateSeconds` doubles as the memo TTL.
 async function fetchJSON<T>(url: string, revalidateSeconds?: number, source?: string): Promise<T> {
-    const options: RequestInit & { next?: { revalidate?: number } } = revalidateSeconds
-        ? { cache: 'force-cache', next: { revalidate: revalidateSeconds } }
-        : { cache: 'no-store' };
-
     const sourceId = source ?? inferSourceByHost(url) ?? '';
-    const start = Date.now();
-    try {
-        // Bound every upstream call — a hanging Finnhub connection must not stall SSR
-        const res = await fetch(url, { ...options, signal: AbortSignal.timeout(8000) });
-        if (!res.ok) {
-            const text = await res.text().catch(() => '');
-            throw new Error(`Fetch failed ${res.status}: ${text}`);
+    return throughFinnhubGate<T>(finnhubGate, url, (revalidateSeconds ?? 0) * 1000, async () => {
+        const options: RequestInit & { next?: { revalidate?: number } } = revalidateSeconds
+            ? { cache: 'force-cache', next: { revalidate: revalidateSeconds } }
+            : { cache: 'no-store' };
+        const start = Date.now();
+        try {
+            // Bound every upstream call — a hanging Finnhub connection must not stall SSR
+            const res = await fetch(url, { ...options, signal: AbortSignal.timeout(8000) });
+            if (!res.ok) {
+                if (res.status === 429) finnhubGate.reportRateLimited(retryAfterMs(res.headers.get('retry-after')));
+                const text = await res.text().catch(() => '');
+                throw new Error(`Fetch failed ${res.status}: ${text}`);
+            }
+            const data = (await res.json()) as T;
+            void recordSourceCall(sourceId, true, Date.now() - start);
+            return data;
+        } catch (err) {
+            void recordSourceCall(sourceId, false, Date.now() - start, err);
+            throw err;
         }
-        const data = (await res.json()) as T;
-        void recordSourceCall(sourceId, true, Date.now() - start);
-        return data;
-    } catch (err) {
-        void recordSourceCall(sourceId, false, Date.now() - start, err);
-        throw err;
-    }
+    });
 }
 
 export { fetchJSON };
