@@ -2,13 +2,43 @@ import { describe, expect, it } from 'vitest';
 
 import {
     buildFundamentalsSnapshot,
+    edgarHeaders,
+    filingDocUrl,
+    filingIndexUrl,
     isOpenMarketTrade,
+    normalizeTicker,
+    parseCikMap,
     parseForm4Xml,
+    submissionsUrl,
     summarizeInsiderActivity,
     yoyGrowth,
     type CompanyFactsPayload,
     type InsiderTransaction,
-} from '@/lib/actions/edgar.helpers';
+} from '@/lib/edgar';
+import { parseForm4Xml as parseForm4ForDaemon } from '../catalyst-monitor/src/form-parse';
+
+describe('EDGAR request plumbing shared by web and daemon', () => {
+    it('builds SEC URLs from padded or unpadded CIKs and strips viewer prefixes', () => {
+        expect(submissionsUrl('320193')).toBe('https://data.sec.gov/submissions/CIK0000320193.json');
+        expect(submissionsUrl('0000320193')).toBe('https://data.sec.gov/submissions/CIK0000320193.json');
+        expect(filingDocUrl('0000097745', '0000097745-26-000167', 'xslF345X06/wk-form4_1788293473.xml')).toBe(
+            'https://www.sec.gov/Archives/edgar/data/97745/000009774526000167/wk-form4_1788293473.xml',
+        );
+        expect(filingIndexUrl('97745', '0000097745-26-000167')).toBe(
+            'https://www.sec.gov/Archives/edgar/data/97745/000009774526000167/0000097745-26-000167-index.htm',
+        );
+    });
+
+    it('parses company_tickers.json into an upper-cased ticker map', () => {
+        expect(parseCikMap({ '0': { cik_str: 320193, ticker: 'aapl', title: 'Apple' }, '1': { cik_str: 1717115, ticker: 'TEM' } }))
+            .toEqual({ AAPL: '320193', TEM: '1717115' });
+        expect(normalizeTicker(' brk.b ')).toBe('BRK-B');
+    });
+
+    it('puts the contact in the User-Agent', () => {
+        expect(edgarHeaders('ops@example.com')['User-Agent']).toContain('ops@example.com');
+    });
+});
 
 const META = {
     symbol: 'TMO',
@@ -106,6 +136,26 @@ describe('parseForm4Xml', () => {
     it('falls back gracefully on a filing with no transactions', () => {
         const rows = parseForm4Xml('<ownershipDocument><reportingOwner></reportingOwner></ownershipDocument>', META);
         expect(rows).toEqual([]);
+    });
+
+    it('joins multiple reporting owners on joint filings', () => {
+        const joint = FORM4_XML.replace(
+            '</reportingOwner>',
+            '</reportingOwner><reportingOwner><reportingOwnerId><rptOwnerName>CASPER FAMILY TRUST</rptOwnerName></reportingOwnerId><reportingOwnerRelationship><isTenPercentOwner>1</isTenPercentOwner></reportingOwnerRelationship></reportingOwner>',
+        );
+        const [row] = parseForm4Xml(joint, META);
+        expect(row.ownerName).toBe('CASPER MARC N / CASPER FAMILY TRUST');
+        expect(row.ownerTitle).toBe('Chairman & CEO');
+        expect(row.isTenPercentOwner).toBe(true);
+    });
+
+    it('feeds the daemon the same rows in its legacy shape', () => {
+        const rows = parseForm4ForDaemon(FORM4_XML);
+        expect(rows).toEqual([
+            { name: 'CASPER MARC N', transactionCode: 'F', change: -724.766, price: 622.18, transactionDate: '2026-08-28' },
+            { name: 'CASPER MARC N', transactionCode: 'P', change: 1000, price: 600, transactionDate: '2026-08-27' },
+        ]);
+        expect(parseForm4ForDaemon('<html>not a form</html>')).toEqual([]);
     });
 
     it('treats an empty officerTitle as null', () => {

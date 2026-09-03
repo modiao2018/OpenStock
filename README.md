@@ -381,6 +381,8 @@ public/assets/images/   # logos and screenshots
     - Form 4 insider filings are fetched the day they are accepted and parsed directly. Chosen over Finnhub's
       insider endpoint after observing multi-day lag and permanently missing filings there.
     - XBRL company facts power the reported-financials card; submissions index powers the filings list.
+    - Headers, URL builders and the Form 4 parser live in `lib/edgar.ts` and are shared with the catalyst-monitor
+      daemon, so the site and the insider alerts always read a filing the same way.
     - Set `EDGAR_CONTACT` to comply with the SEC fair-access policy (10 req/s max; this app stays well under).
 - Yahoo Finance and Nasdaq (free, no key)
     - Analyst consensus, price targets, estimates, rating changes and 13F holders. Both are unofficial endpoints

@@ -2,7 +2,7 @@
 // request each, used by the /status "probe" button and the daemon's
 // 30-minute sources collector. Server/daemon only (touches env + DB).
 
-import { edgarHeaders } from '@/catalyst-monitor/src/collectors/edgar';
+import { CIK_MAP_URL, edgarHeaders, submissionsUrl } from '@/lib/edgar';
 import { callAIProviderWithConfig } from '@/lib/ai-provider';
 import { resolveLlmConfig } from '@/lib/llm-config';
 import { SOURCE_BY_ID, isConfigured, sourceIdOf, type SourceId } from '@/lib/sources-registry';
@@ -68,11 +68,11 @@ const PROBES: Record<Exclude<SourceId, 'bark' | 'healthcheck'>, Probe> = {
         return { ok: r.ok, status: r.status };
     },
     'sec-data': async (ctx) => {
-        const r = await head('https://data.sec.gov/submissions/CIK0000320193.json', { headers: edgarHeaders(ctx.edgarContact) });
+        const r = await head(submissionsUrl('320193'), { headers: edgarHeaders(ctx.edgarContact) });
         return { ok: r.ok, status: r.status };
     },
     'sec-www': async (ctx) => {
-        const r = await head('https://www.sec.gov/files/company_tickers.json', { headers: edgarHeaders(ctx.edgarContact) });
+        const r = await head(CIK_MAP_URL, { headers: edgarHeaders(ctx.edgarContact) });
         return { ok: r.ok, status: r.status };
     },
     'nasdaq-halts': async () => {

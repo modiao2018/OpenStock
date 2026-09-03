@@ -2,8 +2,17 @@ import { log, logError } from '../config';
 import { fetchWithRetry } from '../http';
 import { getKv, setKv, sha256 } from '../store';
 import type { MonitorConfig, NewEvent } from '../types';
+import {
+  CIK_MAP_URL,
+  SEC_MIN_REQUEST_GAP_MS,
+  edgarHeaders as sharedEdgarHeaders,
+  filingDocUrl,
+  padCik,
+  parseCikMap,
+  submissionsUrl,
+  type CompanyTickersPayload,
+} from '../../../lib/edgar';
 
-const CIK_MAP_URL = 'https://www.sec.gov/files/company_tickers.json';
 const CIK_MAP_TTL_MS = 24 * 60 * 60 * 1000;
 
 function sleep(ms: number): Promise<void> {
@@ -40,9 +49,9 @@ function itemsZh(items: string): string {
     .join('、');
 }
 
+/** Same User-Agent as the web app (lib/edgar.ts); SEC 要求带可联系方式 */
 export function edgarHeaders(contact: string): Record<string, string> {
-  // SEC 要求 User-Agent 里带可联系方式，否则可能被封
-  return { 'User-Agent': `catalyst-monitor/0.1 (${contact})`, Accept: 'application/json' };
+  return sharedEdgarHeaders(contact);
 }
 
 export async function getCikMap(config: MonitorConfig): Promise<Record<string, string>> {
@@ -51,12 +60,7 @@ export async function getCikMap(config: MonitorConfig): Promise<Record<string, s
 
   const res = await fetchWithRetry(CIK_MAP_URL, { headers: edgarHeaders(config.env.edgarContact) }, { timeoutMs: 30_000 });
   if (!res.ok) throw new Error(`company_tickers.json HTTP ${res.status}`);
-  const data = (await res.json()) as Record<string, { cik_str: number; ticker: string }>;
-
-  const map: Record<string, string> = {};
-  for (const entry of Object.values(data)) {
-    map[entry.ticker.toUpperCase()] = String(entry.cik_str);
-  }
+  const map = parseCikMap((await res.json()) as CompanyTickersPayload);
   await setKv('edgar_cik_map', JSON.stringify(map));
   return map;
 }
@@ -77,9 +81,9 @@ export async function collectEdgar(config: MonitorConfig): Promise<NewEvent[]> {
       continue;
     }
     try {
-      const cik10 = cik.padStart(10, '0');
+      const cik10 = padCik(cik);
       const res = await fetchWithRetry(
-        `https://data.sec.gov/submissions/CIK${cik10}.json`,
+        submissionsUrl(cik),
         { headers: edgarHeaders(config.env.edgarContact) },
         { timeoutMs: 30_000 }
       );
@@ -95,7 +99,6 @@ export async function collectEdgar(config: MonitorConfig): Promise<NewEvent[]> {
         // 3 天以上的旧申报按"建档"处理：入库+分析，不推送——避免新增标的时被历史公告刷屏
         const isArchival = Date.now() - Date.parse(recent.filingDate[i]) > 3 * 24 * 3600_000;
         const accession: string = recent.accessionNumber[i];
-        const accessionPlain = accession.replace(/-/g, '');
         const primaryDoc: string = recent.primaryDocument?.[i] ?? '';
         const items: string = recent.items?.[i] ?? '';
 
@@ -105,7 +108,7 @@ export async function collectEdgar(config: MonitorConfig): Promise<NewEvent[]> {
           symbol: item.symbol,
           title: `${item.symbol} 提交 ${forms[i]}${items ? `：${itemsZh(items)}` : ''}`,
           url: primaryDoc
-            ? `https://www.sec.gov/Archives/edgar/data/${cik}/${accessionPlain}/${primaryDoc}`
+            ? filingDocUrl(cik, accession, primaryDoc)
             : `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${cik10}&type=${forms[i]}`,
           publishedAt: recent.acceptanceDateTime?.[i] ?? recent.filingDate[i],
           // 申报是不可变的，哈希固定 → 每份 accession 只产生一次事件
@@ -115,7 +118,7 @@ export async function collectEdgar(config: MonitorConfig): Promise<NewEvent[]> {
           archival: isArchival,
         });
       }
-      await sleep(150); // SEC 限速 10 req/s，保守一点
+      await sleep(SEC_MIN_REQUEST_GAP_MS); // SEC 限速 10 req/s，保守一点
     } catch (err) {
       logError('edgar', err);
     }

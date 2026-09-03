@@ -2,6 +2,7 @@ import { log, logError } from '../config';
 import { fetchWithRetry } from '../http';
 import { edgarHeaders, getCikMap } from './edgar';
 import { parseForm144Xml, parseForm4Xml } from '../form-parse';
+import { SEC_MIN_REQUEST_GAP_MS, filingDocUrl, submissionsUrl } from '../../../lib/edgar';
 import { connectToDatabase } from '@/database/mongoose';
 import { InsiderFiling } from '@/database/models/insider.model';
 import {
@@ -32,12 +33,9 @@ function isEdgarActiveHours(now = new Date()): boolean {
   return hhmm >= '05:55' && hhmm <= '22:35';
 }
 
-/** primaryDocument 常带 xslF345X05/ 之类的渲染前缀，去掉才是原始 XML */
-const rawDocName = (primaryDoc: string): string => primaryDoc.split('/').pop() ?? primaryDoc;
-
 export async function fetchFilingXml(config: MonitorConfig, cik: string, accession: string, primaryDoc: string): Promise<string> {
-  const accessionPlain = accession.replace(/-/g, '');
-  const url = `https://www.sec.gov/Archives/edgar/data/${cik}/${accessionPlain}/${rawDocName(primaryDoc)}`;
+  // primaryDocument 常带 xslF345X05/ 渲染前缀，filingDocUrl 会剥掉取原始 XML
+  const url = filingDocUrl(cik, accession, primaryDoc);
   const res = await fetchWithRetry(url, { headers: edgarHeaders(config.env.edgarContact) }, { timeoutMs: 20_000 });
   if (!res.ok) throw new Error(`filing doc HTTP ${res.status}: ${url}`);
   return res.text();
@@ -71,7 +69,7 @@ export async function collectInsiderEdgar(config: MonitorConfig): Promise<NewEve
     if (!cik) continue; // ETF 等无 CIK/无申报义务的标的
     try {
       const res = await fetchWithRetry(
-        `https://data.sec.gov/submissions/CIK${cik.padStart(10, '0')}.json`,
+        submissionsUrl(cik),
         { headers: edgarHeaders(config.env.edgarContact) },
         { timeoutMs: 30_000 }
       );
@@ -87,7 +85,7 @@ export async function collectInsiderEdgar(config: MonitorConfig): Promise<NewEve
         if (!filingDate || filingDate < cutoff) continue;
         const accession: string = recent.accessionNumber[i];
         const primaryDoc: string = recent.primaryDocument?.[i] ?? '';
-        const url = `https://www.sec.gov/Archives/edgar/data/${cik}/${accession.replace(/-/g, '')}/${primaryDoc}`;
+        const url = filingDocUrl(cik, accession, primaryDoc);
 
         // accession 唯一索引幂等入库，11000 冲突 = 已见过
         try {
@@ -167,7 +165,7 @@ export async function collectInsiderEdgar(config: MonitorConfig): Promise<NewEve
       fetchErrors++;
       logError('insider-edgar', err);
     }
-    await sleep(150); // SEC 限速 10 req/s，保守一点
+    await sleep(SEC_MIN_REQUEST_GAP_MS); // SEC 限速 10 req/s，保守一点
   }
 
   if (seedCount > 0) log('insider-edgar', `建档 ${seedCount} 份申报（新标的存量，不推送）`);

@@ -1,4 +1,5 @@
 import { XMLParser } from 'fast-xml-parser';
+import { parseForm4Xml as parseForm4Shared } from '../../lib/edgar';
 
 /**
  * SEC Form 4 / Form 144 XML 的防御式解析（纯函数，__tests__/form-parse.test.ts）。
@@ -7,22 +8,8 @@ import { XMLParser } from 'fast-xml-parser';
 
 const parser = new XMLParser({ ignoreAttributes: true, parseTagValue: false });
 
-const toArray = <T>(v: T | T[] | undefined): T[] => (v === undefined ? [] : Array.isArray(v) ? v : [v]);
-
-// Form 4 的叶子字段多为 { value: 'X' } 包装，偶尔直接是标量
-const unwrap = (v: unknown): string => {
-  if (v === null || v === undefined) return '';
-  if (typeof v === 'object') return unwrap((v as { value?: unknown }).value);
-  return String(v);
-};
-
-const toNum = (v: unknown): number => {
-  const n = parseFloat(unwrap(v));
-  return Number.isFinite(n) ? n : 0;
-};
-
 export interface ParsedForm4Tx {
-  /** 申报的内部人姓名 */
+  /** 申报的内部人姓名（联合申报以 " / " 连接） */
   name: string;
   transactionCode: string;
   /** 股数变动：买入为正，卖出为负 */
@@ -33,34 +20,24 @@ export interface ParsedForm4Tx {
   transactionDate: string;
 }
 
-type XmlNode = Record<string, unknown>;
-
-/** 只取非衍生表里的公开市场买卖（P/S），期权行权/授予等噪音在上层过滤 */
+/**
+ * 只取非衍生表里的交易行（含 P/S/M/F 等，期权行权/授予等噪音在上层过滤）。
+ * 解析逻辑与网页端共用 lib/edgar.ts 的 parseForm4Xml，避免两套解析器对同一份申报给出不同答案。
+ */
 export function parseForm4Xml(xml: string): ParsedForm4Tx[] {
-  const doc = parser.parse(xml) as { ownershipDocument?: XmlNode };
-  const root = doc.ownershipDocument;
-  if (!root) return [];
-
-  const owners = toArray(root.reportingOwner) as XmlNode[];
-  const name = owners
-    .map((o) => unwrap((o.reportingOwnerId as XmlNode | undefined)?.rptOwnerName))
-    .filter(Boolean)
-    .join(' / ');
-
-  const table = root.nonDerivativeTable as XmlNode | undefined;
+  if (!/<ownershipDocument[\s>]/.test(xml)) return [];
+  const rows = parseForm4Shared(xml, { symbol: '', filingDate: '', accessionNumber: '', filingUrl: '' });
   const out: ParsedForm4Tx[] = [];
-  for (const raw of toArray(table?.nonDerivativeTransaction) as XmlNode[]) {
-    const code = unwrap((raw.transactionCoding as XmlNode | undefined)?.transactionCode);
-    const amounts = raw.transactionAmounts as XmlNode | undefined;
-    const shares = toNum(amounts?.transactionShares);
-    const disposed = unwrap(amounts?.transactionAcquiredDisposedCode) === 'D';
-    const date = unwrap(raw.transactionDate).slice(0, 10);
-    if (!code || shares <= 0 || !date) continue;
+  for (const row of rows) {
+    if (row.isDerivative) continue;
+    const shares = row.shares ?? 0;
+    const date = row.transactionDate.slice(0, 10);
+    if (!row.transactionCode || shares <= 0 || !date) continue;
     out.push({
-      name,
-      transactionCode: code,
-      change: disposed ? -shares : shares,
-      price: toNum(amounts?.transactionPricePerShare),
+      name: row.ownerName === 'Unknown insider' ? '' : row.ownerName,
+      transactionCode: row.transactionCode,
+      change: row.acquiredDisposed === 'D' ? -shares : shares,
+      price: row.pricePerShare ?? 0,
       transactionDate: date,
     });
   }

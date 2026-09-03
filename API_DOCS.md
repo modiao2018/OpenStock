@@ -90,7 +90,7 @@ Our background jobs are defined in `lib/inngest/functions.ts`.
 
 *   **Endpoints:** `files/company_tickers.json` (ticker → CIK), `data.sec.gov/submissions/CIK….json` (filing index), `Archives/edgar/data/…/form4.xml` (raw Form 4), `data.sec.gov/api/xbrl/companyfacts/CIK….json` (XBRL facts).
 *   **Key Features:** Insider transactions with transaction codes and 10b5-1 flag, quarterly revenue / net income / EPS / cash flow as reported, links to 8-K, 10-Q, 10-K, 13D/G.
-*   **Auth:** none. Set `EDGAR_CONTACT` (SEC fair-access policy). Code: `lib/actions/edgar.actions.ts`.
+*   **Auth:** none. Set `EDGAR_CONTACT` (SEC fair-access policy). Code: `lib/edgar.ts` (shared with the catalyst-monitor daemon) and `lib/actions/edgar.actions.ts`.
 
 </details>
 

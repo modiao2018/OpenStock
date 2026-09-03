@@ -1,52 +1,44 @@
 'use server';
 
 /**
- * SEC EDGAR data source.
+ * SEC EDGAR data for the stock detail page: insider transactions (Form 4),
+ * reported fundamentals (XBRL company facts) and recent material filings.
  *
- * Why EDGAR instead of a vendor: Form 4 insider filings hit EDGAR the moment they
- * are accepted, and we have observed Finnhub both lagging by days and silently
- * dropping filings entirely. EDGAR is the primary record, it is free, and the
- * only requirement is a descriptive User-Agent header.
- *
- * Endpoints used:
- *   https://www.sec.gov/files/company_tickers.json          ticker -> CIK (ticker.txt as fallback)
- *   https://data.sec.gov/submissions/CIK##########.json    recent filings index
- *   https://www.sec.gov/Archives/edgar/data/...            raw Form 4 XML
- *   https://data.sec.gov/api/xbrl/companyfacts/CIK...json  XBRL fundamentals
+ * Why EDGAR instead of a vendor: Form 4 filings hit EDGAR the moment they are
+ * accepted, while Finnhub was observed lagging by days and silently dropping
+ * filings. Shared plumbing (headers, URLs, parsers) lives in lib/edgar.ts and is
+ * the same code the catalyst-monitor daemon uses, so the site and the alerts
+ * can never disagree about what a filing says.
  */
 
 import { fetchJson, fetchText, mapWithConcurrency, memoize } from './http.helpers';
 import {
+    CIK_MAP_URL,
     buildFundamentalsSnapshot,
+    companyFactsUrl,
+    edgarHeaders,
+    filingDocUrl,
+    filingIndexUrl,
+    normalizeTicker,
+    parseCikMap,
     parseForm4Xml,
+    submissionsUrl,
     summarizeInsiderActivity,
     type CompanyFactsPayload,
+    type CompanyTickersPayload,
     type FundamentalsSnapshot,
     type InsiderActivitySummary,
     type InsiderTransaction,
-} from './edgar.helpers';
+} from '@/lib/edgar';
 
-const SEC_WWW = 'https://www.sec.gov';
-const SEC_DATA = 'https://data.sec.gov';
 const DEFAULT_LOOKBACK_DAYS = 90;
 const MAX_FILINGS_PER_SYMBOL = 40;
 /** SEC fair-access policy allows 10 req/s; keep well under it. */
 const FORM4_CONCURRENCY = 4;
 
-function secHeaders(): Record<string, string> {
-    // Same EDGAR_CONTACT the catalyst monitor uses; SEC asks for a contactable User-Agent.
-    const contact = process.env.EDGAR_CONTACT?.trim() || process.env.SEC_EDGAR_USER_AGENT?.trim() || 'contact-not-configured@example.com';
-    return {
-        'User-Agent': `HappyStock/0.1 (${contact})`,
-        'Accept-Encoding': 'gzip, deflate',
-        Accept: 'application/json, text/plain, */*',
-    };
-}
-
 type SubmissionsPayload = {
     cik: string;
     name: string;
-    tickers?: string[];
     filings: {
         recent: {
             accessionNumber: string[];
@@ -69,69 +61,33 @@ export interface EdgarFilingRef {
     url: string;
 }
 
-function normalizeTicker(symbol: string): string {
-    return symbol.trim().toUpperCase().replace(/\./g, '-');
-}
-
-type CompanyTickersPayload = Record<string, { cik_str: number; ticker: string; title: string }>;
-
-async function lookupInCompanyTickers(ticker: string): Promise<string | null> {
-    // ~1MB JSON, the most complete SEC ticker map (includes recent IPOs missing from ticker.txt).
-    const payload = await fetchJson<CompanyTickersPayload>(`${SEC_WWW}/files/company_tickers.json`, {
-        headers: secHeaders(),
-        revalidate: 86_400,
-        timeoutMs: 15_000,
+/** Ticker -> unpadded CIK map, refreshed daily. Same file the daemon caches in Mongo. */
+async function getCikMap(): Promise<Record<string, string>> {
+    return memoize('edgar:cik-map', 24 * 60 * 60 * 1000, async () => {
+        const payload = await fetchJson<CompanyTickersPayload>(CIK_MAP_URL, {
+            headers: edgarHeaders(),
+            timeoutMs: 15_000,
+        });
+        return parseCikMap(payload);
     });
-    for (const entry of Object.values(payload)) {
-        if (entry?.ticker?.toUpperCase() === ticker) {
-            return String(entry.cik_str).padStart(10, '0');
-        }
-    }
-    return null;
 }
 
-async function lookupInTickerTxt(ticker: string): Promise<string | null> {
-    const text = await fetchText(`${SEC_WWW}/include/ticker.txt`, { headers: secHeaders(), revalidate: 86_400 });
-    for (const line of text.split('\n')) {
-        const [t, cik] = line.trim().split('\t');
-        if (t && cik && t.toUpperCase() === ticker) {
-            return cik.padStart(10, '0');
-        }
-    }
-    return null;
-}
-
-/** Resolve a ticker to a zero-padded 10-digit CIK, or null if unknown to the SEC. */
+/** Resolve a ticker to its CIK (unpadded), or null if unknown to the SEC. */
 export async function getCikForSymbol(symbol: string): Promise<string | null> {
     const ticker = normalizeTicker(symbol);
     if (!ticker) return null;
     try {
-        return (await lookupInCompanyTickers(ticker)) ?? (await lookupInTickerTxt(ticker));
+        const map = await getCikMap();
+        return map[ticker] ?? map[ticker.replace(/-/g, '.')] ?? null;
     } catch (error) {
         console.error('EDGAR ticker lookup failed for', symbol, error);
-        try {
-            return await lookupInTickerTxt(ticker);
-        } catch {
-            return null;
-        }
+        return null;
     }
-}
-
-function accessionPath(cik: string, accessionNumber: string, primaryDocument: string): string {
-    const noDashes = accessionNumber.replace(/-/g, '');
-    const cikNumber = String(Number(cik));
-    // The submissions index prefixes inline-XBRL viewer paths like `xslF345X06/form4.xml`;
-    // the raw XML lives one level up.
-    const doc = primaryDocument.replace(/^xsl[^/]+\//, '');
-    return `${SEC_WWW}/Archives/edgar/data/${cikNumber}/${noDashes}/${doc}`;
 }
 
 async function getSubmissions(cik: string): Promise<SubmissionsPayload | null> {
     try {
-        return await fetchJson<SubmissionsPayload>(`${SEC_DATA}/submissions/CIK${cik}.json`, {
-            headers: secHeaders(),
-            revalidate: 900,
-        });
+        return await fetchJson<SubmissionsPayload>(submissionsUrl(cik), { headers: edgarHeaders(), revalidate: 900 });
     } catch (error) {
         console.error('EDGAR submissions fetch failed for CIK', cik, error);
         return null;
@@ -166,7 +122,7 @@ export async function getRecentFilings(
             accessionNumber: recent.accessionNumber[i],
             primaryDocument: recent.primaryDocument[i],
             description: recent.primaryDocDescription[i] ?? form,
-            url: accessionPath(cik, recent.accessionNumber[i], recent.primaryDocument[i]),
+            url: filingDocUrl(cik, recent.accessionNumber[i], recent.primaryDocument[i]),
         });
         if (refs.length >= limit) break;
     }
@@ -189,18 +145,20 @@ export async function getInsiderTransactions(
     lookbackDays: number = DEFAULT_LOOKBACK_DAYS,
 ): Promise<InsiderTransaction[]> {
     const ticker = normalizeTicker(symbol);
+    const cik = await getCikForSymbol(ticker);
+    if (!cik) return [];
     const filings = await getRecentFilings(ticker, ['4', '4/A'], isoDaysAgo(lookbackDays));
     if (filings.length === 0) return [];
 
     const perFiling = await mapWithConcurrency(filings, FORM4_CONCURRENCY, async (filing) => {
         try {
             // Filings are immutable, cache for a week.
-            const xml = await fetchText(filing.url, { headers: secHeaders(), revalidate: 604_800 });
+            const xml = await fetchText(filing.url, { headers: edgarHeaders(), revalidate: 604_800 });
             return parseForm4Xml(xml, {
                 symbol: ticker,
                 filingDate: filing.filingDate,
                 accessionNumber: filing.accessionNumber,
-                filingUrl: filing.url.replace(/\/[^/]+$/, `/${filing.accessionNumber}-index.htm`),
+                filingUrl: filingIndexUrl(cik, filing.accessionNumber),
             });
         } catch (error) {
             console.error('EDGAR Form 4 fetch failed', filing.url, error);
@@ -242,8 +200,8 @@ export async function getFundamentals(symbol: string): Promise<FundamentalsSnaps
     // fetch it uncached and memoize the small derived snapshot in-process instead.
     return memoize(`edgar:fundamentals:${cik}`, 6 * 60 * 60 * 1000, async () => {
         try {
-            const payload = await fetchJson<CompanyFactsPayload>(`${SEC_DATA}/api/xbrl/companyfacts/CIK${cik}.json`, {
-                headers: secHeaders(),
+            const payload = await fetchJson<CompanyFactsPayload>(companyFactsUrl(cik), {
+                headers: edgarHeaders(),
                 timeoutMs: 20_000,
             });
             return buildFundamentalsSnapshot(ticker, payload);
@@ -256,10 +214,8 @@ export async function getFundamentals(symbol: string): Promise<FundamentalsSnaps
 
 /** Material-event (8-K) and periodic (10-Q/10-K) filings, newest first. */
 export async function getMaterialFilings(symbol: string, limit: number = 10): Promise<EdgarFilingRef[]> {
+    const cik = await getCikForSymbol(symbol);
+    if (!cik) return [];
     const refs = await getRecentFilings(symbol, ['8-K', '8-K/A', '10-Q', '10-K', '10-K/A', 'SC 13D', 'SC 13D/A', 'SC 13G', 'SC 13G/A'], undefined, limit);
-    return refs.map((ref) => ({
-        ...ref,
-        // Send users to the filing index, which works for every document type.
-        url: ref.url.replace(/\/[^/]+$/, `/${ref.accessionNumber}-index.htm`),
-    }));
+    return refs.map((ref) => ({ ...ref, url: filingIndexUrl(cik, ref.accessionNumber) }));
 }

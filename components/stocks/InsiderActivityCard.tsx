@@ -1,5 +1,5 @@
 import type { InsiderActivity } from '@/lib/actions/edgar.actions';
-import { describeTransactionCode, isOpenMarketTrade } from '@/lib/actions/edgar.helpers';
+import { describeTransactionCode, isOpenMarketTrade } from '@/lib/edgar';
 import { fmtCompact, fmtDate, fmtMoney, fmtShares, signClass } from './format';
 
 interface InsiderActivityCardProps {

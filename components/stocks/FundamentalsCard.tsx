@@ -1,6 +1,6 @@
 import type { EdgarFilingRef } from '@/lib/actions/edgar.actions';
-import type { FundamentalPoint, FundamentalsSnapshot } from '@/lib/actions/edgar.helpers';
-import { yoyGrowth } from '@/lib/actions/edgar.helpers';
+import type { FundamentalPoint, FundamentalsSnapshot } from '@/lib/edgar';
+import { yoyGrowth } from '@/lib/edgar';
 import { fmtCompact, fmtDate, fmtMoney, fmtRatioPct, signClass } from './format';
 
 interface FundamentalsCardProps {

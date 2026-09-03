@@ -1,8 +1,12 @@
 /**
  * Small fetch helpers shared by the market-data sources (SEC EDGAR, Yahoo Finance,
- * Nasdaq, Finnhub). Every request has a timeout and, when running inside Next.js,
- * participates in the data cache via `next.revalidate`.
+ * Nasdaq, Finnhub). Every request has a timeout, participates in the Next.js data
+ * cache via `next.revalidate`, and lands in the per-source ledger behind /status
+ * (cache hits are recorded as fast successes, same as finnhub.actions).
  */
+
+import { recordSourceCall } from '@/lib/source-calls';
+import { inferSourceByHost } from '@/lib/sources-registry';
 
 export type FetchOptions = {
     timeoutMs?: number;
@@ -17,6 +21,8 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}):
     const { timeoutMs = 8000, revalidate, headers } = options;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const source = inferSourceByHost(url) ?? '';
+    const start = Date.now();
 
     try {
         const init: NextRequestInit = { headers, signal: controller.signal };
@@ -26,7 +32,12 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}):
         } else {
             init.cache = 'no-store';
         }
-        return await fetch(url, init);
+        const res = await fetch(url, init);
+        void recordSourceCall(source, res.ok, Date.now() - start, res.ok ? undefined : `HTTP ${res.status}`);
+        return res;
+    } catch (err) {
+        void recordSourceCall(source, false, Date.now() - start, err);
+        throw err;
     } finally {
         clearTimeout(timer);
     }

@@ -1,7 +1,79 @@
 /**
- * Pure helpers for SEC EDGAR data (Form 4 insider filings, XBRL company facts).
- * No network access here so everything is unit-testable.
+ * SEC EDGAR: the single place both the web app (lib/actions/edgar.actions.ts) and the
+ * catalyst-monitor daemon (collectors/edgar.ts, insider-edgar.ts, xcheck.ts) get their
+ * request headers, URL builders, CIK map parsing, Form 4 parsing and XBRL fundamentals.
+ *
+ * No network access and no Next.js imports here: the monitor image strips `next`,
+ * and keeping this pure makes everything unit-testable.
  */
+
+// ---------------------------------------------------------------------------
+// Request plumbing
+// ---------------------------------------------------------------------------
+
+export const SEC_WWW = 'https://www.sec.gov';
+export const SEC_DATA = 'https://data.sec.gov';
+export const CIK_MAP_URL = `${SEC_WWW}/files/company_tickers.json`;
+/** SEC fair-access policy: 10 req/s. Callers pace themselves well under this. */
+export const SEC_MIN_REQUEST_GAP_MS = 150;
+
+/** Contact for the SEC User-Agent (fair-access policy). Shared by web and daemon. */
+export function edgarContact(): string {
+    return process.env.EDGAR_CONTACT?.trim() || 'contact-not-configured@example.com';
+}
+
+export function edgarHeaders(contact: string = edgarContact()): Record<string, string> {
+    // SEC 要求 User-Agent 里带可联系方式，否则可能被封
+    return {
+        'User-Agent': `HappyStock/0.1 (${contact})`,
+        Accept: 'application/json, text/plain, */*',
+    };
+}
+
+export function normalizeTicker(symbol: string): string {
+    return symbol.trim().toUpperCase().replace(/\./g, '-');
+}
+
+export function padCik(cik: string | number): string {
+    return String(cik).padStart(10, '0');
+}
+
+export function submissionsUrl(cik: string | number): string {
+    return `${SEC_DATA}/submissions/CIK${padCik(cik)}.json`;
+}
+
+export function companyFactsUrl(cik: string | number): string {
+    return `${SEC_DATA}/api/xbrl/companyfacts/CIK${padCik(cik)}.json`;
+}
+
+/** The submissions index prefixes inline-XBRL viewer paths (`xslF345X05/form4.xml`); the raw document is the last segment. */
+export function rawDocName(primaryDocument: string): string {
+    return primaryDocument.split('/').pop() ?? primaryDocument;
+}
+
+export function filingDocUrl(cik: string | number, accessionNumber: string, primaryDocument: string): string {
+    return `${SEC_WWW}/Archives/edgar/data/${Number(cik)}/${accessionNumber.replace(/-/g, '')}/${rawDocName(primaryDocument)}`;
+}
+
+/** Human-readable filing index page; works for every document type. */
+export function filingIndexUrl(cik: string | number, accessionNumber: string): string {
+    return `${SEC_WWW}/Archives/edgar/data/${Number(cik)}/${accessionNumber.replace(/-/g, '')}/${accessionNumber}-index.htm`;
+}
+
+export type CompanyTickersPayload = Record<string, { cik_str: number; ticker: string; title?: string }>;
+
+/** company_tickers.json -> { TICKER: '320193' } (unpadded, as the daemon stores it). */
+export function parseCikMap(payload: CompanyTickersPayload): Record<string, string> {
+    const map: Record<string, string> = {};
+    for (const entry of Object.values(payload ?? {})) {
+        if (entry?.ticker) map[entry.ticker.toUpperCase()] = String(entry.cik_str);
+    }
+    return map;
+}
+
+// ---------------------------------------------------------------------------
+// Form 4 insider filings
+// ---------------------------------------------------------------------------
 
 export type InsiderTransactionCode =
     | 'P' // open-market purchase
@@ -156,12 +228,14 @@ export interface Form4FilingMeta {
  * Holdings-only rows (no transaction) are skipped.
  */
 export function parseForm4Xml(xml: string, meta: Form4FilingMeta): InsiderTransaction[] {
-    const ownerBlock = tagContent(xml, 'reportingOwner') ?? '';
-    const ownerName = tagText(ownerBlock, 'rptOwnerName') ?? 'Unknown insider';
-    const ownerTitle = tagText(ownerBlock, 'officerTitle') || null;
-    const isDirector = flag(ownerBlock, 'isDirector');
-    const isOfficer = flag(ownerBlock, 'isOfficer');
-    const isTenPercentOwner = flag(ownerBlock, 'isTenPercentOwner');
+    // Joint filings list several reporting owners; fold them into one row set.
+    const ownerBlocks = allBlocks(xml, 'reportingOwner');
+    const ownerNames = ownerBlocks.map((b) => tagText(b, 'rptOwnerName')).filter((n): n is string => Boolean(n));
+    const ownerName = ownerNames.length > 0 ? ownerNames.join(' / ') : 'Unknown insider';
+    const ownerTitle = ownerBlocks.map((b) => tagText(b, 'officerTitle')).find((t) => t) || null;
+    const isDirector = ownerBlocks.some((b) => flag(b, 'isDirector'));
+    const isOfficer = ownerBlocks.some((b) => flag(b, 'isOfficer'));
+    const isTenPercentOwner = ownerBlocks.some((b) => flag(b, 'isTenPercentOwner'));
     const isRule10b51 = flag(xml, 'aff10b5One');
     const periodOfReport = tagText(xml, 'periodOfReport');
 
