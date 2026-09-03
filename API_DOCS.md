@@ -79,8 +79,28 @@ Our background jobs are defined in `lib/inngest/functions.ts`.
 <br/>
 
 *   **Base URL:** `https://finnhub.io/api/v1`
-*   **Key Features:** Real-time quotes, technical indicators, market news.
+*   **Key Features:** Real-time quotes, technical indicators, market news, recommendation trend, earnings surprises.
 *   **Auth:** `NEXT_PUBLIC_FINNHUB_API_KEY`
+
+</details>
+
+<details>
+<summary><b>🏛️ Insider Filings & Fundamentals: SEC EDGAR</b></summary>
+<br/>
+
+*   **Endpoints:** `files/company_tickers.json` (ticker → CIK), `data.sec.gov/submissions/CIK….json` (filing index), `Archives/edgar/data/…/form4.xml` (raw Form 4), `data.sec.gov/api/xbrl/companyfacts/CIK….json` (XBRL facts).
+*   **Key Features:** Insider transactions with transaction codes and 10b5-1 flag, quarterly revenue / net income / EPS / cash flow as reported, links to 8-K, 10-Q, 10-K, 13D/G.
+*   **Auth:** none. Set `EDGAR_CONTACT` (SEC fair-access policy). Code: `lib/actions/edgar.actions.ts`.
+
+</details>
+
+<details>
+<summary><b>🎯 Analyst Research: Yahoo Finance + Nasdaq</b></summary>
+<br/>
+
+*   **Yahoo:** `query2.finance.yahoo.com/v10/finance/quoteSummary/{symbol}` with modules `financialData`, `recommendationTrend`, `upgradeDowngradeHistory`, `earningsTrend`, `institutionOwnership`, `majorHoldersBreakdown`, `calendarEvents`. Requires a cookie + crumb session that is bootstrapped and cached in-process.
+*   **Nasdaq:** `api.nasdaq.com/api/analyst/{symbol}/targetprice` as a second opinion on the mean price target.
+*   **Auth:** none. Code: `lib/actions/analyst.actions.ts`.
 
 </details>
 

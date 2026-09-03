@@ -1,6 +1,9 @@
 import TradingViewWidget from "@/components/TradingViewWidget";
 import WatchlistButton from "@/components/WatchlistButton";
 import StockSentimentCard from "@/components/stocks/StockSentimentCard";
+import AnalystResearchCard from "@/components/stocks/AnalystResearchCard";
+import InsiderActivityCard from "@/components/stocks/InsiderActivityCard";
+import FundamentalsCard from "@/components/stocks/FundamentalsCard";
 import {
     SYMBOL_INFO_WIDGET_CONFIG,
     CANDLE_CHART_WIDGET_CONFIG,
@@ -13,6 +16,8 @@ import {
 import { getSession } from '@/lib/get-session';
 import { isStockInWatchlist } from '@/lib/actions/watchlist.actions';
 import { getStockSentimentInsights } from '@/lib/actions/adanos.actions';
+import { getAnalystResearch } from '@/lib/actions/analyst.actions';
+import { getFundamentals, getInsiderActivity, getMaterialFilings } from '@/lib/actions/edgar.actions';
 import { formatSymbolForTradingView } from '@/lib/utils';
 import { getLocale } from 'next-intl/server';
 import { toTradingViewLocale } from '@/i18n/config';
@@ -26,9 +31,13 @@ export default async function StockDetails({ params }: StockDetailsPageProps) {
 
     const session = await getSession();
     const userId = session?.user?.id;
-    const [isInWatchlist, sentimentInsights] = await Promise.all([
+    const [isInWatchlist, sentimentInsights, analystResearch, insiderActivity, fundamentals, materialFilings] = await Promise.all([
         userId ? isStockInWatchlist(userId, symbol) : Promise.resolve(false),
         getStockSentimentInsights(symbol),
+        getAnalystResearch(symbol),
+        getInsiderActivity(symbol, 90),
+        getFundamentals(symbol),
+        getMaterialFilings(symbol, 6),
     ]);
 
     return (
@@ -69,6 +78,12 @@ export default async function StockDetails({ params }: StockDetailsPageProps) {
                             userId={userId}
                         />
                     </div>
+
+                    <AnalystResearchCard research={analystResearch} />
+
+                    <InsiderActivityCard activity={insiderActivity} />
+
+                    <FundamentalsCard fundamentals={fundamentals} filings={materialFilings} />
 
                     <StockSentimentCard insight={sentimentInsights} />
 

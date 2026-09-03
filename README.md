@@ -89,6 +89,8 @@ Auth & Data
 - Better Auth (email/password) with MongoDB adapter
 - MongoDB + Mongoose
 - Finnhub API for symbols, profiles, and market news
+- SEC EDGAR for insider transactions (Form 4), reported financials (XBRL) and material filings
+- Yahoo Finance + Nasdaq for analyst ratings, price targets, estimates and institutional holders
 - TradingView embeddable widgets
 
 Automation & Comms
@@ -113,6 +115,9 @@ Language composition
     - TradingView symbol info, candlestick/advanced charts, baseline, technicals
     - Company profile and financials widgets
     - Optional cross-source sentiment insights for Reddit, X.com, news, and Polymarket
+    - Analyst research: consensus rating, price-target range with a second-source cross-check, per-firm upgrades/downgrades, EPS and revenue estimates with 90-day revisions, earnings surprises, top institutional holders
+    - Insider transactions read straight from SEC EDGAR Form 4 filings (no vendor lag), with open-market buy/sell signal
+    - Reported financials from XBRL 10-Q/10-K data plus links to recent 8-K, 10-Q, 10-K and 13D/G filings
 - Market overview
     - Heatmap, quotes, and top stories (TradingView widgets)
 - Personalized onboarding
@@ -256,6 +261,9 @@ FINNHUB_BASE_URL=https://finnhub.io/api/v1
 ADANOS_API_KEY=your_adanos_api_key
 # ADANOS_API_BASE_URL=https://api.adanos.org
 
+# SEC EDGAR: contact e-mail placed in the User-Agent (SEC fair-access policy). Shared with the catalyst monitor.
+# EDGAR_CONTACT=you@example.com
+
 # AI Provider (optional, default: "gemini")
 # Supported: "gemini", "minimax", "siray"
 # AI_PROVIDER=gemini
@@ -369,6 +377,15 @@ public/assets/images/   # logos and screenshots
     - Set `NEXT_PUBLIC_FINNHUB_API_KEY` and `FINNHUB_BASE_URL` (default: https://finnhub.io/api/v1).
     - Free tiers may return delayed quotes; respect rate limits and terms.
 
+- SEC EDGAR (free, no key)
+    - Form 4 insider filings are fetched the day they are accepted and parsed directly. Chosen over Finnhub's
+      insider endpoint after observing multi-day lag and permanently missing filings there.
+    - XBRL company facts power the reported-financials card; submissions index powers the filings list.
+    - Set `EDGAR_CONTACT` to comply with the SEC fair-access policy (10 req/s max; this app stays well under).
+- Yahoo Finance and Nasdaq (free, no key)
+    - Analyst consensus, price targets, estimates, rating changes and 13F holders. Both are unofficial endpoints
+      and may change; every call degrades to an empty card rather than failing the page.
+    - Finnhub free tier still supplies the recommendation trend and earnings surprises as a secondary source.
 - Adanos sentiment insights (optional)
     - Structured stock sentiment snapshots across Reddit, X.com, news, and Polymarket.
     - Set `ADANOS_API_KEY`; optionally override the API host with `ADANOS_API_BASE_URL`.
