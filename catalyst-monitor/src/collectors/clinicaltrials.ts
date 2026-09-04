@@ -118,6 +118,6 @@ export async function collectClinicalTrials(config: MonitorConfig): Promise<NewE
     logError('clinicaltrials:translate', err);
   }
 
-  log('clinicaltrials', `checked ${events.length} trials`);
+  log('clinicaltrials', `checked ${attempted} trials, ${events.length} changed`);
   return events;
 }
