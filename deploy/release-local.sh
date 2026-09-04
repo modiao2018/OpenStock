@@ -47,8 +47,9 @@ docker build --platform "$PLATFORM" -f "$ROOT/deploy/Dockerfile" --target web \
 
 SHIP_IMAGES="$WEB_IMAGE:$TAG"
 if [ "$MONITOR_ON" = "true" ]; then
-    info "构建 monitor 镜像"
+    info "构建 monitor 镜像（导入自检推迟到服务器上跑，qemu 里 esbuild 会随机崩）"
     docker build --platform "$PLATFORM" -f "$ROOT/deploy/Dockerfile" --target monitor \
+        --build-arg MONITOR_IMPORT_CHECK=skip \
         -t "$MONITOR_IMAGE:$TAG" "$ROOT"
     SHIP_IMAGES="$SHIP_IMAGES $MONITOR_IMAGE:$TAG"
 fi
@@ -66,6 +67,11 @@ info "增量传输到服务器（首次为全量，之后只传变化的层）"
 rsync -z --partial --stats "$TMP_DIR/images.tar" "$DEPLOY_HOST:$DEPLOY_PATH/deploy/images.tar" > "$TMP_DIR/rsync.log"
 grep -E "Total file size|Literal data|Matched data" "$TMP_DIR/rsync.log" || true
 ssh "$DEPLOY_HOST" "docker load < '$DEPLOY_PATH/deploy/images.tar'"
+if [ "$MONITOR_ON" = "true" ]; then
+    info "在服务器上校验 monitor 镜像的模块导入"
+    ssh "$DEPLOY_HOST" "docker run --rm --memory 512m '$MONITOR_IMAGE:$TAG' tsx deploy/check-monitor-imports.mts" \
+        || die "monitor 镜像导入自检失败，未发版"
+fi
 
 info "同步 deploy/ 编排文件"
 rsync -az --exclude releases.log --exclude local.env --exclude images.tar \
