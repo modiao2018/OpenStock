@@ -4,6 +4,8 @@ import {
   getFallbackProviderName,
   callAIProvider,
   callAIProviderWithFallback,
+  callAIProviderWithConfig,
+  extractChatText,
   type AIProviderName,
 } from "@/lib/ai-provider";
 
@@ -234,20 +236,92 @@ describe("callAIProvider", () => {
     );
   });
 
-  it("throws on empty MiniMax response", async () => {
+  it("throws on empty MiniMax response after one retry, with a diagnostic", async () => {
+    vi.useFakeTimers();
     process.env.MINIMAX_API_KEY = "k";
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ choices: [{ message: {} }] }),
-      })
-    );
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ choices: [{ message: {}, finish_reason: "length" }] }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
 
-    await expect(callAIProvider("hello", "minimax")).rejects.toThrow(
-      "minimax returned empty response"
+    const p = callAIProvider("hello", "minimax");
+    const assertion = expect(p).rejects.toThrow(
+      "minimax returned empty response (finish_reason=length)"
     );
+    await vi.runAllTimersAsync();
+    await assertion;
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
+
+  it("recovers when the retry returns content", async () => {
+    vi.useFakeTimers();
+    process.env.MINIMAX_API_KEY = "k";
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ choices: [] }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ choices: [{ message: { content: "second try" } }] }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const p = callAIProvider("hello", "minimax");
+    await vi.runAllTimersAsync();
+    expect(await p).toBe("second try");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
+
+  it("does not retry hard HTTP errors", async () => {
+    process.env.MINIMAX_API_KEY = "k";
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 401, statusText: "Unauthorized" });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(callAIProvider("hello", "minimax")).rejects.toThrow("401");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("accepts a custom OpenAI-compatible endpoint (e.g. DeepSeek) via explicit config", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          choices: [{ message: { content: "", reasoning_content: "thinking only" } }],
+        }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const out = await callAIProviderWithConfig("hi", {
+      name: "custom",
+      apiKey: "k",
+      baseUrl: "https://api.deepseek.com/v1",
+      model: "deepseek-v4-flash",
+    });
+    expect(out).toBe("thinking only");
+    expect(fetchMock.mock.calls[0][0]).toBe("https://api.deepseek.com/v1/chat/completions");
+  });
+});
+
+describe("extractChatText", () => {
+  it("reads plain string content", () => {
+    expect(extractChatText({ choices: [{ message: { content: "hi" } }] })).toBe("hi");
+  });
+  it("joins array-of-parts content", () => {
+    expect(
+      extractChatText({ choices: [{ message: { content: [{ type: "text", text: "a" }, { text: "b" }] } }] })
+    ).toBe("ab");
+  });
+  it("falls back to legacy text completions", () => {
+    expect(extractChatText({ choices: [{ text: "legacy" }] })).toBe("legacy");
+  });
+  it("returns empty string for whitespace-only or missing content", () => {
+    expect(extractChatText({ choices: [{ message: { content: "   " } }] })).toBe("");
+    expect(extractChatText({ choices: [] })).toBe("");
+    expect(extractChatText(null)).toBe("");
   });
 });
 
@@ -312,7 +386,8 @@ describe("callAIProviderWithFallback", () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const result = await callAIProviderWithFallback("test");
     expect(result).toBe("Gemini fallback");
-    expect(callCount).toBe(2);
+    // minimax 500 is retried once (2 calls) before falling back to Gemini
+    expect(callCount).toBe(3);
     consoleSpy.mockRestore();
   });
 

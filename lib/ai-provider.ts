@@ -126,7 +126,7 @@ async function callOpenAICompatible(
 
   const url = `${config.baseUrl}/chat/completions`;
 
-  return timed("llm", async () => {
+  const attempt = async (): Promise<string> => {
     const res = await fetch(url, {
       method: "POST",
       headers: {
@@ -142,18 +142,99 @@ async function callOpenAICompatible(
     });
 
     if (!res.ok) {
-      throw new Error(
-        `${config.name} API error: ${res.status} ${res.statusText}`
-      );
+      throw new LlmHttpError(config.name, res.status, res.statusText);
     }
 
     const data = await res.json();
-    const text = data?.choices?.[0]?.message?.content;
+    const text = extractChatText(data);
     if (!text) {
-      throw new Error(`${config.name} returned empty response`);
+      throw new LlmEmptyError(config.name, describeEmptyChat(data));
     }
-    return text as string;
+    return text;
+  };
+
+  // One retry on transient upstream trouble: an empty completion (providers
+  // occasionally return an empty choice under load or after a content
+  // filter), a 429, or a 5xx. Hard errors (auth, 4xx) are not retried.
+  return timed("llm", async () => {
+    try {
+      return await attempt();
+    } catch (err) {
+      if (!isRetryableLlmError(err)) throw err;
+      await new Promise((r) => setTimeout(r, LLM_RETRY_DELAY_MS));
+      return attempt();
+    }
   });
+}
+
+const LLM_RETRY_DELAY_MS = 1500;
+
+class LlmHttpError extends Error {
+  constructor(provider: string, public readonly status: number, statusText: string) {
+    super(`${provider} API error: ${status} ${statusText}`);
+  }
+}
+
+class LlmEmptyError extends Error {
+  constructor(provider: string, detail: string) {
+    super(`${provider} returned empty response (${detail})`);
+  }
+}
+
+function isRetryableLlmError(err: unknown): boolean {
+  if (err instanceof LlmEmptyError) return true;
+  if (err instanceof LlmHttpError) return err.status === 429 || err.status >= 500;
+  // AbortSignal.timeout → TimeoutError; fetch network failures → TypeError
+  return err instanceof Error && (err.name === "TimeoutError" || err.name === "TypeError");
+}
+
+/**
+ * Pull the assistant text out of an OpenAI-style chat completion. Tolerates
+ * the variants seen in the wild: content as an array of parts (newer APIs),
+ * `reasoning_content` only (DeepSeek reasoners that spent the whole budget
+ * thinking), and legacy `text` completions.
+ */
+export function extractChatText(data: unknown): string {
+  const choice = (data as { choices?: unknown[] })?.choices?.[0] as
+    | {
+        message?: { content?: unknown; reasoning_content?: unknown };
+        text?: unknown;
+      }
+    | undefined;
+  if (!choice) return "";
+  const content = choice.message?.content;
+  if (typeof content === "string" && content.trim()) return content;
+  if (Array.isArray(content)) {
+    const joined = content
+      .map((part) =>
+        typeof part === "string"
+          ? part
+          : typeof (part as { text?: unknown })?.text === "string"
+            ? (part as { text: string }).text
+            : ""
+      )
+      .join("");
+    if (joined.trim()) return joined;
+  }
+  if (typeof choice.text === "string" && choice.text.trim()) return choice.text;
+  const reasoning = choice.message?.reasoning_content;
+  if (typeof reasoning === "string" && reasoning.trim()) return reasoning;
+  return "";
+}
+
+// Short diagnostic for the error message so the status page shows *why* the
+// reply was empty (truncated? no choices? unexpected shape?)
+function describeEmptyChat(data: unknown): string {
+  const d = data as {
+    choices?: Array<{ finish_reason?: unknown }>;
+    error?: { message?: unknown };
+  };
+  if (d?.error?.message) return `error: ${String(d.error.message).slice(0, 120)}`;
+  if (!Array.isArray(d?.choices) || d.choices.length === 0) {
+    return `no choices, body: ${JSON.stringify(data ?? null).slice(0, 120)}`;
+  }
+  const reason = d.choices[0]?.finish_reason;
+  return reason ? `finish_reason=${String(reason)}` : "empty content";
 }
 
 // ── Public API ─────────────────────────────────────────────────────
