@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { History } from 'lucide-react';
 import { HORIZON_KEYS } from '@/lib/signal-math';
 import type { SignalRowData } from '@/lib/actions/signals.actions';
+import { formatClock } from '@/lib/format-time';
 
 const fmtPct = (v: number | null | undefined) => (v === null || v === undefined ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(1)}%`);
 const pctClass = (v: number | null | undefined) =>
@@ -14,8 +15,7 @@ const DIR_CLASS = { up: 'text-teal-500', down: 'text-red-400', none: 'text-gray-
 export default async function RecentSignals({ rows }: { rows: SignalRowData[] }) {
     const t = await getTranslations('signals');
     const locale = await getLocale();
-    const fmtTime = (iso: string) =>
-        new Date(iso).toLocaleString(locale, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const fmtTime = (iso: string) => formatClock(iso, locale);
     const kindLabel = (k: string) => (t.has(`kinds.${k}`) ? t(`kinds.${k}`) : k);
 
     return (

@@ -49,8 +49,13 @@ const REASON_ZH: Record<AlertReason, string> = {
   intentSell: '内部人拟卖出（144 预告）',
 };
 
-const alertedKey = (symbol: string, filingDate: string, intent: boolean) =>
-  `insider_alerted:${symbol}:${filingDate}:${intent ? 'intent' : 'executed'}`;
+// 已成交申报按 (symbol, 申报日) 跨源去重；144 拟售预告只来自 EDGAR、按 accession
+// 已幂等，所以按申报人区分——DELL 2026-09-03 同日 5 家 Silver Lake 实体各报一份，
+// 按日去重会把后 3 份（含 $42.9M 那份）静默吞掉
+const alertedKey = (symbol: string, item: InsiderAlertItem) =>
+  item.intent
+    ? `insider_alerted:${symbol}:${item.tx.filingDate}:intent:${item.tx.name}`
+    : `insider_alerted:${symbol}:${item.tx.filingDate}:executed`;
 
 export const fmtTx = (tx: InsiderTx, intent = false): string => {
   const side = intent ? '拟卖出' : tx.transactionCode === 'P' ? '买入' : '卖出';
@@ -169,7 +174,7 @@ export async function notifyInsiderTriggers(
   for (const [symbol, items] of triggers) {
     const kept: InsiderAlertItem[] = [];
     for (const item of items) {
-      if (await getKv(alertedKey(symbol, item.tx.filingDate, Boolean(item.intent)))) continue;
+      if (await getKv(alertedKey(symbol, item))) continue;
       if (item.reason === 'clusterSell') {
         const lastNotified = await getKv(`insider_cluster_notified:${symbol}`);
         if (lastNotified && lastNotified >= shiftDate(today, -CLUSTER_DAYS)) continue;
@@ -238,7 +243,7 @@ export async function notifyInsiderTriggers(
     if (ok || gate.deferred) {
       delivered.add(symbol);
       for (const item of items) {
-        await setKv(alertedKey(symbol, item.tx.filingDate, Boolean(item.intent)), today);
+        await setKv(alertedKey(symbol, item), today);
       }
       if (items.some((i) => i.reason === 'clusterSell')) {
         await setKv(`insider_cluster_notified:${symbol}`, today);

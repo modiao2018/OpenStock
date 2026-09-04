@@ -5,6 +5,7 @@ import { getFocusQueue } from '@/lib/actions/focus.actions';
 import AutoRefresh from '@/components/catalyst/AutoRefresh';
 import FocusQueue from '@/components/focus/FocusQueue';
 import DeferredList from '@/components/focus/DeferredList';
+import { formatClock } from '@/lib/format-time';
 
 export default async function FocusPage() {
     const t = await getTranslations('focus');
@@ -16,9 +17,7 @@ export default async function FocusPage() {
 
     const data = await getFocusQueue();
     const above = data.threshold === null ? 0 : data.rows.filter((r) => r.score >= data.threshold!).length;
-    const computed = data.computedAt
-        ? new Date(data.computedAt).toLocaleString(locale, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-        : null;
+    const computed = data.computedAt ? formatClock(data.computedAt, locale) : null;
 
     return (
         <div className="min-h-screen bg-black text-gray-100 p-6 md:p-8">

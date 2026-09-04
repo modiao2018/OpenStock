@@ -6,7 +6,10 @@ import { parseForm4Xml as parseForm4Shared } from '../../lib/edgar';
  * Form 4 = 已成交的内部人交易申报；Form 144 = 关联方拟卖出预告（下单当天提交）。
  */
 
-const parser = new XMLParser({ ignoreAttributes: true, parseTagValue: false });
+// removeNSPrefix：Workiva 等代报系统产出的 Form 144 带 own:/com: 命名空间前缀
+// （<own:aggregateMarketValue>），不剥前缀会整份解析成空——2026-09 漏掉了
+// NVDA Stevens $1.09B 与 Dell 基金会 $1.25B 两份拟售预告
+const parser = new XMLParser({ ignoreAttributes: true, parseTagValue: false, removeNSPrefix: true });
 
 export interface ParsedForm4Tx {
   /** 申报的内部人姓名（联合申报以 " / " 连接） */

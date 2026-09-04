@@ -116,6 +116,31 @@ export function summarizeInsiderTxs(txs: InsiderTx[], today: string, windowDays 
     return summary;
 }
 
+// Brokers report one insider's single-day sale as a dozen price-bucket rows
+// (ALAB 2026-09-01: 24 rows, $51M). Alert thresholds must see the day's total,
+// so rows sharing symbol / insider / date / code / filingDate are folded into
+// one transaction with summed shares and a share-weighted average price.
+// Rows without a price keep their shares but contribute nothing to the VWAP.
+export function aggregateSameDayTxs(txs: InsiderTx[]): InsiderTx[] {
+    const groups = new Map<string, { tx: InsiderTx; pricedShares: number; value: number }>();
+    for (const tx of txs) {
+        const key = [tx.symbol, tx.name, tx.transactionDate, tx.transactionCode, tx.filingDate].join('|');
+        const priced = tx.transactionPrice > 0 ? Math.abs(tx.change) : 0;
+        const g = groups.get(key);
+        if (!g) {
+            groups.set(key, { tx: { ...tx }, pricedShares: priced, value: priced * tx.transactionPrice });
+            continue;
+        }
+        g.tx.change += tx.change;
+        g.pricedShares += priced;
+        g.value += priced * tx.transactionPrice;
+    }
+    return [...groups.values()].map(({ tx, pricedShares, value }) => ({
+        ...tx,
+        transactionPrice: pricedShares > 0 ? value / pricedShares : 0,
+    }));
+}
+
 export type NotifyReason = 'buy' | 'largeSell' | 'clusterSell';
 
 export interface NotifyDecision {
@@ -193,6 +218,14 @@ export function formatUsdCompact(value: number): string {
     if (abs >= 1e3) return `${sign}$${(abs / 1e3).toFixed(0)}K`;
     return `${sign}$${abs.toFixed(0)}`;
 }
+
+// CatalystKv markers: "this symbol's history has been seeded, from here on every
+// new filing is news". Keyed per channel. Judging seededness by "does the symbol
+// have any rows" is wrong for quiet names: a pool stock with no Form 4 inside
+// the EDGAR channel's 5-day lookback (27 of 55 on 2026-09-04) had zero rows, so
+// its first real filing would have been swallowed as a seed and never alerted.
+export const insiderSeedKey = (symbol: string) => `insider_symbol_seeded:${symbol}`;
+export const insiderEdgarSeedKey = (symbol: string) => `insider_edgar_seeded:${symbol}`;
 
 // YYYY-MM-DD ± days, UTC arithmetic (calendar days are all we need here)
 export function shiftDate(date: string, days: number): string {

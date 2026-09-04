@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+    aggregateSameDayTxs,
     decideNotify,
     filingLagDays,
     filterOpenMarketTxs,
@@ -182,6 +183,42 @@ describe('decideNotify', () => {
             tx({ transactionCode: 'S', change: -4000, transactionPrice: 100, name: 'C', transactionDate: '2026-08-25' }), // after newTx
         ];
         expect(decideNotify(newSell, others, OPTS).notify).toBe(false);
+    });
+});
+
+describe('aggregateSameDayTxs', () => {
+    it('folds one insider\'s price-bucket rows into a single day total with VWAP', () => {
+        // ALAB 2026-09-01: Alba sold 183,000 shares across 24 rows (~$51M); the largest
+        // single row was $16.6M, so per-row thresholds saw a much smaller sale
+        const rows = [
+            tx({ symbol: 'ALAB', name: 'ALBA MANUEL', transactionCode: 'S', change: -59_379, transactionPrice: 280.0382, transactionDate: '2026-09-01', filingDate: '2026-09-03' }),
+            tx({ symbol: 'ALAB', name: 'ALBA MANUEL', transactionCode: 'S', change: -37_176, transactionPrice: 279.2802, transactionDate: '2026-09-01', filingDate: '2026-09-03' }),
+            tx({ symbol: 'ALAB', name: 'ALBA MANUEL', transactionCode: 'S', change: -2_575, transactionPrice: 277.3203, transactionDate: '2026-09-01', filingDate: '2026-09-03' }),
+        ];
+        const [agg] = aggregateSameDayTxs(rows);
+        expect(aggregateSameDayTxs(rows)).toHaveLength(1);
+        expect(agg.change).toBe(-99_130);
+        expect(txAmountUsd(agg)).toBeCloseTo(59_379 * 280.0382 + 37_176 * 279.2802 + 2_575 * 277.3203, 0);
+    });
+
+    it('keeps different people, days, codes and filings apart', () => {
+        const rows = [
+            tx({ name: 'A' }), tx({ name: 'B' }),
+            tx({ name: 'A', transactionDate: '2026-08-21' }),
+            tx({ name: 'A', transactionCode: 'S', change: -10 }),
+            tx({ name: 'A', filingDate: '2026-08-23' }),
+        ];
+        expect(aggregateSameDayTxs(rows)).toHaveLength(5);
+    });
+
+    it('unpriced rows add shares but not to the average price', () => {
+        const [agg] = aggregateSameDayTxs([
+            tx({ change: 100, transactionPrice: 10 }),
+            tx({ change: 300, transactionPrice: 0 }),
+        ]);
+        expect(agg.change).toBe(400);
+        expect(agg.transactionPrice).toBe(10);
+        expect(aggregateSameDayTxs([tx({ transactionPrice: 0 })])[0].transactionPrice).toBe(0);
     });
 });
 

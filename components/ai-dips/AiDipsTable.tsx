@@ -8,6 +8,7 @@ import { getChangeColorClass, isRedUpLocale } from '@/lib/utils';
 import { formatUsdCompact } from '@/lib/insider-math';
 import type { AiDipStock } from '@/lib/actions/ai-dips.actions';
 import type { InsiderRowData } from '@/lib/actions/insider.actions';
+import { formatClock } from '@/lib/format-time';
 
 // Same poles as the heatmap ramps
 const RED = '#f23645';
@@ -228,9 +229,7 @@ const AiDipsTable = ({ rows, showStreakColumns, insiderBySymbol, pendingInsider 
                                     </p>
                                     <p className="mt-2 text-[11px] text-gray-600">
                                         {t('insider.insightAt', {
-                                            time: new Date(info.insight.updatedAt).toLocaleString(locale, {
-                                                month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
-                                            }),
+                                            time: formatClock(info.insight.updatedAt, locale),
                                         })}
                                     </p>
                                 </>

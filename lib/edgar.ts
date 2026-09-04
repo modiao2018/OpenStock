@@ -30,6 +30,39 @@ export function edgarHeaders(contact: string = edgarContact()): Record<string, s
     };
 }
 
+/**
+ * data.sec.gov's `acceptanceDateTime` looks like ISO-UTC ("2026-09-04T12:11:08.000Z")
+ * but the wall-clock is US/Eastern — the atom feed shows the same filing as
+ * "12:11:08-04:00". Parsing it as UTC puts every filing 4–5 h in the past, which
+ * made the EDGAR channel look 245 min slow when it was really ~1 min. Convert the
+ * Eastern wall-clock to a real UTC instant (DST-aware).
+ */
+export function secTimestampToIso(raw: string | null | undefined): string | null {
+    if (!raw) return null;
+    const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+    if (!m) {
+        const t = Date.parse(raw);
+        return Number.isNaN(t) ? null : new Date(t).toISOString();
+    }
+    const wall = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+    // Two passes: the offset at (wall − offset) is the true one except at the DST edge
+    let guess = wall - easternOffsetMs(wall);
+    guess = wall - easternOffsetMs(guess);
+    return new Date(guess).toISOString();
+}
+
+const EASTERN_FMT = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York', hourCycle: 'h23',
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
+});
+
+/** UTC offset of US/Eastern at the given instant, as ms (EDT = -4h → -14400000). */
+function easternOffsetMs(instantMs: number): number {
+    const p = Object.fromEntries(EASTERN_FMT.formatToParts(new Date(instantMs)).map((x) => [x.type, x.value]));
+    const asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+    return asUtc - Math.floor(instantMs / 1000) * 1000;
+}
+
 export function normalizeTicker(symbol: string): string {
     return symbol.trim().toUpperCase().replace(/\./g, '-');
 }

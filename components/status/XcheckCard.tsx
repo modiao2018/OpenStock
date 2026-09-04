@@ -1,12 +1,10 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { GitCompareArrows, TriangleAlert } from 'lucide-react';
 import type { XcheckStatus } from '@/lib/actions/sources.actions';
+import { formatClock } from '@/lib/format-time';
 
 function formatTime(iso: string | undefined, locale: string): string {
-    if (!iso) return '—';
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return iso;
-    return d.toLocaleString(locale, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    return iso ? formatClock(iso, locale) : '—';
 }
 
 export default async function XcheckCard({ status }: { status: XcheckStatus }) {

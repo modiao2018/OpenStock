@@ -1,6 +1,6 @@
 import { log, logError } from '../config';
 import { fetchWithRetry } from '../http';
-import { listTrialsMissingZh, setTrialTitleZh, sha256, upsertTrial } from '../store';
+import { latestEventRaw, listTrialsMissingZh, setTrialTitleZh, sha256, upsertTrial } from '../store';
 import { translateTrialTitles } from '../analyze';
 import type { MonitorConfig, NewEvent } from '../types';
 
@@ -53,12 +53,14 @@ export async function collectClinicalTrials(config: MonitorConfig): Promise<NewE
         const phases: string[] = proto.designModule?.phases ?? [];
         const hasResults: boolean = Boolean(study.hasResults);
 
-        // 参与变更检测的关键字段——任何一个变化都值得知道
+        const lastUpdatePostDate: string | null = status.lastUpdatePostDateStruct?.date ?? null;
+        // 参与变更检测的关键字段——任何一个变化都值得知道。
+        // lastUpdatePostDate 不参与：申办方改个联系人/站点也会刷新它，
+        // 状态、完成日期、结果一个没变却推"注册信息变更"（MRNA NCT03313778 2026-09-03）
         const watched = {
           overallStatus,
           whyStopped: status.whyStopped ?? null,
           hasResults,
-          lastUpdatePostDate: status.lastUpdatePostDateStruct?.date ?? null,
           primaryCompletionDate: status.primaryCompletionDateStruct?.date ?? null,
           completionDate: status.completionDateStruct?.date ?? null,
           resultsFirstPostDate: status.resultsFirstPostDateStruct?.date ?? null,
@@ -72,9 +74,16 @@ export async function collectClinicalTrials(config: MonitorConfig): Promise<NewE
           phase: phases.join('/') || 'N/A',
           primaryCompletionDate: watched.primaryCompletionDate ?? undefined,
           completionDate: watched.completionDate ?? undefined,
-          lastUpdatePostDate: watched.lastUpdatePostDate ?? undefined,
+          lastUpdatePostDate: lastUpdatePostDate ?? undefined,
           hasResults,
         });
+
+        // 与上次入库的关键字段逐项比较：都没变就不产生事件。
+        // 也顺带兼容老记录（其 raw 多一个 lastUpdatePostDate 字段），避免升级后全量误报
+        const prev = (await latestEventRaw('clinicaltrials', nctId)) as Record<string, unknown> | null;
+        if (prev && (Object.keys(watched) as Array<keyof typeof watched>).every((k) => (prev[k] ?? null) === watched[k])) {
+          continue;
+        }
 
         const urgent = hasResults || BAD_STATUSES.has(overallStatus);
         events.push({
@@ -84,9 +93,9 @@ export async function collectClinicalTrials(config: MonitorConfig): Promise<NewE
           // "建档/更新"语义由时间线上的徽章表达，标题只描述当前状态
           title: `${item.symbol} ${nctId} ${statusZh(overallStatus)}${hasResults ? '（已发布结果）' : ''}`,
           url: `https://clinicaltrials.gov/study/${nctId}`,
-          publishedAt: watched.lastUpdatePostDate ?? undefined,
+          publishedAt: lastUpdatePostDate ?? undefined,
           contentHash: sha256(watched),
-          raw: watched,
+          raw: { ...watched, lastUpdatePostDate },
           severity: urgent ? 'urgent' : 'normal',
         });
       } catch (err) {

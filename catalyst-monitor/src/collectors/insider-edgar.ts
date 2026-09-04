@@ -1,8 +1,9 @@
 import { log, logError } from '../config';
+import { getKv, setKv } from '../store';
 import { fetchWithRetry } from '../http';
 import { edgarHeaders, getCikMap } from './edgar';
 import { parseForm144Xml, parseForm4Xml } from '../form-parse';
-import { SEC_MIN_REQUEST_GAP_MS, filingDocUrl, submissionsUrl } from '../../../lib/edgar';
+import { SEC_MIN_REQUEST_GAP_MS, filingDocUrl, secTimestampToIso, submissionsUrl } from '../../../lib/edgar';
 import { connectToDatabase } from '@/database/mongoose';
 import { InsiderFiling } from '@/database/models/insider.model';
 import {
@@ -13,7 +14,7 @@ import {
   type InsiderAlertItem,
 } from '../insider-alert';
 import { getAiDipPool } from '../../../lib/ai-dips-pool';
-import { decideNotify, isLateFiling, shiftDate, type InsiderTx } from '../../../lib/insider-math';
+import { aggregateSameDayTxs, decideNotify, insiderEdgarSeedKey, isLateFiling, shiftDate, type InsiderTx } from '../../../lib/insider-math';
 import type { MonitorConfig, NewEvent } from '../types';
 
 // 只看最近几天的申报：更早的要么已被 Finnhub 链路覆盖，要么是首访建档
@@ -53,8 +54,13 @@ export async function collectInsiderEdgar(config: MonitorConfig): Promise<NewEve
 
   const pool = await getAiDipPool();
   const cikMap = await getCikMap(config);
-  // 按 symbol 首访建档：新标的的近几天存量申报只入库不推送
+  // 按 symbol 首访建档：新标的的近几天存量申报只入库不推送。
+  // 以 KV 标记为准（库里有记录也算），否则 5 天内没申报的标的永远"未建档"，
+  // 第一份真实申报会被当成存量吞掉
   const seededSymbols = new Set<string>(await InsiderFiling.distinct('symbol'));
+  for (const meta of pool) {
+    if (!seededSymbols.has(meta.symbol) && (await getKv(insiderEdgarSeedKey(meta.symbol)))) seededSymbols.add(meta.symbol);
+  }
   const today = new Date().toISOString().slice(0, 10);
   const cutoff = shiftDate(today, -LOOKBACK_DAYS);
   const opts = { sellMinUsd: config.env.insiderSellMinUsd, clusterDays: CLUSTER_DAYS, clusterMinSellers: CLUSTER_MIN_SELLERS };
@@ -94,7 +100,7 @@ export async function collectInsiderEdgar(config: MonitorConfig): Promise<NewEve
             accessionNumber: accession,
             form: forms[i],
             filingDate,
-            acceptedAt: recent.acceptanceDateTime?.[i] ? new Date(recent.acceptanceDateTime[i]) : null,
+            acceptedAt: (() => { const iso = secTimestampToIso(recent.acceptanceDateTime?.[i]); return iso ? new Date(iso) : null; })(),
             url,
             firstSeen: isSeed,
           });
@@ -118,17 +124,20 @@ export async function collectInsiderEdgar(config: MonitorConfig): Promise<NewEve
             { accessionNumber: accession },
             { $set: { txCodes: [...new Set(parsedTxs.map((t) => t.transactionCode))] } }
           );
-          for (const parsed of parsedTxs) {
-            if (parsed.transactionCode !== 'P' && parsed.transactionCode !== 'S') continue;
-            const tx: InsiderTx = {
+          // 同一人同一天的多笔分单（券商按价位拆成十几行）合并成一笔再判阈值：
+          // ALAB 2026-09-01 一人 24 行合计 $51M，逐行判只报了其中 2 行 $27M
+          const openMarket: InsiderTx[] = parsedTxs
+            .filter((t) => t.transactionCode === 'P' || t.transactionCode === 'S')
+            .map((t) => ({
               symbol: meta.symbol,
-              name: parsed.name,
-              change: parsed.change,
-              transactionPrice: parsed.price,
-              transactionCode: parsed.transactionCode,
-              transactionDate: parsed.transactionDate,
+              name: t.name,
+              change: t.change,
+              transactionPrice: t.price,
+              transactionCode: t.transactionCode as 'P' | 'S',
+              transactionDate: t.transactionDate,
               filingDate,
-            };
+            }));
+          for (const tx of aggregateSameDayTxs(openMarket)) {
             // 迟报（如 9 月才申报 7 月的买入）是旧闻，只入库不提醒
             if (isLateFiling(tx)) {
               log('insider-edgar', `${meta.symbol} 跳过迟报：${tx.name} ${tx.transactionDate} ${tx.transactionCode}（申报 ${filingDate}）`);
@@ -166,6 +175,7 @@ export async function collectInsiderEdgar(config: MonitorConfig): Promise<NewEve
           accessionsBySymbol.set(meta.symbol, [...(accessionsBySymbol.get(meta.symbol) ?? []), accession]);
         }
       }
+      if (!seededSymbols.has(meta.symbol)) await setKv(insiderEdgarSeedKey(meta.symbol), today);
     } catch (err) {
       fetchErrors++;
       logError('insider-edgar', err);

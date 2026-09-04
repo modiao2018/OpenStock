@@ -65,6 +65,13 @@ export async function insertEvent(ev: NewEvent): Promise<StoredEvent | null> {
   }
 }
 
+/** 该实体最近一次入库的 raw（变更检测用：只比较关心的字段，不比哈希） */
+export async function latestEventRaw(source: NewEvent['source'], externalId: string): Promise<unknown | null> {
+  await connectToDatabase();
+  const doc = await CatalystEvent.findOne({ source, externalId }).sort({ fetchedAt: -1 }).select({ raw: 1 }).lean();
+  return doc?.raw ?? null;
+}
+
 export async function markNotified(id: string): Promise<void> {
   await CatalystEvent.updateOne({ _id: id }, { $set: { notified: true } });
 }

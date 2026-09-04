@@ -107,6 +107,25 @@ describe('parseForm144Xml', () => {
         expect(parsed.approxSaleDate).toBe('2026-09-01');
     });
 
+    it('parses Workiva-style namespaced filings (own:/com: prefixes)', () => {
+        // Real shape of NVDA 0001628280-26-060177 / DELL 0001628280-26-060285 — the
+        // un-prefixed parser returned all nulls and both $1B+ notices were dropped
+        const xml = `<?xml version="1.0" encoding="UTF-8"?><own:edgarSubmission xmlns:com="http://www.sec.gov/edgar/common" xmlns:own="http://www.sec.gov/edgar/ownership">
+  <own:headerData><own:submissionType>144</own:submissionType></own:headerData>
+  <own:formData>
+    <own:issuerInfo><own:issuerCik>0001045810</own:issuerCik>
+      <own:nameOfPersonForWhoseAccountTheSecuritiesAreToBeSold>MARK A STEVENS</own:nameOfPersonForWhoseAccountTheSecuritiesAreToBeSold>
+    </own:issuerInfo>
+    <own:securitiesInformation>
+      <own:noOfUnitsSold>6000000</own:noOfUnitsSold>
+      <own:aggregateMarketValue>1087200000</own:aggregateMarketValue>
+      <own:approxSaleDate>09/02/2026</own:approxSaleDate>
+    </own:securitiesInformation>
+  </own:formData>
+</own:edgarSubmission>`;
+        expect(parseForm144Xml(xml)).toEqual({ person: 'MARK A STEVENS', shares: 6_000_000, valueUsd: 1_087_200_000, approxSaleDate: '2026-09-02' });
+    });
+
     it('degrades to nulls on unknown structure', () => {
         const parsed = parseForm144Xml('<edgarSubmission><formData/></edgarSubmission>');
         expect(parsed).toEqual({ person: null, shares: null, valueUsd: null, approxSaleDate: null });

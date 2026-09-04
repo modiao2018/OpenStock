@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { probeSourceAction, type SourceStatusRow } from '@/lib/actions/sources.actions';
 import type { SourceGroup } from '@/lib/sources-registry';
 import type { SourceLevel } from '@/lib/source-stats-math';
+import { formatClock } from '@/lib/format-time';
 
 const GROUP_ORDER: SourceGroup[] = ['quotes', 'filings', 'clinical', 'ai', 'other'];
 
@@ -29,8 +30,7 @@ const LEVEL_TEXT: Record<SourceLevel, string> = {
 };
 
 function formatTime(ms: number | null, locale: string): string {
-    if (!ms) return '—';
-    return new Date(ms).toLocaleString(locale, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    return ms ? formatClock(ms, locale) : '—';
 }
 
 const formatLatency = (v: number | null) => (v === null ? '—' : v >= 1000 ? `${(v / 1000).toFixed(1)}s` : `${Math.round(v)}ms`);

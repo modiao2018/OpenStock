@@ -2,11 +2,12 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { BellOff } from 'lucide-react';
 import type { DeferredItemData } from '@/lib/actions/focus.actions';
+import { formatClock } from '@/lib/format-time';
 
 export default async function DeferredList({ items }: { items: DeferredItemData[] }) {
     const t = await getTranslations('focus.deferred');
     const locale = await getLocale();
-    const fmt = (iso: string) => new Date(iso).toLocaleString(locale, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const fmt = (iso: string) => formatClock(iso, locale);
 
     return (
         <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5">

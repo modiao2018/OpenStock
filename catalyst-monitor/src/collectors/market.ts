@@ -133,6 +133,9 @@ export async function collectMarket(config: MonitorConfig): Promise<NewEvent[]> 
         contentHash: sha256(`${item.symbol}-${bucket}`),
         raw: { ar: current.ret, sigma, zScore, rvol, benchRet, window: bucket },
         severity: 'urgent',
+        // 每次异动的 externalId 都是新的（symbol+5 分钟桶），"首次见到"不等于建档：
+        // 不显式标 false 会被时间线折叠、被关注分和周报忽略
+        archival: false,
       });
     } catch (err) {
       logError(`market:${item.symbol}`, err);

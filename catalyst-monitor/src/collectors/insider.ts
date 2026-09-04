@@ -1,6 +1,6 @@
 import { log, logError } from '../config';
 import { fetchWithRetry } from '../http';
-import { sha256 } from '../store';
+import { getKv, setKv, sha256 } from '../store';
 import { etToday } from '../alpaca-daily';
 import { connectToDatabase } from '@/database/mongoose';
 import { InsiderTrade } from '@/database/models/insider.model';
@@ -15,8 +15,10 @@ import {
 import { getAiDipPool } from '../../../lib/ai-dips-pool';
 import {
   DEFAULT_MAX_FILING_LAG_DAYS,
+  aggregateSameDayTxs,
   decideNotify,
   filterOpenMarketTxs,
+  insiderSeedKey,
   isLateFiling,
   shiftDate,
   txAmountUsd,
@@ -56,16 +58,22 @@ export async function collectInsider(config: MonitorConfig): Promise<NewEvent[]>
   const from = shiftDate(today, -WINDOW_DAYS);
   // 每轮从 DB 读股票池——网页端改动无需重启 daemon
   const pool = await getAiDipPool();
-  // 按 symbol 判断是否已建档：库里没有该股任何记录 = 新加入池子的标的，
-  // 其 90 天存量只入库不推送——扩池时不会把历史申报一次性刷屏
+  // 按 symbol 判断是否已建档：KV 标记（网页端加池时也会打）或库里已有记录。
+  // 新加入池子的标的，其 90 天存量只入库不推送——扩池时不会把历史申报一次性刷屏。
+  // 不能只看"有没有记录"：90 天没有 P/S 的标的永远没记录，第一笔真实交易会被当成存量吞掉
   const seededSymbols = new Set<string>(await InsiderTrade.distinct('symbol'));
+  for (const meta of pool) {
+    if (!seededSymbols.has(meta.symbol) && (await getKv(insiderSeedKey(meta.symbol)))) seededSymbols.add(meta.symbol);
+  }
 
   // 逐 symbol 串行拉取；单只失败不废掉整轮
   const fetched: InsiderTx[] = [];
   let fetchErrors = 0;
+  const visited: string[] = [];
   for (const meta of pool) {
     try {
       fetched.push(...(await fetchSymbolTxs(config.env.finnhubKey, meta.symbol, from, today)));
+      visited.push(meta.symbol);
     } catch (err) {
       fetchErrors++;
       logError('insider', err);
@@ -107,6 +115,11 @@ export async function collectInsider(config: MonitorConfig): Promise<NewEvent[]>
     }
   }
 
+  // 成功拉取过的标的从此视为已建档（哪怕一笔交易都没有）
+  for (const symbol of visited) {
+    if (!seededSymbols.has(symbol)) await setKv(insiderSeedKey(symbol), today);
+  }
+
   if (seedCount > 0) log('insider', `建档 ${seedCount} 笔（新标的存量，不推送）`);
   if (newTxs.length === 0) {
     if (seedCount === 0) log('insider', '无新增内部人交易');
@@ -120,7 +133,11 @@ export async function collectInsider(config: MonitorConfig): Promise<NewEvent[]>
   const triggers = new Map<string, InsiderAlertItem[]>();
   const idsBySymbol = new Map<string, string[]>();
   let lateCount = 0;
-  for (const { id, tx } of newTxs) {
+  // 同一人同一天的分单先合并再判阈值（与 EDGAR 链路一致），入库仍是逐行
+  const groupKey = (tx: InsiderTx) => [tx.symbol, tx.name, tx.transactionDate, tx.transactionCode, tx.filingDate].join('|');
+  const idsByGroup = new Map<string, string[]>();
+  for (const { id, tx } of newTxs) idsByGroup.set(groupKey(tx), [...(idsByGroup.get(groupKey(tx)) ?? []), id]);
+  for (const tx of aggregateSameDayTxs(newTxs.map((n) => n.tx))) {
     if (isLateFiling(tx)) { lateCount++; continue; }
     const recentSells = tx.transactionCode === 'S'
       ? await recentSellsFromDb(tx.symbol, shiftDate(tx.transactionDate, -CLUSTER_DAYS))
@@ -130,7 +147,7 @@ export async function collectInsider(config: MonitorConfig): Promise<NewEvent[]>
     const list = triggers.get(tx.symbol) ?? [];
     list.push({ tx, reason: decision.reason });
     triggers.set(tx.symbol, list);
-    idsBySymbol.set(tx.symbol, [...(idsBySymbol.get(tx.symbol) ?? []), id]);
+    idsBySymbol.set(tx.symbol, [...(idsBySymbol.get(tx.symbol) ?? []), ...(idsByGroup.get(groupKey(tx)) ?? [])]);
   }
 
   if (lateCount > 0) log('insider', `跳过 ${lateCount} 笔迟报（交易日距申报日 > ${DEFAULT_MAX_FILING_LAG_DAYS} 天，仅入库）`);

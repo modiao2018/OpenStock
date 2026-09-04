@@ -12,6 +12,7 @@ import {
 } from '@/lib/actions/insider.actions';
 import { AI_SUB_SECTORS, type AiSubSector } from '@/lib/ai-dips-catalog';
 import AiDipsTable from '@/components/ai-dips/AiDipsTable';
+import { formatTimeOfDay } from '@/lib/format-time';
 
 const STREAK_FILTERS = [0, 3, 5, 7, 10] as const;
 
@@ -203,9 +204,7 @@ const AiDipsBoard = ({ initialData }: AiDipsBoardProps) => {
                 {data.updatedAt > 0 && (
                     <span className="ml-auto text-xs text-gray-600">
                         {t('updatedAt', {
-                            time: new Date(data.updatedAt).toLocaleTimeString(locale, {
-                                hour: '2-digit', minute: '2-digit',
-                            }),
+                            time: formatTimeOfDay(data.updatedAt, locale),
                         })}
                     </span>
                 )}

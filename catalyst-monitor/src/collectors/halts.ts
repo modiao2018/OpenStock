@@ -83,6 +83,8 @@ export async function collectHalts(config: MonitorConfig): Promise<NewEvent[]> {
       contentHash: sha256({ reason, resumption }),
       raw: it,
       severity: 'urgent',
+      // 停牌/新闻条目天然一次性，首次见到就是事件本身，不是建档快照
+      archival: false,
     });
   }
 

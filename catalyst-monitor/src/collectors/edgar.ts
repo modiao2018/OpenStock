@@ -9,6 +9,7 @@ import {
   filingDocUrl,
   padCik,
   parseCikMap,
+  secTimestampToIso,
   submissionsUrl,
   type CompanyTickersPayload,
 } from '../../../lib/edgar';
@@ -110,7 +111,8 @@ export async function collectEdgar(config: MonitorConfig): Promise<NewEvent[]> {
           url: primaryDoc
             ? filingDocUrl(cik, accession, primaryDoc)
             : `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${cik10}&type=${forms[i]}`,
-          publishedAt: recent.acceptanceDateTime?.[i] ?? recent.filingDate[i],
+          // acceptanceDateTime 是美东墙钟时间（带假 Z 后缀），转成真 UTC 再存
+          publishedAt: secTimestampToIso(recent.acceptanceDateTime?.[i]) ?? recent.filingDate[i],
           // 申报是不可变的，哈希固定 → 每份 accession 只产生一次事件
           contentHash: sha256(accession),
           raw: { form: forms[i], accession, filingDate: recent.filingDate[i], items },

@@ -3,7 +3,8 @@ import { log, logError } from '../config';
 import { fetchWithRetry } from '../http';
 import { sha256 } from '../store';
 import { rssSourceId } from '@/lib/sources-registry';
-import type { MonitorConfig, NewEvent, WatchItem } from '../types';
+import { matchWatchItem } from '../rss-match';
+import type { MonitorConfig, NewEvent } from '../types';
 
 function toArray<T>(v: T | T[] | undefined): T[] {
   if (v === undefined) return [];
@@ -16,22 +17,6 @@ function textOf(v: unknown): string {
   return String(v);
 }
 
-/** 命中第一个匹配的 watchlist 条目：公司名/关键词做子串匹配，代码做全词匹配 */
-function matchWatchItem(text: string, watchlist: WatchItem[]): WatchItem | null {
-  const lower = text.toLowerCase();
-  for (const item of watchlist) {
-    const needles = [item.company, ...item.keywords].map((k) => k.toLowerCase());
-    if (needles.some((n) => n && lower.includes(n))) return item;
-    // 代码单独用词边界匹配，避免短 ticker（如 "A"）误命中
-    if (new RegExp(`\\b${item.symbol}\\b`).test(text.toUpperCase())) return item;
-  }
-  return null;
-}
-
-/**
- * 通用新闻 RSS 采集：拉取配置的 feed，仅保留命中 watchlist 关键词的条目。
- * 这是"新闻 wire 早于公司 IR 页面"问题的第一道补丁。
- */
 export async function collectRss(config: MonitorConfig): Promise<NewEvent[]> {
   const events: NewEvent[] = [];
   const parser = new XMLParser({ ignoreAttributes: true, removeNSPrefix: true });
@@ -76,6 +61,8 @@ export async function collectRss(config: MonitorConfig): Promise<NewEvent[]> {
           contentHash: sha256({ title, description }),
           raw: { feed: feed.name, title, description, link },
           severity: 'normal',
+          // 停牌/新闻条目天然一次性，首次见到就是事件本身，不是建档快照
+          archival: false,
         });
       }
     } catch (err) {

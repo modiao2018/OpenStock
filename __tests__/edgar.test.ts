@@ -9,6 +9,7 @@ import {
     normalizeTicker,
     parseCikMap,
     parseForm4Xml,
+    secTimestampToIso,
     submissionsUrl,
     summarizeInsiderActivity,
     yoyGrowth,
@@ -102,6 +103,20 @@ const FORM4_XML = `<?xml version="1.0"?>
         </derivativeTransaction>
     </derivativeTable>
 </ownershipDocument>`;
+
+describe('secTimestampToIso', () => {
+    it('treats the fake-Z acceptanceDateTime as US/Eastern wall-clock', () => {
+        // Atom feed shows this filing as 2026-09-04T12:11:08-04:00
+        expect(secTimestampToIso('2026-09-04T12:11:08.000Z')).toBe('2026-09-04T16:11:08.000Z');
+        // Winter: EST is -5h
+        expect(secTimestampToIso('2026-01-15T09:00:00.000Z')).toBe('2026-01-15T14:00:00.000Z');
+    });
+    it('passes through nulls and unparseable input', () => {
+        expect(secTimestampToIso(null)).toBeNull();
+        expect(secTimestampToIso('')).toBeNull();
+        expect(secTimestampToIso('nonsense')).toBeNull();
+    });
+});
 
 describe('parseForm4Xml', () => {
     it('extracts owner, role and every transaction while skipping holdings', () => {

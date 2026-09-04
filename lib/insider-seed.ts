@@ -12,6 +12,7 @@ import { timed } from '@/lib/source-calls';
 import { finnhubGate, retryAfterMs } from '@/lib/finnhub-gate';
 import {
     filterOpenMarketTxs,
+    insiderSeedKey,
     shiftDate,
     txAmountUsd,
     txExternalKey,
@@ -26,8 +27,8 @@ const FINNHUB_URL = 'https://finnhub.io/api/v1/stock/insider-transactions';
 const sha256 = (input: unknown) => createHash('sha256').update(JSON.stringify(input)).digest('hex');
 
 // KV marker so the UI can tell "seeded, genuinely no trades" (ETFs etc.)
-// apart from "collector hasn't visited yet"
-export const seedMarkerKey = (symbol: string) => `insider_symbol_seeded:${symbol}`;
+// apart from "collector hasn't visited yet"; the daemon honours the same key
+export const seedMarkerKey = insiderSeedKey;
 
 export async function seedInsiderForSymbols(symbols: string[]): Promise<void> {
     const key = process.env.NEXT_PUBLIC_FINNHUB_API_KEY;
