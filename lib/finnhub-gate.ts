@@ -88,6 +88,12 @@ export class FinnhubGate {
         const cutoff = this.now() - this.opts.windowMs;
         return this.starts.filter((t) => t > cutoff).length;
     }
+
+    /** Calls that could start right now without queueing; 0 during a cooldown. */
+    get freeSlots(): number {
+        if (this.now() < this.cooldownUntil) return 0;
+        return Math.max(0, this.opts.limit - this.inWindow);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -98,6 +104,12 @@ type MemoEntry = { value: unknown; expiresAt: number };
 const memo = new Map<string, MemoEntry>();
 const inflight = new Map<string, Promise<unknown>>();
 const MEMO_MAX = 2000;
+
+/** True when a call for this key would be served from the memo without touching the gate. */
+export function isMemoized(key: string): boolean {
+    const hit = memo.get(key);
+    return hit !== undefined && hit.expiresAt > Date.now();
+}
 
 export async function throughFinnhubGate<T>(
     gate: FinnhubGate,

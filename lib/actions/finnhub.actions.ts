@@ -7,6 +7,7 @@ import { cache } from 'react';
 import { readSnapshot, snapshotKey, writeSnapshot } from '@/lib/snapshot';
 import { recordSourceCall } from '@/lib/source-calls';
 import { finnhubGate, retryAfterMs, throughFinnhubGate } from '@/lib/finnhub-gate';
+import { resolveProfiles } from '@/lib/company-profiles';
 import { inferSourceByHost } from '@/lib/sources-registry';
 
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
@@ -96,12 +97,14 @@ export async function getQuote(symbol: string) {
     }
 }
 
-export async function getCompanyProfile(symbol: string) {
+// Profiles are persisted in Mongo (lib/company-profiles.ts) and refreshed at
+// most daily, so cold starts only spend Finnhub budget on quotes
+export async function getCompanyProfile(symbol: string): Promise<FinnhubCompanyProfile | null> {
     try {
         const token = NEXT_PUBLIC_FINNHUB_API_KEY;
         const url = `${FINNHUB_BASE_URL}/stock/profile2?symbol=${encodeURIComponent(symbol)}&token=${token}`;
-        // Cache profile for 24 hours
-        return await fetchJSON<FinnhubCompanyProfile>(url, 86400);
+        const profiles = await resolveProfiles([symbol], () => fetchJSON<FinnhubCompanyProfile>(url, 86400));
+        return profiles.get(symbol) ?? null;
     } catch (e) {
         console.error('Error fetching profile for', symbol, e);
         return null;

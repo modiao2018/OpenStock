@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FinnhubGate, FinnhubRateLimitError, retryAfterMs, throughFinnhubGate } from '@/lib/finnhub-gate';
+import { FinnhubGate, FinnhubRateLimitError, isMemoized, retryAfterMs, throughFinnhubGate } from '@/lib/finnhub-gate';
 
 function makeGate(over: Partial<ConstructorParameters<typeof FinnhubGate>[0]> = {}) {
     let now = 1_000_000;
@@ -44,6 +44,17 @@ describe('FinnhubGate', () => {
         await expect(gate.acquire()).resolves.toBeUndefined();
     });
 
+    it('reports free slots: limit minus calls in the window, none during a cooldown', async () => {
+        const { gate, advance } = makeGate({ limit: 3, windowMs: 1000 });
+        expect(gate.freeSlots).toBe(3);
+        await gate.acquire(); await gate.acquire();
+        expect(gate.freeSlots).toBe(1);
+        gate.reportRateLimited();
+        expect(gate.freeSlots).toBe(0);
+        advance(2001);
+        expect(gate.freeSlots).toBe(3);
+    });
+
     it('honours an explicit Retry-After over the default cooldown', () => {
         const { gate, advance } = makeGate();
         gate.reportRateLimited(10_000);
@@ -66,6 +77,17 @@ describe('throughFinnhubGate', () => {
         expect(calls).toBe(1);
         await throughFinnhubGate(gate, key, 1000, upstream);
         expect(calls).toBe(1);
+    });
+
+    it('exposes memo hits via isMemoized so callers can budget upstream calls', async () => {
+        const { gate } = makeGate({ limit: 100 });
+        const key = `memo-check-${Math.random()}`;
+        expect(isMemoized(key)).toBe(false);
+        await throughFinnhubGate(gate, key, 1000, async () => ({ c: 1 }));
+        expect(isMemoized(key)).toBe(true);
+        const noTtl = `memo-nottl-${Math.random()}`;
+        await throughFinnhubGate(gate, noTtl, 0, async () => ({ c: 1 }));
+        expect(isMemoized(noTtl)).toBe(false);
     });
 
     it('does not memoize failures, so the next caller retries', async () => {
