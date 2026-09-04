@@ -13,7 +13,7 @@ import {
   type InsiderAlertItem,
 } from '../insider-alert';
 import { getAiDipPool } from '../../../lib/ai-dips-pool';
-import { decideNotify, shiftDate, type InsiderTx } from '../../../lib/insider-math';
+import { decideNotify, isLateFiling, shiftDate, type InsiderTx } from '../../../lib/insider-math';
 import type { MonitorConfig, NewEvent } from '../types';
 
 // 只看最近几天的申报：更早的要么已被 Finnhub 链路覆盖，要么是首访建档
@@ -129,6 +129,11 @@ export async function collectInsiderEdgar(config: MonitorConfig): Promise<NewEve
               transactionDate: parsed.transactionDate,
               filingDate,
             };
+            // 迟报（如 9 月才申报 7 月的买入）是旧闻，只入库不提醒
+            if (isLateFiling(tx)) {
+              log('insider-edgar', `${meta.symbol} 跳过迟报：${tx.name} ${tx.transactionDate} ${tx.transactionCode}（申报 ${filingDate}）`);
+              continue;
+            }
             const recentSells = tx.transactionCode === 'S'
               ? await recentSellsFromDb(meta.symbol, shiftDate(tx.transactionDate, -CLUSTER_DAYS))
               : [];

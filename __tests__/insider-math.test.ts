@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
     decideNotify,
+    filingLagDays,
     filterOpenMarketTxs,
     formatUsdCompact,
+    isLateFiling,
     shiftDate,
     summarizeInsiderTxs,
     txAmountUsd,
@@ -123,6 +125,17 @@ describe('decideNotify', () => {
         expect(decideNotify(tx(), [], OPTS)).toEqual({ notify: true, reason: 'buy' });
     });
 
+    it('stays quiet on a late filing, buy or sell', () => {
+        // TSM 2026-09-04: SVP filed two July-2 purchases two months late
+        const lateBuy = tx({ transactionDate: '2026-07-02', filingDate: '2026-09-04' });
+        expect(decideNotify(lateBuy, [], OPTS)).toEqual({ notify: false, reason: null });
+        const lateSell = tx({ transactionCode: 'S', change: -100_000, transactionPrice: 100, transactionDate: '2026-07-02', filingDate: '2026-09-04' });
+        expect(decideNotify(lateSell, [], OPTS).notify).toBe(false);
+        // Exactly at the limit still counts as timely
+        expect(decideNotify(tx({ transactionDate: '2026-08-12', filingDate: '2026-08-22' }), [], OPTS).notify).toBe(true);
+        expect(decideNotify(tx({ transactionDate: '2026-08-11', filingDate: '2026-08-22' }), [], { ...OPTS, maxFilingLagDays: 30 }).notify).toBe(true);
+    });
+
     it('alerts on a sell strictly above the threshold, not below', () => {
         const small = tx({ transactionCode: 'S', change: -9_900, transactionPrice: 100 });   // $990K
         const large = tx({ transactionCode: 'S', change: -10_100, transactionPrice: 100 }); // $1.01M
@@ -169,6 +182,20 @@ describe('decideNotify', () => {
             tx({ transactionCode: 'S', change: -4000, transactionPrice: 100, name: 'C', transactionDate: '2026-08-25' }), // after newTx
         ];
         expect(decideNotify(newSell, others, OPTS).notify).toBe(false);
+    });
+});
+
+describe('filing lag', () => {
+    it('measures calendar days from trade to filing', () => {
+        expect(filingLagDays(tx())).toBe(2);
+        expect(filingLagDays({ transactionDate: '2026-07-02', filingDate: '2026-09-04' })).toBe(64);
+        // Form 144 intents can carry a future sale date
+        expect(filingLagDays({ transactionDate: '2026-09-10', filingDate: '2026-09-04' })).toBe(-6);
+    });
+    it('flags beyond the default 10-day grace, honours an override', () => {
+        expect(isLateFiling(tx())).toBe(false);
+        expect(isLateFiling({ transactionDate: '2026-08-01', filingDate: '2026-08-12' })).toBe(true);
+        expect(isLateFiling({ transactionDate: '2026-08-01', filingDate: '2026-08-12' }, 11)).toBe(false);
     });
 });
 

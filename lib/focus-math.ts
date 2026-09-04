@@ -30,14 +30,66 @@ export interface FocusDip {
 }
 
 export interface FocusInsider {
+    /** Meaningful open-market buys (≥ FOCUS_MIN_BUY_USD) inside the trailing FOCUS_BUY_WINDOW_DAYS */
     buyCount: number;
     buyUsd: number;
+    /** Sell dollars over the full 90-day window */
     sellUsd: number;
     distinctBuyers: number;
-    /** YYYY-MM-DD of the latest open-market buy, null if none in window */
+    /** YYYY-MM-DD of the latest counted buy, null if none in window */
     lastBuyDate: string | null;
     /** ≥3 distinct sellers inside the trailing 7 days */
     clusterSell: boolean;
+}
+
+/** One stored insider trade, the subset aggregateFocusInsider needs */
+export interface FocusInsiderTrade {
+    name: string;
+    transactionCode: 'P' | 'S';
+    /** YYYY-MM-DD */
+    transactionDate: string;
+    amountUsd: number | null;
+}
+
+// Buys only confirm when they are recent and real money. TSM showed why: 49
+// "buys" in 90 days, 30 of them the same day at <$5K each (a scripted
+// director subscription), the freshest a month old — that is not conviction
+// worth +25 points today.
+export const FOCUS_BUY_WINDOW_DAYS = 30;
+export const FOCUS_MIN_BUY_USD = 10_000;
+export const FOCUS_CLUSTER_DAYS = 7;
+export const FOCUS_CLUSTER_MIN_SELLERS = 3;
+
+export function aggregateFocusInsider(trades: FocusInsiderTrade[], today: string): FocusInsider | null {
+    if (trades.length === 0) return null;
+    const buyFrom = shiftDays(today, -FOCUS_BUY_WINDOW_DAYS);
+    const clusterFrom = shiftDays(today, -FOCUS_CLUSTER_DAYS);
+    const buyers = new Set<string>();
+    const recentSellers = new Set<string>();
+    const out: FocusInsider = { buyCount: 0, buyUsd: 0, sellUsd: 0, distinctBuyers: 0, lastBuyDate: null, clusterSell: false };
+    for (const t of trades) {
+        if (t.transactionDate > today) continue;
+        if (t.transactionCode === 'P') {
+            if (t.transactionDate < buyFrom) continue;
+            if ((t.amountUsd ?? 0) < FOCUS_MIN_BUY_USD) continue;
+            out.buyCount++;
+            out.buyUsd += t.amountUsd ?? 0;
+            buyers.add(t.name);
+            if (!out.lastBuyDate || t.transactionDate > out.lastBuyDate) out.lastBuyDate = t.transactionDate;
+        } else {
+            out.sellUsd += t.amountUsd ?? 0;
+            if (t.transactionDate >= clusterFrom) recentSellers.add(t.name);
+        }
+    }
+    out.distinctBuyers = buyers.size;
+    out.clusterSell = recentSellers.size >= FOCUS_CLUSTER_MIN_SELLERS;
+    return out;
+}
+
+function shiftDays(date: string, days: number): string {
+    const d = new Date(`${date}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + days);
+    return d.toISOString().slice(0, 10);
 }
 
 export interface FocusSignal {
@@ -114,7 +166,8 @@ export function scoreFocus(input: FocusInput): FocusScore {
     const ins = input.insider;
     if (ins) {
         if (ins.buyCount > 0) {
-            add('insiderBuy', 'confirm', 15, 'bull', `${ins.buyCount}`);
+            // Show when the money went in, so a stale-but-counted buy is obvious at a glance
+            add('insiderBuy', 'confirm', 15, 'bull', `${ins.buyCount}${ins.lastBuyDate ? ` ${ins.lastBuyDate.slice(5)}` : ''}`);
             if (ins.distinctBuyers >= 2) add('insiderBuyers', 'confirm', 10, 'bull', `${ins.distinctBuyers}`);
             if (ins.lastBuyDate && daysBetween(ins.lastBuyDate, input.today) <= 14) {
                 add('insiderBuyRecent', 'confirm', 10, 'bull', ins.lastBuyDate);

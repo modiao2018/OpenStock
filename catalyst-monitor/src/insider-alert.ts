@@ -213,11 +213,14 @@ export async function notifyInsiderTriggers(
       : (items.find((i) => i.reason !== 'intentSell') ?? items[0]).reason;
     const first = items[0];
     const firstAmount = txAmountUsd(first.tx);
+    // 标题带交易日：申报日≠交易日（Form 4 可迟报），让读者一眼看出钱是哪天进的
+    const latestTxDate = items.reduce((m, i) => (i.tx.transactionDate > m ? i.tx.transactionDate : m), first.tx.transactionDate);
     const title =
       `${REASON_ZH[reason]}${action ? `【${action}】` : ''}｜${symbol} ` +
       (items.length === 1
         ? `${first.tx.transactionCode === 'P' ? '增持' : '减持'}${firstAmount !== null ? ' ' + formatUsdCompact(firstAmount) : ''}`
-        : `${items.length} 笔`);
+        : `${items.length} 笔`) +
+      `（${first.intent ? '拟售' : '交易'} ${latestTxDate.slice(5)}）`;
     const body =
       `${fmtDipLine(symbol, stats)}\n` +
       items.map((i) => fmtTx(i.tx, i.intent)).join('\n') + '\n' +

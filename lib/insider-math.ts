@@ -123,24 +123,44 @@ export interface NotifyDecision {
     reason: NotifyReason | null;
 }
 
+// Form 4 is due within 2 business days of the trade. A filing that arrives
+// far later (TSM's SVP filed a July buy on Sept 4) is old news: the price has
+// long since digested it, so it must not fire a "buy now" alert.
+export const DEFAULT_MAX_FILING_LAG_DAYS = 10;
+
+// Calendar days between the trade and its filing (negative for Form 144
+// intents whose sale date lies in the future).
+export function filingLagDays(tx: Pick<InsiderTx, 'transactionDate' | 'filingDate'>): number {
+    return Math.round((Date.parse(`${tx.filingDate}T00:00:00Z`) - Date.parse(`${tx.transactionDate}T00:00:00Z`)) / 86_400_000);
+}
+
+export function isLateFiling(tx: Pick<InsiderTx, 'transactionDate' | 'filingDate'>, maxLagDays = DEFAULT_MAX_FILING_LAG_DAYS): boolean {
+    return filingLagDays(tx) > maxLagDays;
+}
+
 export interface NotifyOpts {
     // A single sell above this dollar value alerts on its own; a cluster of
     // sellers also needs a combined value above it
     sellMinUsd: number;
+    // Filings lagging the trade by more than this many days are stale and
+    // never alert (defaults to DEFAULT_MAX_FILING_LAG_DAYS)
+    maxFilingLagDays?: number;
     // Cluster window (days) and how many distinct sellers inside it count as
     // coordinated distribution
     clusterDays: number;
     clusterMinSellers: number;
 }
 
-// Buys always alert — open-market insider purchases are rare, conviction
-// signals. Sells only alert when large (routine 10b5-1 dribble stays quiet)
+// Buys always alert (unless filed late) — open-market insider purchases are
+// rare, conviction signals. Sells only alert when large (routine 10b5-1 dribble stays quiet)
 // or when several distinct insiders together unload more than the threshold
 // inside the cluster window — headcount alone is noise: live 90-day data
 // shows big caps routinely have 5+ insiders on selling plans every month.
 // `recentSells` should contain the symbol's known S transactions around
 // newTx.transactionDate, including newTx itself or not — it's deduped by name.
 export function decideNotify(newTx: InsiderTx, recentSells: InsiderTx[], opts: NotifyOpts): NotifyDecision {
+    // Late filings are history, not news — whichever direction
+    if (isLateFiling(newTx, opts.maxFilingLagDays)) return { notify: false, reason: null };
     if (newTx.transactionCode === 'P') return { notify: true, reason: 'buy' };
 
     const amount = txAmountUsd(newTx);

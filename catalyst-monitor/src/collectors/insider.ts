@@ -14,8 +14,10 @@ import {
 } from '../insider-alert';
 import { getAiDipPool } from '../../../lib/ai-dips-pool';
 import {
+  DEFAULT_MAX_FILING_LAG_DAYS,
   decideNotify,
   filterOpenMarketTxs,
+  isLateFiling,
   shiftDate,
   txAmountUsd,
   txExternalKey,
@@ -117,7 +119,9 @@ export async function collectInsider(config: MonitorConfig): Promise<NewEvent[]>
   const opts = { sellMinUsd: config.env.insiderSellMinUsd, clusterDays: CLUSTER_DAYS, clusterMinSellers: CLUSTER_MIN_SELLERS };
   const triggers = new Map<string, InsiderAlertItem[]>();
   const idsBySymbol = new Map<string, string[]>();
+  let lateCount = 0;
   for (const { id, tx } of newTxs) {
+    if (isLateFiling(tx)) { lateCount++; continue; }
     const recentSells = tx.transactionCode === 'S'
       ? await recentSellsFromDb(tx.symbol, shiftDate(tx.transactionDate, -CLUSTER_DAYS))
       : [];
@@ -129,6 +133,7 @@ export async function collectInsider(config: MonitorConfig): Promise<NewEvent[]>
     idsBySymbol.set(tx.symbol, [...(idsBySymbol.get(tx.symbol) ?? []), id]);
   }
 
+  if (lateCount > 0) log('insider', `跳过 ${lateCount} 笔迟报（交易日距申报日 > ${DEFAULT_MAX_FILING_LAG_DAYS} 天，仅入库）`);
   const delivered = await notifyInsiderTriggers('insider', config, pool, triggers);
   for (const symbol of delivered) {
     const ids = idsBySymbol.get(symbol) ?? [];

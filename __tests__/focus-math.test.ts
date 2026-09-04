@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compareFocus, excessDeclineOverStreak, scoreFocus, type FocusInput, type FocusScore } from '@/lib/focus-math';
+import { aggregateFocusInsider, compareFocus, excessDeclineOverStreak, scoreFocus, type FocusInput, type FocusInsiderTrade, type FocusScore } from '@/lib/focus-math';
 
 const NOW = Date.parse('2026-09-03T18:00:00Z');
 const base = (over: Partial<FocusInput> = {}): FocusInput => ({
@@ -42,6 +42,7 @@ describe('scoreFocus', () => {
             insider: { buyCount: 2, buyUsd: 2e6, sellUsd: 0, distinctBuyers: 2, lastBuyDate: '2026-08-28', clusterSell: false },
         }));
         expect(ids(buy)).toEqual(['insiderBuy', 'insiderBuyers', 'insiderBuyRecent']);
+        expect(buy.factors[0].detail).toBe('2 08-28');
         expect(buy.bullPoints).toBe(35);
 
         const sell = scoreFocus(base({
@@ -113,6 +114,54 @@ describe('scoreFocus', () => {
         }));
         // bull 15 (drawdownLight 10 + streak5 5) vs bear 12
         expect(r.stance).toBe('mixed');
+    });
+});
+
+describe('aggregateFocusInsider', () => {
+    const trade = (over: Partial<FocusInsiderTrade> = {}): FocusInsiderTrade => ({
+        name: 'A', transactionCode: 'P', transactionDate: '2026-08-25', amountUsd: 50_000, ...over,
+    });
+
+    it('returns null without trades', () => {
+        expect(aggregateFocusInsider([], '2026-09-03')).toBeNull();
+    });
+
+    it('ignores token buys and buys older than 30 days — the TSM case', () => {
+        const scripted = Array.from({ length: 30 }, (_, i) =>
+            trade({ name: `Exec ${i}`, transactionDate: '2026-07-07', amountUsd: 3_800 }));
+        const staleReal = trade({ name: 'Tien', transactionDate: '2026-08-03', amountUsd: 73_060 });
+        const r = aggregateFocusInsider([...scripted, staleReal], '2026-09-03')!;
+        expect(r.buyCount).toBe(0);
+        expect(r.distinctBuyers).toBe(0);
+        expect(r.lastBuyDate).toBeNull();
+        expect(ids(scoreFocus(base({ insider: r })))).toEqual([]);
+    });
+
+    it('counts recent meaningful buys and keeps sells on the 90-day window', () => {
+        const r = aggregateFocusInsider([
+            trade({ name: 'A', transactionDate: '2026-08-25', amountUsd: 50_000 }),
+            trade({ name: 'A', transactionDate: '2026-08-26', amountUsd: 9_999 }),      // token, skipped
+            trade({ name: 'B', transactionDate: '2026-08-04', amountUsd: 500_000 }),    // 30 days back, counted
+            trade({ name: 'C', transactionDate: '2026-08-03', amountUsd: 500_000 }),    // 31 days back, skipped
+            trade({ name: 'D', transactionCode: 'S', transactionDate: '2026-06-10', amountUsd: 20_000_000 }),
+            trade({ name: 'E', transactionCode: 'S', transactionDate: '2026-09-04', amountUsd: 1 }), // future, skipped
+        ], '2026-09-03')!;
+        expect(r).toEqual({ buyCount: 2, buyUsd: 550_000, sellUsd: 20_000_000, distinctBuyers: 2, lastBuyDate: '2026-08-25', clusterSell: false });
+    });
+
+    it('detects a seller cluster inside 7 days', () => {
+        const r = aggregateFocusInsider([
+            trade({ name: 'A', transactionCode: 'S', transactionDate: '2026-08-28', amountUsd: 1 }),
+            trade({ name: 'B', transactionCode: 'S', transactionDate: '2026-08-30', amountUsd: 1 }),
+            trade({ name: 'C', transactionCode: 'S', transactionDate: '2026-09-02', amountUsd: 1 }),
+            trade({ name: 'C', transactionCode: 'S', transactionDate: '2026-09-03', amountUsd: 1 }),
+        ], '2026-09-03')!;
+        expect(r.clusterSell).toBe(true);
+        expect(aggregateFocusInsider([
+            trade({ name: 'A', transactionCode: 'S', transactionDate: '2026-08-26', amountUsd: 1 }), // 8 days back
+            trade({ name: 'B', transactionCode: 'S', transactionDate: '2026-08-30', amountUsd: 1 }),
+            trade({ name: 'C', transactionCode: 'S', transactionDate: '2026-09-02', amountUsd: 1 }),
+        ], '2026-09-03')!.clusterSell).toBe(false);
     });
 });
 

@@ -12,19 +12,20 @@ import { getAiDipPool } from '../../../lib/ai-dips-pool';
 import { completedBars, computeDipStats, type DailyBar } from '../../../lib/ai-dips-math';
 import { shiftDate } from '../../../lib/insider-math';
 import {
+  aggregateFocusInsider,
   compareFocus,
   excessDeclineOverStreak,
   scoreFocus,
   type FocusInsider,
+  type FocusInsiderTrade,
   type FocusScore,
 } from '../../../lib/focus-math';
 import { AI_BENCHMARK } from '../signals';
 import type { MonitorConfig, NewEvent } from '../types';
 
 const BATCH = 50;
+// 卖出口径看 90 天；买入只认近 30 天且 ≥$10K（见 focus-math 的 aggregateFocusInsider）
 const INSIDER_WINDOW_DAYS = 90;
-const CLUSTER_DAYS = 7;
-const CLUSTER_MIN_SELLERS = 3;
 // 进入关注队列提醒的回落带：跌到阈值以下 10 分才复位，避免在阈值附近反复提醒
 const HYSTERESIS = 10;
 
@@ -63,30 +64,17 @@ async function loadBars(config: MonitorConfig, symbols: string[]): Promise<Recor
 
 async function loadInsider(symbols: string[], today: string): Promise<Map<string, FocusInsider>> {
   const from = shiftDate(today, -INSIDER_WINDOW_DAYS);
-  const clusterFrom = shiftDate(today, -CLUSTER_DAYS);
   const docs = await InsiderTrade.find({ symbol: { $in: symbols }, transactionDate: { $gte: from, $lte: today } }).lean();
-  const acc = new Map<string, FocusInsider & { buyers: Set<string>; recentSellers: Set<string> }>();
+  const bySymbol = new Map<string, FocusInsiderTrade[]>();
   for (const d of docs) {
-    const a =
-      acc.get(d.symbol) ??
-      acc.set(d.symbol, { buyCount: 0, buyUsd: 0, sellUsd: 0, distinctBuyers: 0, lastBuyDate: null, clusterSell: false, buyers: new Set(), recentSellers: new Set() }).get(d.symbol)!;
-    if (d.transactionCode === 'P') {
-      a.buyCount++;
-      a.buyUsd += d.amountUsd ?? 0;
-      a.buyers.add(d.name);
-      if (!a.lastBuyDate || d.transactionDate > a.lastBuyDate) a.lastBuyDate = d.transactionDate;
-    } else {
-      a.sellUsd += d.amountUsd ?? 0;
-      if (d.transactionDate >= clusterFrom) a.recentSellers.add(d.name);
-    }
+    (bySymbol.get(d.symbol) ?? bySymbol.set(d.symbol, []).get(d.symbol)!).push({
+      name: d.name, transactionCode: d.transactionCode, transactionDate: d.transactionDate, amountUsd: d.amountUsd,
+    });
   }
   const out = new Map<string, FocusInsider>();
-  for (const [symbol, a] of acc) {
-    out.set(symbol, {
-      buyCount: a.buyCount, buyUsd: a.buyUsd, sellUsd: a.sellUsd,
-      distinctBuyers: a.buyers.size, lastBuyDate: a.lastBuyDate,
-      clusterSell: a.recentSellers.size >= CLUSTER_MIN_SELLERS,
-    });
+  for (const [symbol, trades] of bySymbol) {
+    const agg = aggregateFocusInsider(trades, today);
+    if (agg) out.set(symbol, agg);
   }
   return out;
 }

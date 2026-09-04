@@ -918,7 +918,7 @@
       "streak7": "Streak ≥7d",
       "streak5": "Streak ≥5d",
       "underperformsBench": "Lagging benchmark",
-      "insiderBuy": "Insider buy",
+      "insiderBuy": "Insider buy (30d)",
       "insiderBuyers": "Multiple buyers",
       "insiderBuyRecent": "Recent buy",
       "insiderClusterSell": "Cluster selling",
