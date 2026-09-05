@@ -5,8 +5,8 @@ import { inngest } from "@/lib/inngest/client";
 import { headers } from "next/headers";
 import { APIError } from "better-auth/api";
 import { consumeCaptchaToken } from "@/lib/captcha/server";
-import { isAdminEmail, parseAdminEmails } from "@/lib/admin";
-import { notifyAdminsOfPendingSignUp } from "@/lib/nodemailer/admin-notify";
+import { isAdminEmail } from "@/lib/admin";
+import { notifyReviewersOfPendingSignUp } from "@/lib/admin-notify";
 import { connectToDatabase } from "@/database/mongoose";
 import {
     checkThrottle,
@@ -78,12 +78,7 @@ export const signUpWithEmail = async (
                 void sendWelcomeEvent({ email, name: fullName, ...profile });
             } else {
                 const base = process.env.BETTER_AUTH_URL || 'http://localhost:3000';
-                void notifyAdminsOfPendingSignUp({
-                    adminEmails: parseAdminEmails(process.env.ADMIN_EMAILS),
-                    name: fullName,
-                    email,
-                    reviewUrl: `${base}/admin/users`,
-                });
+                void notifyReviewersOfPendingSignUp({ name: fullName, email, reviewUrl: `${base}/admin/users` });
             }
         }
 
