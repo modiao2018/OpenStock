@@ -48,3 +48,26 @@ docker exec mongodb mongodump --uri "$LOCAL_URI" --archive --gzip \
 
 after="$(remote_mongo "mongosh --quiet --eval 'db.getSiblingDB(\"openstock\").getCollectionNames().length'" )"
 ok "迁移完成：服务器 openstock 库现有 $after 个集合"
+
+# ---------- 清理测试账号 ----------
+# 本地跑 E2E / 手工测试会留下 *@example.com 之类的账号，整库 dump 会把它们一起带上生产。
+# restore 后在服务器端删掉这些账号及其关联数据，并列出最终迁入的用户供确认。
+info "清理测试账号（*@example.com）..."
+ssh "$DEPLOY_HOST" "docker exec -i $CID mongosh --quiet -u root -p '$REMOTE_PW' --authenticationDatabase admin openstock --file /dev/stdin" <<'MONGO_EOF'
+const TEST_EMAIL = /@example\.com$/i;
+const users = db.user.find({ email: TEST_EMAIL }).toArray();
+if (users.length === 0) {
+  print('  没有测试账号');
+} else {
+  const ids = users.map(u => u._id);
+  const linkedQuery = { $or: [{ userId: { $in: ids } }, { userId: { $in: ids.map(String) } }] };
+  const removed = ['account', 'session', 'watchlists', 'dashboardconfigs']
+    .map(c => c + '=' + db[c].deleteMany(linkedQuery).deletedCount);
+  removed.unshift('user=' + db.user.deleteMany({ _id: { $in: ids } }).deletedCount);
+  print('  已删除 ' + users.length + ' 个测试账号: ' + users.map(u => u.email).join(', '));
+  print('  关联数据: ' + removed.join(' '));
+}
+print('  生产库现有用户 ' + db.user.countDocuments() + ' 个:');
+db.user.find({}, { email: 1, name: 1, _id: 0 }).forEach(u => print('    ' + u.email + (u.name ? '  (' + u.name + ')' : '')));
+MONGO_EOF
+ok "测试账号清理完成，请核对上方用户列表"

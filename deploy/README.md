@@ -114,7 +114,7 @@ docker compose -p happystock exec -T mongodb \
 | 文件 | 作用 |
 |---|---|
 | `bootstrap-remote.sh` | **开发机上执行**：首次部署一条龙（配置沿用本地 + 建站 + 迁数据） |
-| `push-data.sh` | **开发机上执行**：本地开发库数据迁移到服务器（非空库需 `--overwrite`） |
+| `push-data.sh` | **开发机上执行**：本地开发库数据迁移到服务器（非空库需 `--overwrite`），迁完自动清掉 `*@example.com` 测试账号 |
 | `first-deploy.sh` | 首次部署备选路径（服务器上构建），服务器上执行 |
 | `update.sh` | 更新发版；`--tag` 模式配合本机构建实现服务器零构建 |
 | `release-local.sh` | **开发机上执行**：本机构建 → 推镜像 → 远程发版（小服务器推荐） |
