@@ -718,6 +718,7 @@
     "bullishAvg": "看多均值",
     "sourceAlignment": "来源一致性",
     "coverage": "覆盖度",
+    "snapshotAt": "快照时间 {time}（北京时间）",
     "buzz": "热度",
     "bullish": "看多",
     "trend": "趋势",

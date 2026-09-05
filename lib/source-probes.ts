@@ -107,11 +107,14 @@ const PROBES: Record<Exclude<SourceId, 'bark' | 'healthcheck'>, Probe> = {
     },
     adanos: async () => {
         const base = (process.env.ADANOS_API_BASE_URL || 'https://api.adanos.org').replace(/\/$/, '');
-        const r = await head(`${base}/news/stocks/v1/compare?tickers=AAPL&days=1`, {
+        // /health is not metered (verified: the monthly counter does not move),
+        // unlike /compare which would burn 48 of the free tier's 250 requests a
+        // month just on the daemon's 30-minute probe
+        const r = await getJson<{ status?: string }>(`${base}/health`, {
             headers: { 'X-API-Key': process.env.ADANOS_API_KEY ?? '' },
         });
-        // 404 = no data for the ticker, upstream itself is fine
-        return { ok: r.ok || r.status === 404, status: r.status };
+        const status = r.data?.status;
+        return { ok: r.ok && (status === undefined || status === 'healthy'), status: r.status, error: r.ok && status && status !== 'healthy' ? status : undefined };
     },
 };
 

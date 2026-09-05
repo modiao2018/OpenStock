@@ -1,8 +1,9 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
     getStockSentimentInsights,
 } from '@/lib/actions/adanos.actions';
+import * as store from '@/lib/adanos-store';
 import {
     buildStockSentimentInsights,
     getSourceAlignment,
@@ -13,6 +14,9 @@ afterEach(() => {
     vi.restoreAllMocks();
     delete process.env.ADANOS_API_KEY;
     delete process.env.ADANOS_API_BASE_URL;
+    delete process.env.ADANOS_SOURCES;
+    delete process.env.ADANOS_CACHE_HOURS;
+    delete process.env.ADANOS_QUOTA_RESERVE;
 });
 
 describe('normalizeSourceInsight', () => {
@@ -132,7 +136,124 @@ describe('buildStockSentimentInsights', () => {
     });
 });
 
+const okStock = (over: Record<string, unknown> = {}) =>
+    new Response(
+        JSON.stringify({ stocks: [{ ticker: 'TSLA', company_name: 'Tesla, Inc.', buzz_score: 80, bullish_pct: 40, trend: 'rising', mentions: 10, trade_count: 10, ...over }] }),
+        { status: 200, headers: { 'x-ratelimit-limit-monthly': '250', 'x-ratelimit-remaining-monthly': '200', 'x-ratelimit-used-monthly': '50', 'x-ratelimit-reset-monthly': '2099-01-01T00:00:00Z' } },
+    );
+
+describe('getStockSentimentInsights snapshot cache and quota', () => {
+    beforeEach(() => {
+        process.env.ADANOS_API_KEY = 'test-key';
+        vi.spyOn(store, 'writeQuota').mockResolvedValue();
+        vi.spyOn(store, 'writeSnapshot').mockResolvedValue();
+    });
+
+    it('serves a fresh snapshot without touching upstream', async () => {
+        const fetchSpy = vi.spyOn(global, 'fetch');
+        vi.spyOn(store, 'readSnapshot').mockResolvedValue({
+            insights: { symbol: 'TSLA', companyName: null, averageBuzz: 1, bullishAverage: null, sourceAlignment: 'noSentimentMix', availableSources: 1, sources: [] },
+            sources: ['reddit', 'x', 'news', 'polymarket'],
+            fetchedAt: Date.now() - 3600_000,
+        });
+        vi.spyOn(store, 'readQuota').mockResolvedValue(null);
+
+        const insight = await getStockSentimentInsights('tsla');
+        expect(fetchSpy).not.toHaveBeenCalled();
+        expect(insight).toMatchObject({ symbol: 'TSLA', requestedSources: 4 });
+        expect(insight?.fetchedAt).toBeTypeOf('number');
+    });
+
+    it('refetches when the snapshot is older than ADANOS_CACHE_HOURS and stores the quota', async () => {
+        process.env.ADANOS_CACHE_HOURS = '1';
+        const fetchSpy = vi.spyOn(global, 'fetch').mockImplementation(async () => okStock());
+        vi.spyOn(store, 'readSnapshot').mockResolvedValue({ insights: null, sources: ['reddit', 'x', 'news', 'polymarket'], fetchedAt: Date.now() - 2 * 3600_000 });
+        vi.spyOn(store, 'readQuota').mockResolvedValue(null);
+
+        const insight = await getStockSentimentInsights('TSLA');
+        expect(fetchSpy).toHaveBeenCalledTimes(4);
+        expect(insight).toMatchObject({ symbol: 'TSLA', availableSources: 4, requestedSources: 4 });
+        expect(store.writeQuota).toHaveBeenCalledWith(expect.objectContaining({ limit: 250, remaining: 200 }));
+        expect(store.writeSnapshot).toHaveBeenCalledWith('TSLA', expect.objectContaining({ sources: ['reddit', 'x', 'news', 'polymarket'] }));
+        // The Next data cache must not mask the Mongo snapshot
+        expect(fetchSpy.mock.calls[0][1]).toMatchObject({ cache: 'no-store' });
+    });
+
+    it('refetches when ADANOS_SOURCES asks for a source the snapshot lacks', async () => {
+        process.env.ADANOS_SOURCES = 'news,reddit';
+        const fetchSpy = vi.spyOn(global, 'fetch').mockImplementation(async () => okStock());
+        vi.spyOn(store, 'readSnapshot').mockResolvedValue({ insights: null, sources: ['news'], fetchedAt: Date.now() });
+        vi.spyOn(store, 'readQuota').mockResolvedValue(null);
+
+        const insight = await getStockSentimentInsights('TSLA');
+        expect(fetchSpy).toHaveBeenCalledTimes(2);
+        expect(fetchSpy.mock.calls.map((c) => String(c[0]))).toEqual([
+            expect.stringContaining('/reddit/'),
+            expect.stringContaining('/news/'),
+        ]);
+        expect(insight).toMatchObject({ availableSources: 2, requestedSources: 2 });
+    });
+
+    it('serves the stale snapshot instead of spending the quota reserve', async () => {
+        const fetchSpy = vi.spyOn(global, 'fetch');
+        const stale = { insights: { symbol: 'TSLA', companyName: null, averageBuzz: 5, bullishAverage: null, sourceAlignment: 'noSentimentMix' as const, availableSources: 1, sources: [] }, sources: ['reddit', 'x', 'news', 'polymarket'], fetchedAt: Date.now() - 10 * 86400_000 };
+        vi.spyOn(store, 'readSnapshot').mockResolvedValue(stale);
+        vi.spyOn(store, 'readQuota').mockResolvedValue({ limit: 250, remaining: 8, used: 242, resetAt: Date.now() + 86400_000, at: Date.now() });
+
+        const insight = await getStockSentimentInsights('TSLA');
+        expect(fetchSpy).not.toHaveBeenCalled();
+        expect(insight).toMatchObject({ averageBuzz: 5, fetchedAt: stale.fetchedAt });
+    });
+
+    it('returns null for an unknown symbol once the quota reserve is reached', async () => {
+        const fetchSpy = vi.spyOn(global, 'fetch');
+        vi.spyOn(store, 'readSnapshot').mockResolvedValue(null);
+        vi.spyOn(store, 'readQuota').mockResolvedValue({ limit: 250, remaining: 0, used: 250, resetAt: Date.now() + 86400_000, at: Date.now() });
+
+        await expect(getStockSentimentInsights('TSLA')).resolves.toBeNull();
+        expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('keeps the stale snapshot and does not overwrite it when every source fails', async () => {
+        vi.spyOn(global, 'fetch').mockResolvedValue(new Response('{"detail":"quota"}', { status: 429 }));
+        const stale = { insights: { symbol: 'TSLA', companyName: null, averageBuzz: 5, bullishAverage: null, sourceAlignment: 'noSentimentMix' as const, availableSources: 1, sources: [] }, sources: ['reddit', 'x', 'news', 'polymarket'], fetchedAt: Date.now() - 2 * 86400_000 };
+        vi.spyOn(store, 'readSnapshot').mockResolvedValue(stale);
+        vi.spyOn(store, 'readQuota').mockResolvedValue(null);
+
+        const insight = await getStockSentimentInsights('TSLA');
+        expect(insight).toMatchObject({ averageBuzz: 5 });
+        expect(store.writeSnapshot).not.toHaveBeenCalled();
+    });
+
+    it('caches an all-404 answer so unknown tickers are not retried every render', async () => {
+        vi.spyOn(global, 'fetch').mockResolvedValue(new Response(null, { status: 404 }));
+        vi.spyOn(store, 'readSnapshot').mockResolvedValue(null);
+        vi.spyOn(store, 'readQuota').mockResolvedValue(null);
+
+        await expect(getStockSentimentInsights('ZZZZ')).resolves.toBeNull();
+        expect(store.writeSnapshot).toHaveBeenCalledWith('ZZZZ', expect.objectContaining({ insights: null }));
+    });
+
+    it('coalesces concurrent renders of the same symbol into one upstream round-trip', async () => {
+        const fetchSpy = vi.spyOn(global, 'fetch').mockImplementation(async () => okStock());
+        vi.spyOn(store, 'readSnapshot').mockResolvedValue(null);
+        vi.spyOn(store, 'readQuota').mockResolvedValue(null);
+
+        const [a, b] = await Promise.all([getStockSentimentInsights('TSLA'), getStockSentimentInsights('TSLA')]);
+        expect(fetchSpy).toHaveBeenCalledTimes(4);
+        expect(a).toEqual(b);
+    });
+});
+
 describe('getStockSentimentInsights', () => {
+    beforeEach(() => {
+        // No MONGODB_URI in unit tests, so the store is a no-op; pin it anyway
+        vi.spyOn(store, 'readSnapshot').mockResolvedValue(null);
+        vi.spyOn(store, 'readQuota').mockResolvedValue(null);
+        vi.spyOn(store, 'writeQuota').mockResolvedValue();
+        vi.spyOn(store, 'writeSnapshot').mockResolvedValue();
+    });
+
     it('returns a parsed result when compare data matches the requested ticker', async () => {
         process.env.ADANOS_API_KEY = 'test-key';
         vi.spyOn(global, 'fetch').mockImplementation(async (input) => {

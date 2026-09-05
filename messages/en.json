@@ -718,6 +718,7 @@
     "bullishAvg": "Bullish Avg",
     "sourceAlignment": "Source Alignment",
     "coverage": "Coverage",
+    "snapshotAt": "Snapshot {time} (Beijing time)",
     "buzz": "Buzz",
     "bullish": "Bullish",
     "trend": "Trend",

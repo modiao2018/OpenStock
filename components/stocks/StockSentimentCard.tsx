@@ -1,6 +1,7 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 
 import type { StockSentimentInsights } from '@/lib/actions/adanos.helpers';
+import { formatClock } from '@/lib/format-time';
 import { isRedUpLocale } from '@/lib/utils';
 
 interface StockSentimentCardProps {
@@ -69,6 +70,11 @@ export default async function StockSentimentCard({ insight }: StockSentimentCard
                         <p className="mt-1 text-sm text-gray-400">
                             {t('description')}
                         </p>
+                        {insight.fetchedAt ? (
+                            <p className="mt-1 text-xs text-gray-500">
+                                {t('snapshotAt', { time: formatClock(insight.fetchedAt, locale) })}
+                            </p>
+                        ) : null}
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 rounded-2xl border border-gray-800 bg-black/20 p-4 md:min-w-[320px]">
@@ -101,7 +107,7 @@ export default async function StockSentimentCard({ insight }: StockSentimentCard
                                 {t('coverage')}
                             </p>
                             <p className="mt-1 text-lg font-semibold text-white">
-                                {insight.availableSources}/4
+                                {insight.availableSources}/{insight.requestedSources ?? 4}
                             </p>
                         </div>
                     </div>

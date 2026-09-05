@@ -7,6 +7,8 @@ import { connectToDatabase } from '@/database/mongoose';
 import { SourceStats, type ISourceStats } from '@/database/models/source-stats.model';
 import { CatalystKv } from '@/database/models/catalyst.model';
 import { resolveLlmConfig } from '@/lib/llm-config';
+import { formatQuota } from '@/lib/adanos-quota';
+import { readQuota as readAdanosQuota } from '@/lib/adanos-store';
 import { recordSourceCall } from '@/lib/source-calls';
 import { isSourceConfigured, probeSource as runProbe, type ProbeResult } from '@/lib/source-probes';
 import { classifySource, summarizeWindow, type SourceLevel, type SourceWindow } from '@/lib/source-stats-math';
@@ -108,11 +110,17 @@ export async function getSourcesStatus(): Promise<SourceStatusRow[]> {
     const byId = new Map(docs.map((d) => [d.source, d]));
     const feeds = readFeeds();
     const llm = await resolveLlmConfig().catch(() => null);
+    // Free tier is 250 metered requests/month; surface what is left next to the host
+    const adanosQuota = formatQuota(await readAdanosQuota());
 
     const rows: SourceStatusRow[] = [];
     for (const spec of SOURCES) {
         const configured = spec.id === 'llm' ? llm !== null : await isSourceConfigured(spec.id);
-        const host = spec.id === 'llm' && llm ? `${llm.provider} · ${llm.model}` : spec.host;
+        const host = spec.id === 'llm' && llm
+            ? `${llm.provider} · ${llm.model}`
+            : spec.id === 'adanos' && adanosQuota
+                ? `${spec.host} · ${adanosQuota}`
+                : spec.host;
         const row = toRow(spec.id, spec.id, spec, byId.get(spec.id) ?? null, configured, host, spec.name, now);
 
         if (spec.dynamicPrefix) {

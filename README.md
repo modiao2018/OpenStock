@@ -392,6 +392,11 @@ public/assets/images/   # logos and screenshots
     - Structured stock sentiment snapshots across Reddit, X.com, news, and Polymarket.
     - Set `ADANOS_API_KEY`; optionally override the API host with `ADANOS_API_BASE_URL`.
     - Used only for the stock detail sentiment card and does not replace Finnhub or TradingView.
+    - The free tier allows 250 metered requests per month and each source is one request. Snapshots are
+      cached in MongoDB per symbol for `ADANOS_CACHE_HOURS` (default 24) and reused across deploys; when
+      the remaining monthly quota drops to `ADANOS_QUOTA_RESERVE` (default 10) the app stops refreshing
+      and serves whatever snapshot it has. `ADANOS_SOURCES=news,reddit` limits which sources are pulled.
+      The remaining quota is shown on the `/status` page next to the Adanos row.
 
 - TradingView
     - Embeddable widgets used for charts, heatmap, quotes, and timelines.

@@ -72,6 +72,11 @@ export interface StockSentimentInsights {
     sourceAlignment: SourceAlignmentKey;
     availableSources: number;
     sources: SentimentSourceInsight[];
+    // How many sources were asked for (ADANOS_SOURCES may trim the four); the
+    // card shows availableSources/requestedSources
+    requestedSources?: number;
+    // Epoch ms of the upstream fetch this snapshot came from
+    fetchedAt?: number;
 }
 
 function toNumber(value: unknown): number | null {
