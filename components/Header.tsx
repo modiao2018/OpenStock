@@ -5,7 +5,7 @@ import UserDropdown from "@/components/UserDropdown";
 
 // The popular-stock list loads lazily when the search dialog first opens —
 // awaiting 10 Finnhub profile calls here would block the shell on every hard load
-const Header = ({ user }: { user: User }) => {
+const Header = ({ user, isAdmin = false }: { user: User; isAdmin?: boolean }) => {
     const initialStocks: StockWithWatchlistStatus[] = [];
 
     return (
@@ -23,7 +23,7 @@ const Header = ({ user }: { user: User }) => {
                     <NavItems initialStocks={initialStocks}/>
                 </nav>
 
-                <UserDropdown user={user} initialStocks={initialStocks} />
+                <UserDropdown user={user} initialStocks={initialStocks} isAdmin={isAdmin} />
             </div>
         </header>
     )

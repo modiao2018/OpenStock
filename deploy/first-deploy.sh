@@ -28,6 +28,7 @@ if [ ! -f "$ENV_FILE" ]; then
 接下来请编辑 ${ENV_FILE}，至少填写：
   - BETTER_AUTH_URL           网站对外访问地址（如 http://服务器IP:3000）
   - NEXT_PUBLIC_FINNHUB_API_KEY  Finnhub 行情 key
+  - ADMIN_EMAILS              账号审核员邮箱（逗号分隔），否则新注册用户没人能放行
 需要催化剂监控的话，把 MONITOR_ENABLED 改为 true 并填 BARK_URL、EDGAR_CONTACT。
 
 填完后再次运行：bash deploy/first-deploy.sh

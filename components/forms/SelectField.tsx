@@ -11,8 +11,8 @@ import {
 
 const SelectField = ({name, label, placeholder, options, control, error, required = false, requiredMessage}: SelectFieldProps & { requiredMessage?: string }) => {
     return (
-        <div className="space-y-2">
-            <Label htmlFor={name}>{label}</Label>
+        <div className="form-field">
+            <Label htmlFor={name} className="form-label">{label}</Label>
 
             <Controller
                 name={name}
@@ -25,17 +25,17 @@ const SelectField = ({name, label, placeholder, options, control, error, require
                         <SelectTrigger className="select-trigger">
                             <SelectValue placeholder={placeholder} />
                         </SelectTrigger>
-                        <SelectContent className="bg-gray-800 border-gray-600 text-white">
+                        <SelectContent className="auth-menu">
                             {options.map((option) => (
-                                <SelectItem key={option.value} value={option.value} className="focus:bg-gray-600 focus: text-white">
+                                <SelectItem key={option.value} value={option.value} className="auth-menu-item">
                                     {option.label}
                                 </SelectItem>
                             ))}
                         </SelectContent>
-                        {error && <p className="text-red-600">{error.message}</p>}
                     </Select>
                 )}
             />
+            {error && <p className="form-error">{error.message}</p>}
         </div>
     )
 }

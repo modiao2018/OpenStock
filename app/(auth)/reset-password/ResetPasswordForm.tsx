@@ -9,7 +9,6 @@ import { useTranslations } from 'next-intl';
 import FooterLink from '@/components/forms/FooterLink';
 import InputField from '@/components/forms/InputField';
 import PasswordRequirements from '@/components/forms/PasswordRequirements';
-import AuthContact from '@/components/AuthContact';
 import { Button } from '@/components/ui/button';
 import { resetPasswordWithToken } from '@/lib/actions/auth.actions';
 import { buildPasswordValidation } from '@/lib/constants';
@@ -79,31 +78,33 @@ const ResetPasswordForm = () => {
     return (
         <>
             <h1 className="form-title">{t('title')}</h1>
-            <p className="text-sm text-gray-400 mb-6">
-                {t('subtitle')}
-            </p>
+            <p className="form-subtitle">{t('subtitle')}</p>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-                <InputField
-                    name="newPassword"
-                    label={t('newPasswordLabel')}
-                    placeholder={t('newPasswordPlaceholder')}
-                    type="password"
-                    register={register}
-                    error={errors.newPassword}
-                    validation={buildPasswordValidation({
-                        required: tValidation('required'),
-                        minLength: tValidation('minLength'),
-                        pattern: tValidation('pattern'),
-                    })}
-                />
-                <PasswordRequirements password={newPassword ?? ''} />
+            <form onSubmit={handleSubmit(onSubmit)} className="form-body" noValidate>
+                <div>
+                    <InputField
+                        name="newPassword"
+                        label={t('newPasswordLabel')}
+                        placeholder={t('newPasswordPlaceholder')}
+                        type="password"
+                        autoComplete="new-password"
+                        register={register}
+                        error={errors.newPassword}
+                        validation={buildPasswordValidation({
+                            required: tValidation('required'),
+                            minLength: tValidation('minLength'),
+                            pattern: tValidation('pattern'),
+                        })}
+                    />
+                    <PasswordRequirements password={newPassword ?? ''} />
+                </div>
 
                 <InputField
                     name="confirmPassword"
                     label={t('confirmPasswordLabel')}
                     placeholder={t('confirmPasswordPlaceholder')}
                     type="password"
+                    autoComplete="new-password"
                     register={register}
                     error={errors.confirmPassword}
                     validation={{
@@ -113,12 +114,11 @@ const ResetPasswordForm = () => {
                     }}
                 />
 
-                <Button type="submit" disabled={isSubmitting} className="yellow-btn w-full mt-5">
+                <Button type="submit" disabled={isSubmitting} className="primary-btn w-full">
                     {isSubmitting ? t('submitting') : t('submit')}
                 </Button>
 
                 <FooterLink text={t('footerText')} linkText={t('footerLink')} href="/forgot-password" />
-                <AuthContact />
             </form>
         </>
     );

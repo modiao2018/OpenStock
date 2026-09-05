@@ -145,9 +145,6 @@
     .container {
         @apply mx-auto max-w-screen-2xl px-4 md:px-6 lg:px-8;
     }
-    .yellow-btn {
-        @apply h-12 cursor-pointer bg-gradient-to-b from-teal-400 to-teal-500 hover:from-teal-500 hover:to-teal-400 text-gray-800 font-medium text-base rounded-lg shadow-lg disabled:opacity-50;
-    }
     .home-wrapper {
         @apply text-gray-400 flex-col gap-4 md:gap-10 items-center sm:items-start;
     }
@@ -157,59 +154,8 @@
     .header {
         @apply z-50 w-full h-[70px] bg-gray-800;
     }
-    /* Auth showcase: the triggered-alert card slides in once after load */
-    .auth-alert-in {
-        animation: auth-alert-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.7s backwards;
-    }
-    @media (prefers-reduced-motion: reduce) {
-        .auth-alert-in {
-            animation: none;
-        }
-    }
     .header-wrapper {
         @apply flex justify-between items-center px-6 py-4 text-gray-500;
-    }
-    .auth-layout {
-        @apply flex flex-col justify-between lg:flex-row h-screen bg-gray-900 relative overflow-hidden;
-    }
-    .auth-logo {
-        @apply pt-6 lg:pt-8 mb-8 lg:mb-12;
-    }
-    .auth-left-section {
-        @apply w-full lg:w-[45%] lg:h-screen px-6 lg:px-16 flex flex-col overflow-y-auto;
-    }
-    .auth-right-section {
-        @apply w-full max-lg:border-t max-lg:border-gray-600 lg:w-[55%] lg:h-screen bg-gray-800 px-6 py-4 md:p-6 lg:py-12 lg:px-18 flex flex-col justify-start;
-    }
-    .auth-blockquote {
-        @apply text-sm md:text-xl lg:text-2xl font-medium text-gray-200 mb-1 md:mb-6 lg:mb-8;
-    }
-    .form-title {
-        @apply text-4xl font-bold text-gray-400 mb-10;
-    }
-    .form-label {
-        @apply text-sm font-medium text-gray-400;
-    }
-    .form-input {
-        @apply h-12 px-3 py-3 text-white text-base placeholder:text-gray-600 border-gray-600  rounded-lg focus:!border-teal-500 focus:ring-0 ;
-    }
-    .select-trigger {
-        @apply w-full !h-12 px-3 py-3 text-base border-gray-600 bg-gray-800 text-white rounded-lg focus:!border-teal-500 focus:ring-0;
-    }
-    .country-select-trigger {
-        @apply h-12 px-3 py-3 text-base w-full justify-between font-normal border-gray-600 bg-gray-800 text-gray-400 rounded-lg focus:!border-teal-500 focus:ring-0;
-    }
-    .country-select-input {
-        @apply !bg-gray-800 text-gray-400 border-0 border-b border-gray-600 rounded-none focus:ring-0 placeholder:text-gray-500;
-    }
-    .country-select-empty {
-        @apply text-gray-500 py-6 text-center !bg-gray-800;
-    }
-    .country-select-item {
-        @apply text-white cursor-pointer px-3 py-2 rounded-sm bg-gray-800 hover:!bg-gray-600;
-    }
-    .footer-link {
-        @apply text-gray-400 font-medium hover:text-teal-400 hover:underline transition-colors;
     }
     .search-text {
         @apply cursor-pointer hover:text-teal-500;
@@ -491,13 +437,282 @@
     background-color: #9095A1;
 }
 
-@keyframes auth-alert-in {
-    from {
-        opacity: 0;
-        transform: translateY(14px);
+/* ---------- Auth surface (sign-in / sign-up / reset) ----------
+   Lives in the utilities layer, after Tailwind's own, so these classes beat
+   the shadcn defaults (bg-primary, h-9, rounded-md) on the same elements. */
+@layer utilities {
+    .auth-page {
+        @apply relative min-h-dvh flex flex-col bg-gray-900 text-gray-400 overflow-x-hidden;
     }
-    to {
-        opacity: 1;
-        transform: translateY(0);
+    /* One teal aurora. Its core sits at roughly the card's lower third so
+       the card's blur has something to read; the mask keeps the header dark. */
+    .auth-aurora {
+        @apply pointer-events-none absolute inset-x-0 bottom-0 h-[82vh];
+        background:
+            radial-gradient(38% 42% at 50% 72%, rgba(15, 237, 190, 0.22), transparent 70%),
+            radial-gradient(70% 45% at 50% 105%, rgba(15, 237, 190, 0.18), transparent 70%);
+        filter: blur(40px);
+        mask-image: linear-gradient(to top, black 55%, transparent);
+    }
+    .auth-page ::selection {
+        background: rgba(15, 237, 190, 0.32);
+        color: #fff;
+    }
+    .auth-header {
+        @apply relative z-10 flex items-center justify-between px-5 py-4 sm:px-8 sm:py-5;
+    }
+    .auth-logo {
+        @apply inline-flex items-center rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60;
+    }
+    .auth-card-wrap {
+        @apply relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-4 sm:px-6;
+    }
+    .auth-card {
+        @apply w-full max-w-[440px] rounded-[28px] border border-white/[0.08] bg-gray-800/85 px-6 py-7 sm:px-10 sm:py-8;
+        backdrop-filter: blur(24px) saturate(140%);
+        -webkit-backdrop-filter: blur(24px) saturate(140%);
+        box-shadow:
+            0 30px 80px -30px rgba(0, 0, 0, 0.9),
+            0 12px 32px -16px rgba(15, 237, 190, 0.18);
+        animation: auth-card-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .auth-fineprint {
+        @apply mx-auto max-w-[520px] text-center text-xs leading-relaxed text-gray-500;
+    }
+    .auth-footer {
+        @apply relative z-10 flex flex-col gap-2 px-6 pb-5 pt-2;
+    }
+
+    .form-title {
+        @apply text-[28px] sm:text-[30px] font-semibold leading-tight tracking-[-0.02em] text-white text-balance;
+    }
+    .form-subtitle {
+        @apply mt-2 text-[15px] leading-relaxed text-gray-500;
+    }
+    .form-body {
+        @apply mt-7 flex flex-col gap-4;
+    }
+    .form-field {
+        @apply flex flex-col gap-2;
+    }
+    .form-label {
+        @apply text-[13px] font-medium text-gray-400;
+    }
+    .form-input {
+        @apply h-12 rounded-xl border-white/[0.08] bg-white/[0.04] dark:bg-white/[0.04] px-4 text-[15px] md:text-[15px] text-white placeholder:text-gray-500 shadow-none;
+        @apply transition-[border-color,background-color,box-shadow] duration-200;
+        @apply hover:border-white/[0.14] hover:bg-white/[0.06] dark:hover:bg-white/[0.06];
+        @apply focus-visible:border-teal-400/70 focus-visible:bg-white/[0.06] dark:focus-visible:bg-white/[0.06] focus-visible:ring-[3px] focus-visible:ring-teal-400/20;
+        @apply aria-invalid:border-red-500/60 aria-invalid:ring-red-500/15 dark:aria-invalid:ring-red-500/15;
+        caret-color: var(--color-teal-400);
+    }
+    .form-input:-webkit-autofill,
+    .form-input:-webkit-autofill:hover,
+    .form-input:-webkit-autofill:focus {
+        -webkit-text-fill-color: #fff;
+        -webkit-box-shadow: 0 0 0 1000px #1d1f22 inset;
+        transition: background-color 9999s ease-in-out 0s;
+        caret-color: #0FEDBE;
+    }
+    .form-error {
+        @apply text-[13px] leading-snug text-red-500;
+    }
+    .form-help {
+        @apply text-xs text-gray-500;
+    }
+    .form-links {
+        @apply flex justify-center;
+    }
+    .form-footer {
+        @apply border-t border-white/[0.06] pt-4 text-center;
+    }
+    .form-group-title {
+        @apply mt-3 border-t border-white/[0.06] pt-6 text-[15px] font-semibold text-white;
+    }
+    .primary-btn {
+        @apply h-12 cursor-pointer rounded-xl bg-teal-400 text-[15px] font-semibold text-gray-900;
+        @apply transition-[transform,background-color,box-shadow,opacity] duration-200;
+        @apply hover:bg-[#3ff2cb] active:scale-[0.985] disabled:opacity-60;
+        box-shadow: 0 8px 24px -10px rgba(15, 237, 190, 0.6);
+    }
+    .primary-btn:focus-visible {
+        @apply ring-[3px] ring-teal-400/30 ring-offset-0;
+    }
+    .footer-link {
+        @apply font-medium text-gray-400 underline-offset-4 transition-colors hover:text-white hover:underline;
+    }
+    .select-trigger {
+        @apply w-full !h-12 rounded-xl border-white/[0.08] bg-white/[0.04] dark:bg-white/[0.04] px-4 text-[15px] text-white shadow-none;
+        @apply data-[placeholder]:text-gray-500 hover:border-white/[0.14] hover:bg-white/[0.06] dark:hover:bg-white/[0.06];
+        @apply focus-visible:border-teal-400/70 focus-visible:ring-[3px] focus-visible:ring-teal-400/20;
+        caret-color: var(--color-teal-400);
+    }
+    .country-select-trigger {
+        @apply h-12 w-full justify-between rounded-xl border-white/[0.08] dark:border-white/[0.08] bg-white/[0.04] dark:bg-white/[0.04] px-4 text-[15px] font-normal text-white shadow-none;
+        @apply hover:border-white/[0.14] hover:bg-white/[0.06] dark:hover:bg-white/[0.06] hover:text-white;
+        @apply focus-visible:border-teal-400/70 focus-visible:ring-[3px] focus-visible:ring-teal-400/20;
+    }
+    .country-select-input {
+        @apply rounded-none border-0 border-b border-white/[0.06] !bg-transparent text-white placeholder:text-gray-500 focus:ring-0;
+        caret-color: var(--color-teal-400);
+    }
+    .country-select-empty {
+        @apply py-6 text-center text-gray-500;
+    }
+    .country-select-item {
+        @apply cursor-pointer rounded-lg px-3 py-2 text-white data-[selected=true]:bg-white/[0.08] data-[selected=true]:text-white;
+    }
+    .auth-menu {
+        @apply rounded-2xl border-white/[0.08] bg-[#1a1c20] p-1.5 text-white shadow-[0_24px_60px_-20px_rgba(0,0,0,0.8)];
+    }
+    .auth-menu-item {
+        @apply cursor-pointer rounded-lg py-2 text-[15px] text-gray-200 focus:bg-white/[0.08] focus:text-white;
+    }
+
+    /* Slide-to-fit captcha */
+    .captcha {
+        @apply flex flex-col gap-2.5;
+    }
+    .captcha-stage {
+        @apply relative w-full overflow-hidden rounded-2xl border border-white/[0.08] bg-gray-700 select-none;
+        touch-action: none;
+    }
+    .captcha-bg,
+    .captcha-piece {
+        @apply pointer-events-none block;
+    }
+    .captcha-bg {
+        @apply h-full w-full object-cover;
+    }
+    .captcha-piece {
+        @apply absolute h-auto drop-shadow-[0_6px_10px_rgba(0,0,0,0.6)];
+        will-change: left;
+    }
+    .captcha[data-state='ready'] .captcha-piece,
+    .captcha[data-state='dragging'] .captcha-piece {
+        filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 0.5px rgba(255, 255, 255, 0.9));
+    }
+    .captcha-skeleton {
+        @apply absolute inset-0 bg-gradient-to-r from-white/[0.03] via-white/[0.07] to-white/[0.03] bg-[length:200%_100%];
+        animation: captcha-shimmer 1.4s ease-in-out infinite;
+    }
+    .captcha-veil {
+        @apply absolute inset-0 flex items-center justify-center bg-gray-900/70 px-6 text-center text-sm text-gray-400;
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+    }
+    .captcha-veil-solved {
+        @apply bg-teal-400/10 text-teal-400;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        animation: captcha-veil-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .captcha-badge {
+        @apply flex size-11 items-center justify-center rounded-full bg-teal-400 text-gray-900 shadow-[0_10px_30px_-8px_rgba(15,237,190,0.8)];
+        animation: captcha-badge-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both;
+    }
+    .captcha-refresh {
+        @apply absolute right-2 top-2 flex size-7 cursor-pointer items-center justify-center rounded-full bg-gray-900/60 text-gray-400 transition-colors;
+        @apply hover:bg-gray-900/90 hover:text-white disabled:cursor-default disabled:opacity-40;
+        @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60;
+        backdrop-filter: blur(6px);
+    }
+    .captcha-track {
+        @apply relative h-12 overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.04];
+    }
+    .captcha-fill {
+        @apply absolute inset-y-0 left-0 w-full origin-left bg-teal-400/15;
+        transition: background-color 0.2s;
+        will-change: transform;
+    }
+    .captcha-hint {
+        @apply pointer-events-none absolute inset-0 flex items-center justify-center pl-8 text-[13px] text-gray-500;
+        transition: opacity 0.15s;
+    }
+    .captcha-handle {
+        @apply absolute left-0 top-0 flex h-full w-11 cursor-grab items-center justify-center rounded-xl bg-white text-gray-900;
+        @apply outline-none focus-visible:ring-[3px] focus-visible:ring-teal-400/40;
+        @apply disabled:cursor-default;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.4) inset;
+        touch-action: none;
+        will-change: transform;
+    }
+    .captcha[data-state='dragging'] .captcha-handle {
+        @apply cursor-grabbing;
+    }
+    .captcha[data-state='ready'] .captcha-handle:hover {
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.4) inset;
+    }
+    .captcha[data-state='solved'] .captcha-handle {
+        @apply bg-teal-400;
+    }
+    .captcha[data-state='solved'] .captcha-fill {
+        @apply bg-teal-400/25;
+    }
+    .captcha[data-state='failed'] .captcha-handle {
+        @apply bg-red-500 text-white;
+    }
+    .captcha[data-state='failed'] .captcha-fill {
+        @apply bg-red-500/15;
+    }
+    .captcha[data-state='failed'] .captcha-track {
+        animation: captcha-shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    }
+    .captcha[data-state='loading'] .captcha-handle,
+    .captcha[data-state='verifying'] .captcha-handle,
+    .captcha[data-state='solved'] .captcha-handle,
+    .captcha[data-state='failed'] .captcha-handle {
+        transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .captcha[data-state='loading'] .captcha-fill,
+    .captcha[data-state='verifying'] .captcha-fill,
+    .captcha[data-state='solved'] .captcha-fill,
+    .captcha[data-state='failed'] .captcha-fill {
+        transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s;
+    }
+    .captcha-status {
+        @apply text-xs leading-tight text-gray-500;
+    }
+    .captcha-status:empty {
+        @apply hidden;
+    }
+    .captcha[data-state='solved'] .captcha-status {
+        @apply text-teal-400;
+    }
+    .captcha[data-state='failed'] .captcha-status,
+    .captcha[data-state='throttled'] .captcha-status {
+        @apply text-red-500;
+    }
+}
+
+@keyframes auth-card-in {
+    from { opacity: 0; transform: translateY(12px) scale(0.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes captcha-shimmer {
+    from { background-position: 100% 0; }
+    to { background-position: -100% 0; }
+}
+@keyframes captcha-veil-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes captcha-badge-in {
+    from { opacity: 0; transform: scale(0.6); }
+    to { opacity: 1; transform: scale(1); }
+}
+@keyframes captcha-shake {
+    10%, 90% { transform: translateX(-1px); }
+    20%, 80% { transform: translateX(2px); }
+    30%, 50%, 70% { transform: translateX(-4px); }
+    40%, 60% { transform: translateX(4px); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .auth-card,
+    .captcha-veil-solved,
+    .captcha-badge,
+    .captcha[data-state='failed'] .captcha-track,
+    .captcha-skeleton {
+        animation: none;
     }
 }

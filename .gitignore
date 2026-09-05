@@ -47,3 +47,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# impeccable 设计审阅的截图/样稿（本机产物）
+/.impeccable/review/
+/.impeccable/mocks/

@@ -8,7 +8,12 @@
     }
   },
   "common": {
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "notFound": {
+      "title": "Page not found",
+      "body": "There's nothing at this address, or you don't have access to it.",
+      "home": "Back to dashboard"
+    }
   },
   "home": {
     "stockHeatmap": "Heatmap"
@@ -87,12 +92,8 @@
   },
   "auth": {
     "layout": {
-      "quote": "HappyStock — market clarity for everyone. No gatekeeping, no subscriptions.",
       "contact": "Contact us: ",
-      "showcaseHeatmap": "Heatmap",
-      "showcaseAlertTitle": "Price alert triggered",
-      "showcaseAlertBody": "NVDA crossed $950.00",
-      "showcaseCatalyst": "Catalyst · MRNA FDA decision"
+      "fineprint": "HappyStock is community-built and not a brokerage. Market data may be delayed. Nothing here is financial advice."
     },
     "signIn": {
       "title": "Welcome back",
@@ -109,7 +110,15 @@
       "footerLink": "Create an account",
       "toastErrorTitle": "Sign in failed",
       "toastErrorInvalid": "Invalid email or password.",
-      "toastErrorGeneric": "Failed to sign in."
+      "toastErrorGeneric": "Failed to sign in.",
+      "subtitle": "Sign in to your HappyStock account.",
+      "errorThrottled": "Too many attempts. Try again in {minutes} min.",
+      "errorCaptcha": "Please complete the slide verification again.",
+      "errorInvalid": "Invalid email or password.",
+      "errorExists": "An account with this email already exists.",
+      "errorUnconfigured": "This feature is not configured on the server yet.",
+      "errorPending": "Your account is still under review. You'll be able to sign in once it's approved.",
+      "errorRejected": "This account was not approved. Contact us if you think that's a mistake."
     },
     "signUp": {
       "title": "Sign Up & Personalize",
@@ -137,7 +146,16 @@
       "footerLink": "Sign in",
       "toastErrorTitle": "Sign up failed",
       "toastErrorDescription": "We could not create your account.",
-      "toastErrorGeneric": "Failed to create an account."
+      "toastErrorGeneric": "Failed to create an account.",
+      "subtitle": "Tell us a little about how you invest so the dashboard fits you.",
+      "profileSection": "Investor profile",
+      "errorThrottled": "Too many attempts. Try again in {minutes} min.",
+      "errorCaptcha": "Please complete the slide verification again.",
+      "errorInvalid": "Invalid email or password.",
+      "errorExists": "An account with this email already exists.",
+      "errorUnconfigured": "This feature is not configured on the server yet.",
+      "errorPending": "Your account is still under review. You'll be able to sign in once it's approved.",
+      "errorRejected": "This account was not approved. Contact us if you think that's a mistake."
     },
     "forgotPassword": {
       "title": "Forgot your password?",
@@ -151,7 +169,14 @@
       "toastErrorTitle": "Password reset unavailable",
       "toastErrorGeneric": "Unable to start password reset.",
       "footerText": "Remembered it?",
-      "footerLink": "Sign in"
+      "footerLink": "Sign in",
+      "errorThrottled": "Too many attempts. Try again in {minutes} min.",
+      "errorCaptcha": "Please complete the slide verification again.",
+      "errorInvalid": "Invalid email or password.",
+      "errorExists": "An account with this email already exists.",
+      "errorUnconfigured": "This feature is not configured on the server yet.",
+      "errorPending": "Your account is still under review. You'll be able to sign in once it's approved.",
+      "errorRejected": "This account was not approved. Contact us if you think that's a mistake."
     },
     "resetPassword": {
       "loading": "Loading reset form...",
@@ -182,6 +207,25 @@
       "uppercase": "At least 1 uppercase letter",
       "lowercase": "At least 1 lowercase letter",
       "number": "At least 1 number"
+    },
+    "captcha": {
+      "hint": "Slide to fit the piece",
+      "handleLabel": "Drag the puzzle piece into place; arrow keys move it, Enter confirms",
+      "loading": "Loading verification…",
+      "verifying": "Checking…",
+      "solved": "Verified",
+      "failed": "Not quite. New puzzle coming up.",
+      "expired": "That puzzle expired. New one coming up.",
+      "throttled": "Too many verification requests. Please wait a few minutes.",
+      "unavailable": "Verification is temporarily unavailable. Please try again later.",
+      "required": "Please complete the slide verification first.",
+      "refresh": "New puzzle"
+    },
+    "pending": {
+      "title": "Thanks, you're on the list",
+      "body": "We've received the sign-up for {email}. A reviewer will look it over and approve access, usually within a day.",
+      "hint": "You can't sign in until then. If it takes longer, drop us a line at the address below.",
+      "backToSignIn": "Back to sign in"
     }
   },
   "options": {
@@ -659,7 +703,8 @@
     }
   },
   "userMenu": {
-    "logout": "Logout"
+    "logout": "Logout",
+    "reviewUsers": "Account review"
   },
   "footer": {
     "tagline": "HappyStock is an open-source alternative to expensive market platforms. Track real-time prices, set personalized alerts, and explore detailed company insights — built openly, for everyone, forever free.",
@@ -1033,6 +1078,43 @@
       "keywords": "Watching for:",
       "pending": "Not structured yet (the monitor fills this in next round)",
       "none": "No structuring record"
+    }
+  },
+  "admin": {
+    "users": {
+      "title": "Account review",
+      "subtitle": "Approve new sign-ups before they can sign in.",
+      "pendingCount": "{n} awaiting review",
+      "noPending": "No pending accounts",
+      "filter": {
+        "pending": "Pending",
+        "all": "All accounts"
+      },
+      "headers": {
+        "user": "User",
+        "registered": "Registered",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "status": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "approve": "Approve",
+      "reject": "Reject",
+      "adminBadge": "Reviewer",
+      "confirmReject": "Reject {email}? They will not be able to sign in.",
+      "approvedToast": "{email} approved",
+      "rejectedToast": "{email} rejected",
+      "emptyPending": "Nothing to review right now.",
+      "emptyAll": "No accounts yet.",
+      "error": {
+        "forbidden": "You are not allowed to do that.",
+        "notFound": "That account no longer exists.",
+        "self": "Reviewer accounts can't be rejected here.",
+        "generic": "Something went wrong. Try again."
+      }
     }
   }
 }

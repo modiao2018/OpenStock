@@ -2,6 +2,7 @@ import Header from "@/components/Header";
 import { getSession } from "@/lib/get-session";
 import { redirect } from "next/navigation";
 import Footer from "@/components/Footer";
+import { isAdminEmail } from "@/lib/admin";
 
 const Layout = async ({ children }: { children: React.ReactNode }) => {
     const session = await getSession();
@@ -16,7 +17,7 @@ const Layout = async ({ children }: { children: React.ReactNode }) => {
 
     return (
         <main className="min-h-screen text-gray-400">
-            <Header user={user} />
+            <Header user={user} isAdmin={isAdminEmail(session.user.email)} />
 
             <div className="container py-10">
                 {children}

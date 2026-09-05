@@ -2,6 +2,7 @@ declare global {
     type SignInFormData = {
         email: string;
         password: string;
+        captchaToken?: string;
     };
 
     type SignUpFormData = {
@@ -12,6 +13,7 @@ declare global {
         investmentGoals: string;
         riskTolerance: string;
         preferredIndustry: string;
+        captchaToken?: string;
     };
 
     type CountrySelectProps = {
@@ -32,6 +34,7 @@ declare global {
         validation?: RegisterOptions;
         disabled?: boolean;
         value?: string;
+        autoComplete?: string;
     };
 
     type Option = {

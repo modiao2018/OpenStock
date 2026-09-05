@@ -8,7 +8,7 @@ const CONTACT_EMAIL = 'lxutong2026@gmail.com';
 const AuthContact = () => {
     const t = useTranslations('auth.layout');
     return (
-        <p className="mt-10 text-center text-sm text-gray-500">
+        <p className="text-center text-xs text-gray-500">
             {t('contact')}
             <a
                 href={`mailto:${CONTACT_EMAIL}`}

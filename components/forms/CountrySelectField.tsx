@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/command';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import countryList from 'react-select-country-list';
 import { useLocale, useTranslations } from 'next-intl';
@@ -63,14 +63,11 @@ const CountrySelect = ({
 
     const countries = useLocalizedCountries(locale);
 
-    // Helper function to get flag emoji
-    const getFlagEmoji = (countryCode: string) => {
-        const codePoints = countryCode
-            .toUpperCase()
-            .split('')
-            .map((char) => 127397 + char.charCodeAt(0));
-        return String.fromCodePoint(...codePoints);
-    };
+    // ISO code as a quiet tag: emoji flags render as letter pairs on Windows
+    // and as boxes wherever no emoji font is installed.
+    const Code = ({ code }: { code: string }) => (
+        <span className='w-7 shrink-0 font-mono text-[11px] tracking-wide text-gray-500'>{code}</span>
+    );
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -83,20 +80,20 @@ const CountrySelect = ({
                 >
                     {value ? (
                         <span className='flex items-center gap-2'>
-              <span>{getFlagEmoji(value)}</span>
-              <span>{countries.find((c) => c.value === value)?.label}</span>
-            </span>
+                            <Code code={value} />
+                            <span>{countries.find((c) => c.value === value)?.label}</span>
+                        </span>
                     ) : (
                         t('placeholder')
                     )}
-                    <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
+                    <ChevronDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
                 </Button>
             </PopoverTrigger>
             <PopoverContent
-                className='w-full p-0 bg-gray-800 border-gray-600'
+                className='auth-menu w-[var(--radix-popover-trigger-width)] p-0'
                 align='start'
             >
-                <Command className='bg-gray-800 border-gray-600'>
+                <Command className='bg-transparent'>
                     <CommandInput
                         placeholder={t('search')}
                         className='country-select-input'
@@ -104,8 +101,8 @@ const CountrySelect = ({
                     <CommandEmpty className='country-select-empty'>
                         {t('empty')}
                     </CommandEmpty>
-                    <CommandList className='max-h-60 bg-gray-800 scrollbar-hide-default'>
-                        <CommandGroup className='bg-gray-800'>
+                    <CommandList className='max-h-60 scrollbar-hide-default'>
+                        <CommandGroup>
                             {countries.map((country) => (
                                 <CommandItem
                                     key={country.value}
@@ -123,9 +120,9 @@ const CountrySelect = ({
                                         )}
                                     />
                                     <span className='flex items-center gap-2'>
-                    <span>{getFlagEmoji(country.value)}</span>
-                    <span>{country.label}</span>
-                  </span>
+                                        <Code code={country.value} />
+                                        <span>{country.label}</span>
+                                    </span>
                                 </CommandItem>
                             ))}
                         </CommandGroup>
@@ -146,7 +143,7 @@ export const CountrySelectField = ({
     const t = useTranslations('country');
 
     return (
-        <div className='space-y-2'>
+        <div className='form-field'>
             <Label htmlFor={name} className='form-label'>
                 {label}
             </Label>
@@ -160,8 +157,8 @@ export const CountrySelectField = ({
                     <CountrySelect value={field.value} onChange={field.onChange} />
                 )}
             />
-            {error && <p className='text-sm text-red-500'>{error.message}</p>}
-            <p className='text-xs text-gray-500'>
+            {error && <p className='form-error'>{error.message}</p>}
+            <p className='form-help'>
                 {t('helper')}
             </p>
         </div>

@@ -84,7 +84,7 @@ record_release() {
 # 校验 .env.production 的必填项
 validate_env() {
     local missing="" key
-    for key in MONGO_ROOT_PASSWORD BETTER_AUTH_SECRET BETTER_AUTH_URL NEXT_PUBLIC_FINNHUB_API_KEY; do
+    for key in MONGO_ROOT_PASSWORD BETTER_AUTH_SECRET BETTER_AUTH_URL NEXT_PUBLIC_FINNHUB_API_KEY ADMIN_EMAILS; do
         [ -n "$(get_env "$key")" ] || missing="$missing $key"
     done
     [ -z "$missing" ] || die "以下必填项还没填，请编辑 ${ENV_FILE}：$missing"

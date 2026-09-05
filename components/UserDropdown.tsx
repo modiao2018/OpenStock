@@ -12,12 +12,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {useRouter} from "next/navigation";
 import {useTranslations} from "next-intl";
 import {Button} from "@/components/ui/button";
-import {LogOut} from "lucide-react";
+import {LogOut, ShieldCheck} from "lucide-react";
+import Link from "next/link";
 import NavItems from "@/components/NavItems";
 import { LanguageSwitcherItems } from '@/components/LanguageSwitcher';
 import {signOut} from "@/lib/actions/auth.actions";
 
-const UserDropdown = ({ user, initialStocks }: {user: User, initialStocks: StockWithWatchlistStatus[]}) => {
+const UserDropdown = ({ user, initialStocks, isAdmin = false }: {user: User, initialStocks: StockWithWatchlistStatus[], isAdmin?: boolean}) => {
     const t = useTranslations('userMenu');
     const router = useRouter();
 
@@ -63,6 +64,17 @@ const UserDropdown = ({ user, initialStocks }: {user: User, initialStocks: Stock
                 <DropdownMenuSeparator className="bg-gray-600"/>
                 <LanguageSwitcherItems />
                 <DropdownMenuSeparator className="bg-gray-600"/>
+                {isAdmin && (
+                    <>
+                        <DropdownMenuItem asChild className="text-gray-100 text-md font-medium focus:bg-transparent focus:text-teal-500 transition-colors cursor-pointer">
+                            <Link href="/admin/users">
+                                <ShieldCheck className="h-4 w-4 mr-2 hidden sm:block" />
+                                {t('reviewUsers')}
+                            </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="bg-gray-600"/>
+                    </>
+                )}
                 <DropdownMenuItem onClick={handleSignOut} className="text-gray-100 text-md font-medium focus:bg-transparent focus:text-teal-500 transition-colors cursor-pointer">
                     <LogOut className="h-4 w-4 mr-2 hidden sm:block" />
                     {t('logout')}

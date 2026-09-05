@@ -1,14 +1,15 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import InputField from '@/components/forms/InputField';
 import FooterLink from '@/components/forms/FooterLink';
-import AuthContact from '@/components/AuthContact';
+import SlideCaptcha from '@/components/forms/SlideCaptcha';
 import { requestPasswordResetEmail } from '@/lib/actions/auth.actions';
+import { describeAuthFailure } from '@/lib/auth-messages';
 
 type ForgotPasswordFormData = {
     email: string;
@@ -16,6 +17,10 @@ type ForgotPasswordFormData = {
 
 const ForgotPasswordPage = () => {
     const t = useTranslations('auth.forgotPassword');
+    const tCaptcha = useTranslations('auth.captcha');
+    const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+    const [captchaKey, setCaptchaKey] = useState(0);
+    const [captchaError, setCaptchaError] = useState<string | undefined>();
     const {
         register,
         handleSubmit,
@@ -28,8 +33,12 @@ const ForgotPasswordPage = () => {
     });
 
     const onSubmit = async (data: ForgotPasswordFormData) => {
+        if (!captchaToken) {
+            setCaptchaError(tCaptcha('required'));
+            return;
+        }
         try {
-            const result = await requestPasswordResetEmail(data);
+            const result = await requestPasswordResetEmail({ ...data, captchaToken });
 
             if (result.success) {
                 toast.success(t('successToast'));
@@ -37,27 +46,30 @@ const ForgotPasswordPage = () => {
             }
 
             toast.error(t('toastErrorTitle'), {
-                description: result.error ?? t('toastErrorGeneric'),
+                description: describeAuthFailure(result, t, 'toastErrorGeneric'),
             });
         } catch (error) {
             toast.error(t('toastErrorTitle'), {
                 description: error instanceof Error ? error.message : t('toastErrorGeneric'),
             });
         }
+        // tokens are single-use: every request, sent or not, needs a fresh slide
+        setCaptchaToken(null);
+        setCaptchaKey((k) => k + 1);
     };
 
     return (
         <>
             <h1 className="form-title">{t('title')}</h1>
-            <p className="text-sm text-gray-400 mb-6">
-                {t('subtitle')}
-            </p>
+            <p className="form-subtitle">{t('subtitle')}</p>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <form onSubmit={handleSubmit(onSubmit)} className="form-body" noValidate>
                 <InputField
                     name="email"
                     label={t('emailLabel')}
                     placeholder="you@example.com"
+                    type="email"
+                    autoComplete="email"
                     register={register}
                     error={errors.email}
                     validation={{
@@ -69,12 +81,20 @@ const ForgotPasswordPage = () => {
                     }}
                 />
 
-                <Button type="submit" disabled={isSubmitting} className="yellow-btn w-full mt-5">
+                <SlideCaptcha
+                    key={captchaKey}
+                    error={captchaError}
+                    onChange={(token) => {
+                        setCaptchaToken(token);
+                        if (token) setCaptchaError(undefined);
+                    }}
+                />
+
+                <Button type="submit" disabled={isSubmitting} className="primary-btn w-full">
                     {isSubmitting ? t('submitting') : t('submit')}
                 </Button>
 
                 <FooterLink text={t('footerText')} linkText={t('footerLink')} href="/sign-in" />
-                <AuthContact />
             </form>
         </>
     );

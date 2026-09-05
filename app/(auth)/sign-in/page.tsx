@@ -4,17 +4,23 @@ import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import InputField from '@/components/forms/InputField';
 import FooterLink from '@/components/forms/FooterLink';
+import SlideCaptcha from '@/components/forms/SlideCaptcha';
 import { signInWithEmail } from "@/lib/actions/auth.actions";
+import { describeAuthFailure } from "@/lib/auth-messages";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import AuthContact from "@/components/AuthContact";
-import React from "react";
+import React, { useState } from "react";
 import { useTranslations } from "next-intl";
 
 const SignIn = () => {
     const router = useRouter()
     const t = useTranslations('auth.signIn');
+    const tCaptcha = useTranslations('auth.captcha');
+    const tValidation = useTranslations('auth.passwordValidation');
+    const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+    const [captchaKey, setCaptchaKey] = useState(0);
+    const [captchaError, setCaptchaError] = useState<string | undefined>();
     const {
         register,
         handleSubmit,
@@ -28,14 +34,18 @@ const SignIn = () => {
     });
 
     const onSubmit = async (data: SignInFormData) => {
+        if (!captchaToken) {
+            setCaptchaError(tCaptcha('required'));
+            return;
+        }
         try {
-            const result = await signInWithEmail(data);
+            const result = await signInWithEmail({ ...data, captchaToken });
             if (result.success) {
                 router.push('/');
                 return;
             }
             toast.error(t('toastErrorTitle'), {
-                description: result.error ?? t('toastErrorInvalid'),
+                description: describeAuthFailure(result, t, 'toastErrorGeneric'),
             });
         } catch (e) {
             console.error(e);
@@ -43,17 +53,23 @@ const SignIn = () => {
                 description: e instanceof Error ? e.message : t('toastErrorGeneric')
             })
         }
+        // tokens are single-use: a failed attempt needs a fresh slide
+        setCaptchaToken(null);
+        setCaptchaKey((k) => k + 1);
     }
 
     return (
         <>
             <h1 className="form-title">{t('title')}</h1>
+            <p className="form-subtitle">{t('subtitle')}</p>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <form onSubmit={handleSubmit(onSubmit)} className="form-body" noValidate>
                 <InputField
                     name="email"
                     label={t('emailLabel')}
                     placeholder="you@example.com"
+                    type="email"
+                    autoComplete="email"
                     register={register}
                     error={errors.email}
                     validation={{
@@ -70,23 +86,35 @@ const SignIn = () => {
                     label={t('passwordLabel')}
                     placeholder={t('passwordPlaceholder')}
                     type="password"
+                    autoComplete="current-password"
                     register={register}
                     error={errors.password}
-                    validation={{ required: t('passwordRequired'), minLength: 8 }}
+                    validation={{
+                        required: t('passwordRequired'),
+                        minLength: { value: 8, message: tValidation('minLength') },
+                    }}
                 />
 
-                <div className="flex justify-end">
+                <SlideCaptcha
+                    key={captchaKey}
+                    error={captchaError}
+                    onChange={(token) => {
+                        setCaptchaToken(token);
+                        if (token) setCaptchaError(undefined);
+                    }}
+                />
+
+                <Button type="submit" disabled={isSubmitting} className="primary-btn w-full">
+                    {isSubmitting ? t('submitting') : t('submit')}
+                </Button>
+
+                <div className="form-links">
                     <Link href="/forgot-password" className="footer-link text-sm">
                         {t('forgotPassword')}
                     </Link>
                 </div>
 
-                <Button type="submit" disabled={isSubmitting} className="yellow-btn w-full mt-5">
-                    {isSubmitting ? t('submitting') : t('submit')}
-                </Button>
-
                 <FooterLink text={t('footerText')} linkText={t('footerLink')} href="/sign-up" />
-                <AuthContact />
             </form>
         </>
     );
