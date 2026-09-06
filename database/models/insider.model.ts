@@ -2,13 +2,21 @@ import { Schema, model, models, type Document, type Model } from 'mongoose';
 
 /**
  * 内部人（Form 3/4/5）公开市场买卖记录与每股最近一次 AI 洞察。
- * 由 catalyst-monitor 的 insider 采集器写入，网页端 /ai-dips 只读。
+ * 三个写入口（EDGAR 即时通道、Finnhub 轮询、网页加池时的即时建档）都经
+ * lib/insider-trades.ts 的 insertInsiderTrades 入库，网页端 /ai-dips 只读。
  */
+
+export type InsiderTradeSource = 'edgar' | 'finnhub';
 
 export interface IInsiderTrade extends Document {
     symbol: string;
-    /** sha256(txExternalKey)，同一笔申报只入库一次 */
+    /** sha256(txExternalKey)，同一来源的同一笔申报只入库一次 */
     externalId: string;
+    /** 跨源粗粒度标识 txMatchKey：EDGAR 与 Finnhub 报同一笔时只保留先到的 */
+    matchKey: string;
+    source: InsiderTradeSource;
+    /** EDGAR accession number（source=edgar 时有） */
+    accessionNumber: string | null;
     /** 申报的内部人姓名 */
     name: string;
     transactionCode: 'P' | 'S';
@@ -32,6 +40,9 @@ const InsiderTradeSchema = new Schema<IInsiderTrade>(
     {
         symbol: { type: String, required: true, uppercase: true, trim: true },
         externalId: { type: String, required: true },
+        matchKey: { type: String, required: true },
+        source: { type: String, enum: ['edgar', 'finnhub'], default: 'finnhub' },
+        accessionNumber: { type: String, default: null },
         name: { type: String, required: true },
         transactionCode: { type: String, enum: ['P', 'S'], required: true },
         change: { type: Number, required: true },
@@ -44,8 +55,10 @@ const InsiderTradeSchema = new Schema<IInsiderTrade>(
     },
     { timestamps: true }
 );
-// 幂等入库：同一笔申报只存一次
+// 幂等入库：同一来源的同一笔申报只存一次；跨源按粗粒度键去重
 InsiderTradeSchema.index({ externalId: 1 }, { unique: true });
+InsiderTradeSchema.index({ matchKey: 1 }, { unique: true, sparse: true });
+InsiderTradeSchema.index({ symbol: 1, filingDate: 1, source: 1 });
 InsiderTradeSchema.index({ symbol: 1, transactionDate: -1 });
 // 页面只用 90 天，180 天后自动清理，集合有界
 InsiderTradeSchema.index({ createdAt: 1 }, { expireAfterSeconds: 180 * 86400 });

@@ -4,27 +4,20 @@
 // the daemon later sees the rows via the unique index and treats the symbol
 // as already seeded, so nothing double-alerts.
 
-import { createHash } from 'node:crypto';
 import { connectToDatabase } from '@/database/mongoose';
-import { InsiderTrade } from '@/database/models/insider.model';
 import { CatalystKv } from '@/database/models/catalyst.model';
+import { insertInsiderTrades } from '@/lib/insider-trades';
 import { timed } from '@/lib/source-calls';
 import { finnhubGate, retryAfterMs } from '@/lib/finnhub-gate';
 import {
     filterOpenMarketTxs,
     insiderSeedKey,
     shiftDate,
-    txAmountUsd,
-    txExternalKey,
     type RawInsiderTx,
 } from '@/lib/insider-math';
 
 const WINDOW_DAYS = 90;
 const FINNHUB_URL = 'https://finnhub.io/api/v1/stock/insider-transactions';
-
-// 必须与 catalyst-monitor/src/store.ts 的 sha256 完全一致（JSON.stringify 后再
-// hash）——externalId 不同会让 daemon 把同一笔申报当成新交易误推送
-const sha256 = (input: unknown) => createHash('sha256').update(JSON.stringify(input)).digest('hex');
 
 // KV marker so the UI can tell "seeded, genuinely no trades" (ETFs etc.)
 // apart from "collector hasn't visited yet"; the daemon honours the same key
@@ -48,25 +41,7 @@ export async function seedInsiderForSymbols(symbols: string[]): Promise<void> {
                     return (await res.json()) as { data?: RawInsiderTx[] };
                 });
                 const txs = filterOpenMarketTxs(symbol, data.data ?? []);
-                for (const tx of txs) {
-                    try {
-                        await InsiderTrade.create({
-                            symbol: tx.symbol,
-                            externalId: sha256(txExternalKey(tx)),
-                            name: tx.name,
-                            transactionCode: tx.transactionCode,
-                            change: tx.change,
-                            transactionPrice: tx.transactionPrice,
-                            amountUsd: txAmountUsd(tx),
-                            transactionDate: tx.transactionDate,
-                            filingDate: tx.filingDate,
-                            firstSeen: true,
-                        });
-                    } catch (err: unknown) {
-                        if (err && typeof err === 'object' && (err as { code?: number }).code === 11000) continue;
-                        throw err;
-                    }
-                }
+                await insertInsiderTrades(txs, { source: 'finnhub', firstSeen: true });
                 await CatalystKv.findOneAndUpdate(
                     { key: seedMarkerKey(symbol) },
                     { $set: { value: today } },

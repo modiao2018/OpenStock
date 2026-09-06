@@ -1,9 +1,10 @@
 import { log, logError } from '../config';
 import { fetchWithRetry } from '../http';
-import { getKv, setKv, sha256 } from '../store';
+import { getKv, setKv } from '../store';
 import { etToday } from '../alpaca-daily';
 import { connectToDatabase } from '@/database/mongoose';
 import { InsiderTrade } from '@/database/models/insider.model';
+import { backfillInsiderMatchKeys, insertInsiderTrades } from '@/lib/insider-trades';
 import {
   CLUSTER_DAYS,
   CLUSTER_MIN_SELLERS,
@@ -21,8 +22,6 @@ import {
   insiderSeedKey,
   isLateFiling,
   shiftDate,
-  txAmountUsd,
-  txExternalKey,
   type InsiderTx,
   type RawInsiderTx,
 } from '../../../lib/insider-math';
@@ -53,6 +52,9 @@ export async function collectInsider(config: MonitorConfig): Promise<NewEvent[]>
     return [];
   }
   await connectToDatabase();
+  // 旧行补跨源去重键（一次性，之后每轮都是空转）
+  const backfilled = await backfillInsiderMatchKeys();
+  if (backfilled > 0) log('insider', `补齐 ${backfilled} 行的跨源去重键`);
 
   const today = etToday();
   const from = shiftDate(today, -WINDOW_DAYS);
@@ -89,31 +91,13 @@ export async function collectInsider(config: MonitorConfig): Promise<NewEvent[]>
   const degradedError = () =>
     new Error(`Finnhub insider 拉取失败 ${fetchErrors}/${pool.length} 只（疑似限流或故障）`);
 
-  // 唯一索引幂等入库，11000 冲突 = 已见过
+  // 幂等入库（同一来源重复、或 EDGAR 通道已先入库的同一笔都会被跳过）
   const newTxs: Array<{ id: string; tx: InsiderTx }> = [];
   let seedCount = 0;
-  for (const tx of fetched) {
-    const isSeed = !seededSymbols.has(tx.symbol);
-    try {
-      const doc = await InsiderTrade.create({
-        symbol: tx.symbol,
-        externalId: sha256(txExternalKey(tx)),
-        name: tx.name,
-        transactionCode: tx.transactionCode,
-        change: tx.change,
-        transactionPrice: tx.transactionPrice,
-        amountUsd: txAmountUsd(tx),
-        transactionDate: tx.transactionDate,
-        filingDate: tx.filingDate,
-        firstSeen: isSeed,
-      });
-      if (isSeed) seedCount++;
-      else newTxs.push({ id: String(doc._id), tx });
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && (err as { code?: number }).code === 11000) continue;
-      throw err;
-    }
-  }
+  const seedTxs = fetched.filter((tx) => !seededSymbols.has(tx.symbol));
+  const liveTxs = fetched.filter((tx) => seededSymbols.has(tx.symbol));
+  seedCount = (await insertInsiderTrades(seedTxs, { source: 'finnhub', firstSeen: true })).inserted.length;
+  newTxs.push(...(await insertInsiderTrades(liveTxs, { source: 'finnhub', firstSeen: false })).inserted);
 
   // 成功拉取过的标的从此视为已建档（哪怕一笔交易都没有）
   for (const symbol of visited) {

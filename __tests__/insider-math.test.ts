@@ -10,6 +10,8 @@ import {
     summarizeInsiderTxs,
     txAmountUsd,
     txExternalKey,
+    txMatchKey,
+    normalizeInsiderName,
     type InsiderTx,
     type NotifyOpts,
 } from '@/lib/insider-math';
@@ -251,5 +253,27 @@ describe('shiftDate', () => {
         expect(shiftDate('2026-08-20', -7)).toBe('2026-08-13');
         expect(shiftDate('2026-09-01', -1)).toBe('2026-08-31');
         expect(shiftDate('2026-08-31', -90)).toBe('2026-06-02');
+    });
+});
+
+describe('txMatchKey (cross-source identity)', () => {
+    it('ignores price and filing date, which differ between EDGAR and Finnhub', () => {
+        const edgar = tx({ name: 'Borgeson Blake', transactionPrice: 3.34, filingDate: '2026-09-02', change: -30000, transactionCode: 'S' });
+        const finnhub = tx({ name: 'BLAKE BORGESON', transactionPrice: 3.3401, filingDate: '2026-09-03', change: -30000, transactionCode: 'S' });
+        expect(txMatchKey(edgar)).toBe(txMatchKey(finnhub));
+        expect(txExternalKey(edgar)).not.toBe(txExternalKey(finnhub));
+    });
+
+    it('still separates different trades', () => {
+        expect(txMatchKey(tx({ change: -30000 }))).not.toBe(txMatchKey(tx({ change: -40000 })));
+        expect(txMatchKey(tx({ transactionDate: '2026-08-04' }))).not.toBe(txMatchKey(tx({ transactionDate: '2026-09-01' })));
+        expect(txMatchKey(tx({ transactionCode: 'P', change: 100 }))).not.toBe(txMatchKey(tx({ transactionCode: 'S', change: -100 })));
+        expect(txMatchKey(tx({ name: 'Jane Doe' }))).not.toBe(txMatchKey(tx({ name: 'John Doe' })));
+    });
+
+    it('normalises names as word sets', () => {
+        expect(normalizeInsiderName('Borgeson Blake')).toBe(normalizeInsiderName('Blake Borgeson'));
+        expect(normalizeInsiderName('Huang Jen Hsun')).toBe(normalizeInsiderName('Jen-Hsun Huang'.replace('-', ' ')));
+        expect(normalizeInsiderName('Smith, John A.')).toBe('a john smith');
     });
 });

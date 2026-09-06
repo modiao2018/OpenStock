@@ -4,7 +4,7 @@ import { getKv, setKv } from '../store';
 import { pushMessage } from '../notify';
 import { fetchDailyBars, formingSessionDate } from '../alpaca-daily';
 import { getCikMap } from './edgar';
-import { fetchFilingXml } from './insider-edgar';
+import { backfillFilingTrades, fetchFilingXml } from './insider-edgar';
 import { parseForm4Xml } from '../form-parse';
 import { connectToDatabase } from '@/database/mongoose';
 import { InsiderFiling, InsiderTrade } from '@/database/models/insider.model';
@@ -12,6 +12,7 @@ import { fetchTwelveDaily, twelveConfigured } from '@/lib/twelvedata';
 import { getAiDipPool } from '../../../lib/ai-dips-pool';
 import { completedBars } from '../../../lib/ai-dips-math';
 import { shiftDate } from '../../../lib/insider-math';
+import { SEC_MIN_REQUEST_GAP_MS } from '../../../lib/edgar';
 import {
   alertSignature,
   compareQuote,
@@ -44,6 +45,8 @@ export interface InsiderXcheckResult {
   windowTo: string;
   checkedFilings: number;
   missing: Array<{ symbol: string; filingDate: string; accessionNumber: string; url: string }>;
+  /** 本次从 EDGAR 原文回填进交易表的行数（Finnhub 漏掉的） */
+  backfilledTrades?: number;
 }
 
 export const XCHECK_QUOTES_KEY = 'source_xcheck:quotes';
@@ -166,9 +169,11 @@ async function checkInsiders(config: MonitorConfig): Promise<void> {
   const to = shiftDate(today, -opts.graceDays);
   const filingDocs = await InsiderFiling.find({ form: '4', filingDate: { $gte: from, $lte: to } }).lean();
   const symbols = [...new Set(filingDocs.map((d) => d.symbol))];
+  // 只看 Finnhub 来源的行：这里核对的是"Finnhub 有没有跟上 EDGAR"，
+  // EDGAR 通道自己写的行不算 Finnhub 的功劳
   const tradeDocs = symbols.length
     ? await InsiderTrade.find(
-        { symbol: { $in: symbols }, filingDate: { $gte: shiftDate(from, -opts.toleranceDays), $lte: shiftDate(to, opts.toleranceDays) } },
+        { symbol: { $in: symbols }, source: { $ne: 'edgar' }, filingDate: { $gte: shiftDate(from, -opts.toleranceDays), $lte: shiftDate(to, opts.toleranceDays) } },
         { symbol: 1, filingDate: 1 }
       ).lean()
     : [];
@@ -210,12 +215,35 @@ async function checkInsiders(config: MonitorConfig): Promise<void> {
       const doc = filingDocs.find((d) => d.accessionNumber === c.accessionNumber);
       return { symbol: c.symbol, filingDate: c.filingDate, accessionNumber: c.accessionNumber, url: doc?.url ?? '' };
     });
+
+  // Finnhub 漏掉的申报不能只列在状态页——从 EDGAR 原文把买卖回填进页面读的交易表，
+  // 页面才不会停在 Finnhub 最后一次跟上的那笔（RXRX 2026-09：页面停在 8 月，EDGAR 早有 9 月的）
+  let backfilledTrades = 0;
+  if (missing.length > 0) {
+    const cikMap = await getCikMap(config);
+    // 已经由 EDGAR 通道写过的申报不用再拉
+    const already = new Set(
+      (await InsiderTrade.find({ accessionNumber: { $in: missing.map((m) => m.accessionNumber) } }, { accessionNumber: 1 }).lean()).map((d) => d.accessionNumber)
+    );
+    for (const m of missing.slice(0, MAX_BACKFILL)) {
+      const cik = cikMap[m.symbol];
+      if (!cik || !m.url || already.has(m.accessionNumber)) continue;
+      try {
+        backfilledTrades += await backfillFilingTrades(config, cik, m);
+      } catch (err) {
+        logError('xcheck:backfill-trades', err);
+      }
+      await sleep(SEC_MIN_REQUEST_GAP_MS);
+    }
+    if (backfilledTrades > 0) log('xcheck', `从 EDGAR 回填 ${backfilledTrades} 笔 Finnhub 缺失的交易`);
+  }
   const result: InsiderXcheckResult = {
     checkedAt: new Date().toISOString(),
     windowFrom: from,
     windowTo: to,
     checkedFilings: filings.length,
     missing,
+    backfilledTrades,
   };
   await setKv(XCHECK_INSIDER_KEY, JSON.stringify(result));
   await setKv('xcheck_insider_date', today);
@@ -226,7 +254,7 @@ async function checkInsiders(config: MonitorConfig): Promise<void> {
     'source_xcheck:insider:sig',
     alertSignature(missing.map((m) => m.accessionNumber)),
     `内部人数据交叉验证｜Finnhub 缺失 ${missing.length} 份申报`,
-    `EDGAR 有 Form 4 但 Finnhub 超过 ${opts.graceDays} 天仍无对应交易：\n` +
+    `EDGAR 有 Form 4 但 Finnhub 超过 ${opts.graceDays} 天仍无对应交易（已从 EDGAR 回填 ${backfilledTrades} 笔到页面）：\n` +
       missing.slice(0, 10).map((m) => `${m.symbol} ${m.filingDate}`).join('\n') +
       (missing.length > 10 ? `\n…共 ${missing.length} 份` : '') +
       '\n请到数据源状态页查看'

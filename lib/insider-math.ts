@@ -75,6 +75,22 @@ export function txExternalKey(tx: InsiderTx): string {
     ].join('|');
 }
 
+// Cross-source identity. Finnhub and EDGAR describe the same filed trade
+// with slightly different prices (Finnhub rounds the VWAP, EDGAR gives the
+// per-row price) and Finnhub's filingDate can be off by a day, so the exact
+// externalId never matches across sources. Symbol / insider / trade date /
+// direction / share count is stable in both and is what "the same trade" means
+// for the page and the alert thresholds.
+export function txMatchKey(tx: Pick<InsiderTx, 'symbol' | 'name' | 'transactionDate' | 'transactionCode' | 'change'>): string {
+    return [tx.symbol, normalizeInsiderName(tx.name), tx.transactionDate, tx.transactionCode, Math.abs(tx.change)].join('|');
+}
+
+// "Borgeson Blake" (EDGAR) vs "Blake Borgeson" / "BORGESON BLAKE" (Finnhub):
+// compare as a sorted, lower-cased word set
+export function normalizeInsiderName(name: string): string {
+    return name.toLowerCase().replace(/[.,]/g, ' ').split(/\s+/).filter(Boolean).sort().join(' ');
+}
+
 export interface InsiderSummary {
     buyCount: number;
     sellCount: number;

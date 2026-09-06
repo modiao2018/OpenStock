@@ -80,6 +80,9 @@ export default async function XcheckCard({ status }: { status: XcheckStatus }) {
                             <p className="text-xs text-gray-400 mb-2">
                                 {t('lastCheck', { time: formatTime(insider.checkedAt, locale) })} · {t('window', { from: insider.windowFrom, to: insider.windowTo })} · {t('checkedFilings', { n: insider.checkedFilings })}
                             </p>
+                            {insider.backfilledTrades ? (
+                                <p className="text-xs text-amber-400/90 mb-1">{t('backfilled', { n: insider.backfilledTrades })}</p>
+                            ) : null}
                             {insider.missing.length === 0 ? (
                                 <p className="text-sm text-teal-400">{t('noMissing')}</p>
                             ) : (
