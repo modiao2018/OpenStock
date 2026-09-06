@@ -20,6 +20,7 @@ import { collectXcheck } from './collectors/xcheck';
 import { collectOutcomes } from './collectors/outcomes';
 import { collectFocus } from './collectors/focus';
 import { collectDigest } from './collectors/digest';
+import { collectThesis } from './collectors/thesis';
 import { eventDirection, recordSignal } from './signals';
 import { COLLECTOR_SPECS, collectorIntervals, type CollectorName } from './collector-registry';
 import { recordSourceCall } from '@/lib/source-calls';
@@ -54,6 +55,7 @@ const RUNNERS = {
   outcomes: collectOutcomes,
   focus: collectFocus,
   digest: collectDigest,
+  thesis: collectThesis,
 } satisfies Record<CollectorName, Runner>;
 
 /** 公告里给了催化剂时间指引 → 自动补进催化剂日历 */

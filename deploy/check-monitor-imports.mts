@@ -10,7 +10,8 @@ const modules = [
     'collectors/rss', 'collectors/market', 'collectors/reminders',
     'collectors/weekly', 'collectors/discovery', 'collectors/aidips',
     'collectors/insider', 'collectors/insider-edgar',
-    'collectors/sources', 'collectors/xcheck',
+    'collectors/sources', 'collectors/xcheck', 'collectors/outcomes',
+    'collectors/focus', 'collectors/digest', 'collectors/thesis',
 ];
 for (const m of modules) {
     await import(`../catalyst-monitor/src/${m}.ts`);

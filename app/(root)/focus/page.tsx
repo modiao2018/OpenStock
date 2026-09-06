@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { getSession } from '@/lib/get-session';
 import { getFocusQueue } from '@/lib/actions/focus.actions';
+import { getTheses } from '@/lib/actions/thesis.actions';
+import ThesisPanel from '@/components/thesis/ThesisPanel';
 import AutoRefresh from '@/components/catalyst/AutoRefresh';
 import FocusQueue from '@/components/focus/FocusQueue';
 import DeferredList from '@/components/focus/DeferredList';
@@ -15,7 +17,7 @@ export default async function FocusPage() {
         redirect('/sign-in');
     }
 
-    const data = await getFocusQueue();
+    const [data, theses] = await Promise.all([getFocusQueue(), getTheses({ includeClosed: true, limit: 100 })]);
     const above = data.threshold === null ? 0 : data.rows.filter((r) => r.score >= data.threshold!).length;
     const computed = data.computedAt ? formatClock(data.computedAt, locale) : null;
 
@@ -39,6 +41,7 @@ export default async function FocusPage() {
             </div>
 
             <div className="space-y-6">
+                <ThesisPanel items={theses} />
                 <FocusQueue rows={data.rows} threshold={data.threshold} />
                 <DeferredList items={data.deferred} />
             </div>

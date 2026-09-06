@@ -652,7 +652,8 @@
         "xcheck": "多源交叉验证",
         "outcomes": "信号结果回补",
         "focus": "关注队列打分",
-        "digest": "每日摘要"
+        "digest": "每日摘要",
+        "thesis": "洞察跟进"
       }
     }
   },
@@ -849,7 +850,8 @@
       "event.rss": "新闻",
       "event.clinicaltrials": "临床试验变更",
       "reminder.t7": "催化剂提醒 T-7",
-      "reminder.t1": "催化剂提醒 T-1"
+      "reminder.t1": "催化剂提醒 T-1",
+      "thesis.open": "我的洞察"
     }
   },
   "focus": {
@@ -933,6 +935,103 @@
       "catalyst21d": "催化剂 21 天内",
       "urgentEvent": "紧急事件",
       "signal24h": "24h 内有信号"
+    }
+  },
+  "thesis": {
+    "title": "洞察跟进",
+    "hint": "临时看上某只股票、有个想法或点子时，随手写一段话就行——不需要价格、不需要指标，AI 会把它整理成可检验的观点。之后系统每 15 分钟对照一次：有相关消息、价格大幅波动、到了你提的时间或者几天没动静时，AI 会对照你当初的想法给点评并推送提醒。随时可以关闭。",
+    "activeCount": "进行中 {n} 条",
+    "showClosed": "显示已结束（{n}）",
+    "hideClosed": "隐藏已结束",
+    "add": "记一条想法",
+    "addFor": "记下对 {symbol} 的想法",
+    "empty": "还没有记录。突然对某只股票有想法时，趁热写一段话，免得过两天就忘了",
+    "emptyFor": "还没有对 {symbol} 的短期想法",
+    "saved": "已开始跟进 {symbol}",
+    "saveFailed": "保存失败，请重试",
+    "actionFailed": "操作失败，请重试",
+    "closed": "已关闭对 {symbol} 的跟进",
+    "reopened": "已重新开始跟进",
+    "deleteConfirm": "删除对 {symbol} 的这条想法及全部跟进记录？",
+    "closingNoteLabel": "结语：",
+    "direction": {
+      "long": "偏多",
+      "short": "偏空",
+      "watch": "方向未定"
+    },
+    "status": {
+      "active": "进行中",
+      "closed": "已关闭",
+      "expired": "已到期"
+    },
+    "outcome": {
+      "confirmed": "兑现",
+      "refuted": "证伪",
+      "abandoned": "放弃"
+    },
+    "row": {
+      "entry": "入场",
+      "last": "最近",
+      "target": "目标",
+      "stop": "失效",
+      "until": "截止 {date}",
+      "followups": "跟进 {n} 次",
+      "daysLeft": "剩 {n} 天",
+      "dueToday": "今天到期",
+      "overdue": "已过期 {n} 天"
+    },
+    "triggers": {
+      "stop": "触及失效价",
+      "target": "达到目标价",
+      "horizonPassed": "已到截止日",
+      "horizonSoon": "即将到期",
+      "urgentEvent": "紧急事件",
+      "newEvent": "有新信息",
+      "bigMove": "价格大幅波动",
+      "checkin": "定期回顾"
+    },
+    "followup": {
+      "title": "AI 跟进记录",
+      "none": "还没有跟进——监控进程每 15 分钟检查一次，有触发条件时才会提醒",
+      "notDelivered": "推送未送达"
+    },
+    "actions": {
+      "close": "关闭跟进",
+      "reopen": "重新跟进",
+      "delete": "删除",
+      "append": "补充",
+      "appendPlaceholder": "补充新的想法（回车提交），AI 下次跟进会看到"
+    },
+    "form": {
+      "title": "随手记一个想法",
+      "titleFor": "对 {symbol} 的想法",
+      "intro": "想到什么写什么：为什么注意到它、看好还是看空、打算怎么做、什么时候见分晓。写多写少都行。",
+      "placeholder": "例如：最近 AI 数据中心电力紧张的新闻很多，Vistra 好像是受益方，想小仓位试一下，看下个月财报怎么说。\n\n或者只是一句：英伟达财报后跌太多了，觉得有反弹机会。",
+      "placeholderFor": "例如：{symbol} 最近的消息让我觉得……想试一下，看两周内有没有变化。",
+      "aiHint": "提交后 AI 会自动识别标的、方向、你提到的价位和时间，并整理出“什么算兑现、什么算证伪、跟进要盯什么”。",
+      "needsSymbol": "AI 没认出你说的是哪只股票，补一下代码就行",
+      "stockSearchPlaceholder": "搜代码或公司名",
+      "save": "记下并开始跟进",
+      "saving": "AI 整理中…",
+      "cancel": "取消"
+    },
+    "closeDialog": {
+      "title": "关闭对 {symbol} 的跟进",
+      "intro": "关闭后不再提醒。顺手记一下结果，日后回看能知道自己当时判断得怎么样。",
+      "outcome": "结果",
+      "note": "结语（可选）",
+      "notePlaceholder": "例如：财报后涨了 8% 已清仓；或者：消息证伪，止损出局。",
+      "confirm": "关闭跟进"
+    },
+    "savedUnframed": "已记下 {symbol}，AI 稍后会整理成可检验的观点",
+    "framing": {
+      "title": "AI 整理的观点",
+      "confirm": "看到这些说明想法在兑现",
+      "refute": "看到这些说明想法不成立",
+      "questions": "接下来可以弄清楚的问题",
+      "keywords": "跟进时盯这些关键词：",
+      "pending": "AI 还没整理（监控进程下一轮会补）",
+      "none": "没有整理记录"
     }
   }
 }

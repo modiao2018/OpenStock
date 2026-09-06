@@ -652,7 +652,8 @@
         "xcheck": "Cross-check",
         "outcomes": "Signal outcomes",
         "focus": "Focus scoring",
-        "digest": "Daily digest"
+        "digest": "Daily digest",
+        "thesis": "Thesis follow-ups"
       }
     }
   },
@@ -849,7 +850,8 @@
       "event.rss": "News",
       "event.clinicaltrials": "Trial update",
       "reminder.t7": "Catalyst reminder T-7",
-      "reminder.t1": "Catalyst reminder T-1"
+      "reminder.t1": "Catalyst reminder T-1",
+      "thesis.open": "My thesis"
     }
   },
   "focus": {
@@ -933,6 +935,103 @@
       "catalyst21d": "Catalyst ≤21d",
       "urgentEvent": "Urgent event",
       "signal24h": "Signal in 24h"
+    }
+  },
+  "thesis": {
+    "title": "Thesis Follow-ups",
+    "hint": "When a stock suddenly interests you, just jot a paragraph — no prices, no indicators needed; the AI turns it into a checkable thesis. Every 15 minutes the monitor checks: relevant news, a big price move, the time you mentioned, or days of silence all trigger an AI review against your original note, pushed to you. Close it any time.",
+    "activeCount": "{n} active",
+    "showClosed": "Show closed ({n})",
+    "hideClosed": "Hide closed",
+    "add": "Write a thesis",
+    "addFor": "Write a thesis for {symbol}",
+    "empty": "Nothing yet. When a stock suddenly interests you, write the thought down before it fades",
+    "emptyFor": "No short-term thesis for {symbol} yet",
+    "saved": "Now following {symbol}",
+    "saveFailed": "Save failed, please retry",
+    "actionFailed": "Action failed, please retry",
+    "closed": "Stopped following {symbol}",
+    "reopened": "Follow-up reopened",
+    "deleteConfirm": "Delete this thesis on {symbol} and all its follow-ups?",
+    "closingNoteLabel": "Closing note:",
+    "direction": {
+      "long": "Leaning long",
+      "short": "Leaning short",
+      "watch": "Undecided"
+    },
+    "status": {
+      "active": "Active",
+      "closed": "Closed",
+      "expired": "Expired"
+    },
+    "outcome": {
+      "confirmed": "Confirmed",
+      "refuted": "Refuted",
+      "abandoned": "Abandoned"
+    },
+    "row": {
+      "entry": "Entry",
+      "last": "Last",
+      "target": "Target",
+      "stop": "Stop",
+      "until": "Until {date}",
+      "followups": "{n} follow-ups",
+      "daysLeft": "{n} days left",
+      "dueToday": "Due today",
+      "overdue": "{n} days overdue"
+    },
+    "triggers": {
+      "stop": "Stop hit",
+      "target": "Target hit",
+      "horizonPassed": "Deadline passed",
+      "horizonSoon": "Deadline soon",
+      "urgentEvent": "Urgent event",
+      "newEvent": "New information",
+      "bigMove": "Big price move",
+      "checkin": "Periodic review"
+    },
+    "followup": {
+      "title": "AI follow-ups",
+      "none": "No follow-ups yet — the monitor checks every 15 minutes and only alerts when something triggers",
+      "notDelivered": "push not delivered"
+    },
+    "actions": {
+      "close": "Stop following",
+      "reopen": "Follow again",
+      "delete": "Delete",
+      "append": "Append",
+      "appendPlaceholder": "Add a new thought (Enter to submit); the AI sees it on the next follow-up"
+    },
+    "form": {
+      "title": "Jot down an idea",
+      "titleFor": "An idea about {symbol}",
+      "intro": "Write whatever is on your mind: why it caught your eye, bullish or bearish, what you plan to do, when it should show. Long or short is fine.",
+      "placeholder": "e.g. Lots of news on AI data-center power shortages; Vistra looks like a beneficiary, small position, see what next month's earnings say.\n\nOr just: NVDA fell too much after earnings, feels like a bounce.",
+      "placeholderFor": "e.g. Recent news on {symbol} makes me think… want to try it and see if anything changes within two weeks.",
+      "aiHint": "On submit the AI picks out the symbol, lean, any levels or dates you mentioned, and lays out what would confirm or refute the idea and what to watch for.",
+      "needsSymbol": "The AI couldn't tell which stock you mean — add the ticker",
+      "stockSearchPlaceholder": "Ticker or company name",
+      "save": "Save and follow",
+      "saving": "AI is structuring…",
+      "cancel": "Cancel"
+    },
+    "closeDialog": {
+      "title": "Stop following {symbol}",
+      "intro": "No more alerts after closing. Record the outcome so you can grade your own calls later.",
+      "outcome": "Outcome",
+      "note": "Closing note (optional)",
+      "notePlaceholder": "e.g. +8% after earnings, sold out; or: news refuted, stopped out.",
+      "confirm": "Stop following"
+    },
+    "savedUnframed": "{symbol} noted; the AI will structure it shortly",
+    "framing": {
+      "title": "AI-structured thesis",
+      "confirm": "Signs the idea is playing out",
+      "refute": "Signs the idea is wrong",
+      "questions": "Worth finding out next",
+      "keywords": "Watching for:",
+      "pending": "Not structured yet (the monitor fills this in next round)",
+      "none": "No structuring record"
     }
   }
 }
