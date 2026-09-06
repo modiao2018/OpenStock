@@ -90,7 +90,8 @@ export async function catchUpFilingTrades(config: MonitorConfig, cikMap: Record<
   const known = new Set(
     (await InsiderTrade.find({ accessionNumber: { $in: filings.map((f) => f.accessionNumber) } }, { accessionNumber: 1 }).lean()).map((d) => d.accessionNumber)
   );
-  const todo = filings.filter((f) => !known.has(f.accessionNumber) && (f.txCodes === null || f.txCodes.includes('P') || f.txCodes.includes('S')));
+  // 旧行的 txCodes 可能是字段缺失（undefined）而非 null——都算"未解析"
+  const todo = filings.filter((f) => !known.has(f.accessionNumber) && (!f.txCodes || f.txCodes.includes('P') || f.txCodes.includes('S')));
   let added = 0;
   let checked = 0;
   for (const f of todo.slice(0, CATCHUP_BATCH)) {
