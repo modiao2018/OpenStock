@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { isRedUpLocale } from '@/lib/utils';
 import type { SymbolTileData } from '@/lib/actions/catalyst.actions';
+import { describeWindow } from '@/catalyst-monitor/src/guidance-dates';
 
 function Sparkline({ points, redUp }: { points: number[]; redUp: boolean }) {
     if (points.length < 2) return <div className="h-10" />;
@@ -30,7 +31,8 @@ function Sparkline({ points, redUp }: { points: number[]; redUp: boolean }) {
 /** 标的速览瓦片：收盘 · 当日涨跌 · 当日走势火花线 · 异动σ · 下一催化剂倒计时 */
 export default async function SymbolTiles({ tiles }: { tiles: SymbolTileData[] }) {
     const t = await getTranslations('catalyst.tiles');
-    const redUp = isRedUpLocale(await getLocale());
+    const locale = await getLocale();
+    const redUp = isRedUpLocale(locale);
     if (tiles.length === 0) return null;
 
     return (
@@ -95,8 +97,13 @@ export default async function SymbolTiles({ tiles }: { tiles: SymbolTileData[] }
 
                         <div className="mt-1.5 text-xs">
                             {tile.nextCatalyst ? (
-                                <span className={tile.nextCatalyst.days <= 7 ? 'text-amber-400' : 'text-gray-500'}>
-                                    <span className="tabular-nums font-medium">T-{tile.nextCatalyst.days}</span>
+                                <span className={tile.nextCatalyst.precision === 'day' && tile.nextCatalyst.days <= 7 ? 'text-amber-400' : 'text-gray-500'}>
+                                    {/* 区间指引没有可倒数的天数，显示"2026 下半年"而不是编出来的 T-N */}
+                                    <span className="tabular-nums font-medium">
+                                        {tile.nextCatalyst.precision === 'day'
+                                            ? `T-${tile.nextCatalyst.days}`
+                                            : describeWindow(tile.nextCatalyst.date, tile.nextCatalyst.precision, locale)}
+                                    </span>
                                     <span className="mx-1 text-gray-700">·</span>
                                     <span className="text-gray-500">{tile.nextCatalyst.title.slice(0, 24)}</span>
                                 </span>

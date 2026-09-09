@@ -2,7 +2,8 @@ import { callAIProviderWithConfig } from '@/lib/ai-provider';
 import { resolveLlmConfig } from '@/lib/llm-config';
 import { log, logError } from './config';
 import { fetchWithRetry } from './http';
-import { getRecentEvents, listTrials, listUpcomingCustomEvents } from './store';
+import { getRecentEvents, listAutoCustomEvents, listTrials, listUpcomingCustomEvents } from './store';
+import { describeWindow, parseGuidanceReply, type DatePrecision, type GuidanceCatalyst } from './guidance-dates';
 import type { MonitorConfig, StoredEvent } from './types';
 
 // 正文+附件合计上限：8-K 的新闻稿和幻灯片常见 2 万+ 字符，
@@ -110,7 +111,7 @@ async function buildMarketContext(ev: StoredEvent): Promise<string> {
     const in30d = new Date(Date.now() + 30 * 24 * 3600_000).toISOString().slice(0, 10);
     const catalysts: string[] = [];
     for (const c of await listUpcomingCustomEvents()) {
-      if (c.symbol === symbol && c.date <= in30d) catalysts.push(`- ${c.date} ${c.title}`);
+      if (c.symbol === symbol && c.date <= in30d) catalysts.push(`- ${describeWindow(c.date, c.precision ?? 'day', 'zh')} ${c.title}`);
     }
     for (const t of await listTrials()) {
       if (t.symbol === symbol && t.primaryCompletionDate && t.primaryCompletionDate <= in30d) {
@@ -178,49 +179,60 @@ export async function translateTrialTitles(
   }
 }
 
-export interface GuidanceCatalyst {
-  title: string;
-  date: string; // YYYY-MM-DD
-  kind: 'data-readout' | 'pdufa' | 'adcom' | 'earnings' | 'conference' | 'other';
-  dateText: string;
-}
+export type { GuidanceCatalyst } from './guidance-dates';
 
 export interface AnalysisResult {
   analysis: string | null;
   guidances: GuidanceCatalyst[];
+  /** 本公告表明"已经发生 / 时间已更新"的既有 AI 抽取条目 id */
+  supersedes: string[];
 }
 
-/** 从 LLM 回复中提取 JSON 数组（容忍 ```json 围栏和前后废话） */
-function parseJsonArrayReply(reply: string): any[] | null {
-  const match = reply.match(/\[[\s\S]*\]/);
-  if (!match) return null;
-  try {
-    const parsed = JSON.parse(match[0]);
-    return Array.isArray(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
+const NO_GUIDANCE: Pick<AnalysisResult, 'guidances' | 'supersedes'> = { guidances: [], supersedes: [] };
 
-const GUIDANCE_KINDS = new Set(['data-readout', 'pdufa', 'adcom', 'earnings', 'conference', 'other']);
+const PRECISION_ZH: Record<DatePrecision, string> = {
+  day: '具体日期',
+  month: '仅月份',
+  quarter: '季度',
+  half: '半年',
+  year: '年内',
+};
 
 async function extractGuidance(
   llm: NonNullable<Awaited<ReturnType<typeof resolveLlmConfig>>>,
   ev: StoredEvent,
   context: string
-): Promise<GuidanceCatalyst[]> {
+): Promise<Pick<AnalysisResult, 'guidances' | 'supersedes'>> {
   // 只有申报和新闻里才会出现公司给的时间指引
-  if (ev.source !== 'edgar' && ev.source !== 'rss') return [];
+  if (ev.source !== 'edgar' && ev.source !== 'rss') return NO_GUIDANCE;
+
+  // 把该标的日历里已有的 AI 条目喂给模型：新公告常常宣告旧指引"已发生"或改期，
+  // 不给它看旧条目就没法作废，日历会一直挂着过时的预期
+  // 只回看近 180 天的锚点：更早的早就过期，不值得占 prompt
+  const cutoff = new Date(Date.now() - 180 * 24 * 3600_000).toISOString().slice(0, 10);
+  const existing = ev.symbol ? (await listAutoCustomEvents(ev.symbol)).filter((c) => c.date >= cutoff).slice(-20) : [];
+  const existingBlock = existing.length
+    ? '\n该公司日历里已有的催化剂预期（id | 预期时间 | 精度 | 标题 | 原文）：\n' +
+      existing
+        .map((c) => `- ${c.id} | ${c.date} | ${PRECISION_ZH[c.precision ?? 'day']} | ${c.title} | ${c.dateText ?? ''}`)
+        .join('\n') +
+      '\n若本内容表明其中某条已经发生（如"已递交/已受理/已公布/已完成"）、或给出了同一事件更新的时间，' +
+      '把它的 id 放进 supersedes；同一事件的新时间作为新条目输出。仅是再次重复同样的预期不算更新，不要放进 supersedes。\n'
+    : '';
 
   const prompt =
     '从以下内容中找出公司给出的所有未来催化剂时间指引（数据读出/topline、后续随访数据、' +
     'PDUFA 审批日、FDA 咨询委员会、启动新试验、财报日、医学会议展示等）。' +
-    '只输出 JSON 数组（最多 3 项，没有则输出 []），不要任何其他文字：\n' +
-    '[{"title": "简短中文标题（含药物名/事件类型）", "dateText": "原文时间表述", ' +
-    '"isoDate": "YYYY-MM-DD 估计值", "kind": "data-readout|pdufa|adcom|earnings|conference|other"}]\n' +
-    '模糊表述的估计规则：具体日期照抄；仅月份取 15 日；季度取中间月 15 日；' +
-    '"上半年/H1"取 04-15，"下半年/H2"取 10-15；"年内/later this year"取 11-15。\n\n' +
-    `${context}`;
+    '只输出一个 JSON 对象，不要任何其他文字：\n' +
+    '{"catalysts": [{"title": "简短中文标题（含药物名/事件类型）", "dateText": "原文时间表述", ' +
+    '"isoDate": "YYYY-MM-DD", "precision": "day|month|quarter|half|year", ' +
+    '"kind": "data-readout|pdufa|adcom|earnings|conference|other"}], "supersedes": ["已发生或已改期的既有条目 id"]}\n' +
+    'catalysts 最多 3 项，没有则为 []。precision 必须如实反映原文粒度：具体日期填 day 并照抄；' +
+    '只给月份填 month，isoDate 取该月任一天；季度填 quarter；"上半年/下半年/H1/H2"填 half；' +
+    '"年内/later this year"填 year；isoDate 落在该区间内即可。' +
+    '已经发生的事情（如"已获受理"）不是未来催化剂，不要输出。' +
+    existingBlock +
+    `\n${context}`;
 
   try {
     const reply = await callAIProviderWithConfig(prompt, {
@@ -230,18 +242,13 @@ async function extractGuidance(
       model: llm.model,
     });
     const today = new Date().toISOString().slice(0, 10);
-    return (parseJsonArrayReply(reply) ?? [])
-      .filter((g) => g?.isoDate && /^\d{4}-\d{2}-\d{2}$/.test(g.isoDate) && g.isoDate >= today)
-      .slice(0, 3)
-      .map((g) => ({
-        title: String(g.title ?? '').slice(0, 120) || '数据读出指引',
-        date: g.isoDate as string,
-        kind: GUIDANCE_KINDS.has(g.kind) ? g.kind : 'other',
-        dateText: String(g.dateText ?? '').slice(0, 200),
-      }));
+    const parsed = parseGuidanceReply(reply, today, 3);
+    // 只认本标的确实存在的 id，LLM 编造的直接丢
+    const known = new Set(existing.map((c) => c.id));
+    return { guidances: parsed.catalysts, supersedes: parsed.supersedes.filter((id) => known.has(id)) };
   } catch (err) {
     logError('analyze:guidance', err);
-    return [];
+    return NO_GUIDANCE;
   }
 }
 
@@ -251,7 +258,7 @@ async function extractGuidance(
  * LLM 未配置或调用失败返回 null 字段，调用方照常推送，不阻塞。
  */
 export async function analyzeEvent(config: MonitorConfig, ev: StoredEvent): Promise<AnalysisResult> {
-  const none: AnalysisResult = { analysis: null, guidances: [] };
+  const none: AnalysisResult = { analysis: null, guidances: [], supersedes: [] };
   const context = await buildContext(config, ev);
   if (!context) return none;
 
@@ -303,6 +310,6 @@ export async function analyzeEvent(config: MonitorConfig, ev: StoredEvent): Prom
     logError('analyze', err);
   }
 
-  const guidances = await extractGuidance(llm, ev, context);
-  return { analysis, guidances };
+  const { guidances, supersedes } = await extractGuidance(llm, ev, context);
+  return { analysis, guidances, supersedes };
 }

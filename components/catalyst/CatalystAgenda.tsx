@@ -16,12 +16,17 @@ import {
     type CustomCatalystData,
     type CustomCatalystKind,
 } from '@/lib/actions/catalyst.actions';
+import { describeWindow, windowOf, type DatePrecision } from '@/catalyst-monitor/src/guidance-dates';
 
 const KINDS: CustomCatalystKind[] = ['data-readout', 'pdufa', 'adcom', 'earnings', 'conference', 'other'];
 
 interface AgendaEntry {
     key: string;
-    date: string; // YYYY-MM-DD；未知日期用 '9999-12-31'
+    date: string; // YYYY-MM-DD；未知日期用 '9999-12-31'；区间指引是区间末尾
+    /** 非 day = 公司只给了"下半年/Q4"这类区间，没有具体日期 */
+    precision: DatePrecision;
+    /** 公告原文时间表述（AI 抽取条目） */
+    dateText?: string;
     symbol: string;
     title: string;
     chip: string;
@@ -61,7 +66,7 @@ export default function CatalystAgenda({
     // 最早的未来催化剂日：月历初始定位 + 默认展开明细，打开即有内容
     const today0 = new Date().toISOString().slice(0, 10);
     const firstUpcoming = [
-        ...customEvents.map((c) => c.date),
+        ...customEvents.filter((c) => c.precision === 'day').map((c) => c.date),
         ...trials.map((tr) => {
             const d = tr.primaryCompletionDate;
             return d && /^\d{4}-\d{2}$/.test(d) ? `${d}-01` : d;
@@ -92,6 +97,8 @@ export default function CatalystAgenda({
             out.push({
                 key: `c-${c.id}`,
                 date: c.date,
+                precision: c.precision,
+                dateText: c.dateText,
                 symbol: c.symbol,
                 title: c.title,
                 chip: tCustom(`kind.${c.kind}`),
@@ -108,6 +115,7 @@ export default function CatalystAgenda({
                 out.push({
                     key: `t-${tr.nctId}`,
                     date: iso ?? '9999-12-31',
+                    precision: 'day',
                     symbol: tr.symbol,
                     // 中文界面优先显示 AI 翻译的标题，原文可通过链接核对
                     title: locale.startsWith('zh') ? (tr.titleZh ?? tr.title) : tr.title,
@@ -127,12 +135,25 @@ export default function CatalystAgenda({
     const byDate = useMemo(() => {
         const m = new Map<string, AgendaEntry[]>();
         for (const e of entries) {
-            if (e.date >= '9999') continue;
+            // 区间指引没有具体日子，不钉在某个格子上（钉在区间末尾会误导），月历下方单列
+            if (e.date >= '9999' || e.precision !== 'day') continue;
             if (!m.has(e.date)) m.set(e.date, []);
             m.get(e.date)!.push(e);
         }
         return m;
     }, [entries]);
+
+    // 当前月历页对应的区间指引：窗口与本月有交集即列出
+    const monthWindows = useMemo(() => {
+        const { y, m } = monthCursor;
+        const monthStart = isoOf(y, m, 1);
+        const monthEnd = isoOf(y, m, new Date(Date.UTC(y, m + 1, 0)).getUTCDate());
+        return entries.filter((e) => {
+            if (e.precision === 'day' || e.date >= '9999') return false;
+            const w = windowOf(e.date, e.precision);
+            return w.start <= monthEnd && w.end >= monthStart;
+        });
+    }, [entries, monthCursor]);
 
     const listGroups = useMemo(() => {
         const byMonth = new Map<string, AgendaEntry[]>();
@@ -198,16 +219,28 @@ export default function CatalystAgenda({
     };
 
     const renderEntryRow = (e: AgendaEntry) => {
+        const ranged = e.precision !== 'day';
         const days = e.date < '9999' ? Math.ceil((Date.parse(e.date) - now) / 86_400_000) : null;
         const past = e.date < today;
+        // 区间指引：窗口未到显示"未定"，已进入窗口显示"窗口中"——不倒数一个编出来的日子
+        const inWindow = ranged && !past && windowOf(e.date, e.precision).start <= today;
+        const dateLabel = ranged ? describeWindow(e.date, e.precision, locale) : e.date < '9999' ? e.date : '';
         return (
             <li key={e.key} className="flex items-start gap-2.5">
                 <span
                     className={`shrink-0 w-14 text-right tabular-nums text-sm font-medium ${
-                        past ? 'text-gray-700' : days !== null && days <= 7 ? 'text-amber-400' : 'text-teal-400'
+                        past
+                            ? 'text-gray-700'
+                            : ranged
+                              ? inWindow
+                                  ? 'text-amber-400/90'
+                                  : 'text-gray-500'
+                              : days !== null && days <= 7
+                                ? 'text-amber-400'
+                                : 'text-teal-400'
                     }`}
                 >
-                    {days === null ? '—' : past ? t('past') : `T-${days}`}
+                    {days === null ? '—' : past ? t('past') : ranged ? (inWindow ? t('inWindow') : t('tbd')) : `T-${days}`}
                 </span>
                 <div
                     className={`min-w-0 flex-1 pl-2.5 ${
@@ -223,10 +256,15 @@ export default function CatalystAgenda({
                                 {tCustom('auto')}
                             </span>
                         )}
+                        {ranged && (
+                            <span className="text-xs px-1.5 py-0.5 rounded border border-amber-900/60 text-amber-500/80" title={e.dateText}>
+                                {t('windowChip')}
+                            </span>
+                        )}
                         {e.statusKey && (
                             <span className="text-xs text-gray-600">{tStatus.has(e.statusKey) ? tStatus(e.statusKey) : e.statusKey}</span>
                         )}
-                        <span className="text-xs text-gray-600 tabular-nums ml-auto">{e.date < '9999' ? e.date : ''}</span>
+                        <span className="text-xs text-gray-600 tabular-nums ml-auto" title={e.dateText}>{dateLabel}</span>
                         {e.isCustom && (
                             <Button
                                 variant="ghost"
@@ -387,6 +425,12 @@ export default function CatalystAgenda({
                             );
                         })}
                     </div>
+                    {monthWindows.length > 0 && (
+                        <div className="mt-3 rounded-lg border border-dashed border-amber-900/50 bg-amber-950/10 px-3 py-2">
+                            <p className="text-[10px] text-amber-500/80 mb-1.5">{t('monthWindows')}</p>
+                            <ul className="space-y-2">{monthWindows.map(renderEntryRow)}</ul>
+                        </div>
+                    )}
                     <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-600">
                         <span className="text-teal-400">■</span>{t('legendCustom')}
                         <span className="text-gray-500">■</span>{t('legendTrial')}

@@ -15,6 +15,7 @@ import {
 } from '@/database/models/catalyst.model';
 import { abnormalSeries, rollingWindows, stddev } from '@/catalyst-monitor/src/market-math';
 import { extractAction } from '@/catalyst-monitor/src/analyze';
+import { windowOf, type DatePrecision } from '@/catalyst-monitor/src/guidance-dates';
 import { notify, pushMessage, sendBark, type PushEnv } from '@/catalyst-monitor/src/notify';
 import { sendWeeklyReport } from '@/catalyst-monitor/src/collectors/weekly';
 import { collectorIntervals } from '@/catalyst-monitor/src/collector-registry';
@@ -668,9 +669,13 @@ async function getMarketConfig(): Promise<{ benchmark: string; sigmaThreshold: n
 export interface UpcomingCatalyst {
     symbol: string;
     title: string;
+    /** 锚点日期；precision 非 day 时是区间末尾，不是承诺的具体日 */
     date: string;
+    /** 距锚点的天数；区间指引下前端不该显示 T-N */
     days: number;
     kind: string;
+    /** 日期精度（试验注册日期与手动条目为 day） */
+    precision: DatePrecision;
 }
 
 export interface SymbolTileData {
@@ -706,21 +711,27 @@ export async function getDashboardOverview(): Promise<DashboardOverview> {
         const watchItems = await CatalystWatchItem.find().sort({ symbol: 1 }).lean();
         const watched = new Set(watchItems.map((w) => w.symbol));
 
-        // 催化剂跑道：自定义（含 AI 抽取）+ 试验主要完成日期，90 天内
+        // 催化剂跑道：自定义（含 AI 抽取，已作废的除外）+ 试验主要完成日期，90 天内。
+        // 区间指引（"下半年"）只要窗口与 90 天有交集就上跑道，位置取窗口起点
         const catalysts: UpcomingCatalyst[] = [];
-        for (const c of await CatalystCustomEvent.find({ date: { $gte: today, $lte: in90d } }).lean()) {
-            if (watched.has(c.symbol)) catalysts.push({ symbol: c.symbol, title: c.title, date: c.date, days: days(c.date), kind: c.kind });
+        for (const c of await CatalystCustomEvent.find({ date: { $gte: today }, status: { $ne: 'superseded' } }).lean()) {
+            if (!watched.has(c.symbol)) continue;
+            const precision = c.precision ?? 'day';
+            const start = windowOf(c.date, precision).start;
+            if (start > in90d) continue;
+            catalysts.push({ symbol: c.symbol, title: c.title, date: c.date, days: days(c.date), kind: c.kind, precision });
         }
         for (const t of await CatalystTrial.find().lean()) {
             const d = t.primaryCompletionDate;
             const iso = d && /^\d{4}-\d{2}$/.test(d) ? `${d}-01` : d;
             if (iso && watched.has(t.symbol) && iso >= today && iso <= in90d) {
-                catalysts.push({ symbol: t.symbol, title: `${t.nctId} 主要完成`, date: iso, days: days(iso), kind: 'trial' });
+                catalysts.push({ symbol: t.symbol, title: `${t.nctId} 主要完成`, date: iso, days: days(iso), kind: 'trial', precision: 'day' });
             }
         }
         catalysts.sort((a, b) => a.date.localeCompare(b.date));
         overview.runway = catalysts;
-        overview.hero = catalysts[0];
+        // 头条倒计时要的是"有日期可数"的事件；区间指引没有第几天，不当头条
+        overview.hero = catalysts.find((c) => c.precision === 'day');
 
         // 标的瓦片：行情来自已存分钟线（最近两个交易时段），σ 来自盘面快照
         const snapshot = await getMarketSnapshot();
@@ -875,21 +886,28 @@ export interface CustomCatalystData {
     id: string;
     symbol: string;
     title: string;
+    /** 锚点日期；precision 非 day 时是区间末尾 */
     date: string;
+    precision: DatePrecision;
+    /** 公告原文的时间表述（AI 抽取条目） */
+    dateText?: string;
     kind: CustomCatalystKind;
     note?: string;
     source: 'manual' | 'auto';
 }
 
+/** 未作废的自定义催化剂（已被后续公告作废的不再展示，但保留在库里供归因） */
 export async function getCustomCatalysts(): Promise<CustomCatalystData[]> {
     try {
         await connectToDatabase();
-        const docs = await CatalystCustomEvent.find().sort({ date: 1 }).lean();
+        const docs = await CatalystCustomEvent.find({ status: { $ne: 'superseded' } }).sort({ date: 1 }).lean();
         return docs.map((d) => ({
             id: String(d._id),
             symbol: d.symbol,
             title: d.title,
             date: d.date,
+            precision: d.precision ?? 'day',
+            dateText: d.dateText ?? undefined,
             kind: d.kind,
             note: d.note ?? undefined,
             source: d.source,
@@ -911,7 +929,7 @@ export async function addCustomCatalyst(input: {
         await connectToDatabase();
         await CatalystCustomEvent.findOneAndUpdate(
             { symbol: input.symbol.toUpperCase().trim(), title: input.title.trim(), date: input.date },
-            { $setOnInsert: { kind: input.kind, source: 'manual' } },
+            { $setOnInsert: { kind: input.kind, source: 'manual', precision: 'day', status: 'active' } },
             { upsert: true }
         );
         revalidatePath('/catalyst');

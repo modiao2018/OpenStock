@@ -3,6 +3,7 @@ import { callAIProviderWithConfig } from '@/lib/ai-provider';
 import { resolveLlmConfig } from '@/lib/llm-config';
 import { log, logError } from '../config';
 import { getKv, getRecentEvents, listTrials, listUpcomingCustomEvents, setKv } from '../store';
+import { describeWindow, windowOf } from '../guidance-dates';
 import { pushMessage, type PushEnv } from '../notify';
 import { Signal } from '@/database/models/signal.model';
 import { buildScorecard, MIN_SAMPLES } from '../../../lib/signal-math';
@@ -78,7 +79,11 @@ export async function composeWeeklyReport(config: WeeklyContext): Promise<{ subj
   const watched = new Set(config.watchlist.map((w) => w.symbol));
   const upcoming: string[] = [];
   for (const c of await listUpcomingCustomEvents()) {
-    if (c.date <= in21d) upcoming.push(`· ${c.date} ${c.symbol} ${c.title}`);
+    const precision = c.precision ?? 'day';
+    // 区间指引只要窗口与未来 21 天有交集就列出，并按原粒度描述，不假装有具体日期
+    if (windowOf(c.date, precision).start <= in21d) {
+      upcoming.push(`· ${precision === 'day' ? c.date : `${describeWindow(c.date, precision, 'zh')}（日期未定）`} ${c.symbol} ${c.title}`);
+    }
   }
   for (const t of await listTrials()) {
     const d = t.primaryCompletionDate;

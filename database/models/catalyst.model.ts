@@ -106,11 +106,26 @@ const CatalystWatchItemSchema = new Schema<ICatalystWatchItem>(
 export interface ICatalystCustomEvent extends Document {
     symbol: string;
     title: string;
-    /** YYYY-MM-DD */
+    /**
+     * YYYY-MM-DD。精度非 day 时这是区间的末尾（"2026 下半年" → 2026-12-31），
+     * 只用于排序与"是否已过"判断，不是公司承诺的具体日期。
+     */
     date: string;
+    /** 日期精度：公告原文是具体日 / 月份 / 季度 / 半年 / 年内。缺省视为 day（旧数据） */
+    precision?: 'day' | 'month' | 'quarter' | 'half' | 'year';
+    /** 公告原文的时间表述（AI 抽取时记录），前端展示与复核用 */
+    dateText?: string;
     kind: 'data-readout' | 'pdufa' | 'adcom' | 'earnings' | 'conference' | 'other';
     note?: string;
     source: 'manual' | 'auto';
+    /**
+     * superseded = 后续公告表明该事件已发生或时间已更新，日历/提醒/周报不再展示。
+     * 不物理删除，保留"AI 当时怎么说"的归因记录。缺省视为 active。
+     */
+    status?: 'active' | 'superseded';
+    /** 触发作废的时间线事件 id（CatalystEvent._id）与作废时间 */
+    supersededBy?: string;
+    supersededAt?: Date;
 }
 
 const CatalystCustomEventSchema = new Schema<ICatalystCustomEvent>(
@@ -118,6 +133,8 @@ const CatalystCustomEventSchema = new Schema<ICatalystCustomEvent>(
         symbol: { type: String, required: true, uppercase: true, trim: true },
         title: { type: String, required: true, trim: true },
         date: { type: String, required: true },
+        precision: { type: String, enum: ['day', 'month', 'quarter', 'half', 'year'] },
+        dateText: { type: String },
         kind: {
             type: String,
             enum: ['data-readout', 'pdufa', 'adcom', 'earnings', 'conference', 'other'],
@@ -125,6 +142,9 @@ const CatalystCustomEventSchema = new Schema<ICatalystCustomEvent>(
         },
         note: { type: String },
         source: { type: String, enum: ['manual', 'auto'], default: 'manual' },
+        status: { type: String, enum: ['active', 'superseded'] },
+        supersededBy: { type: String },
+        supersededAt: { type: Date },
     },
     { timestamps: true }
 );

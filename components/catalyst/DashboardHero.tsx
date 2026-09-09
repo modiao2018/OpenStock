@@ -1,6 +1,7 @@
 import React from 'react';
 import { getLocale, getTranslations } from 'next-intl/server';
 import type { DashboardOverview } from '@/lib/actions/catalyst.actions';
+import { describeWindow, windowOf } from '@/catalyst-monitor/src/guidance-dates';
 
 const RUNWAY_DAYS = 90;
 
@@ -42,7 +43,7 @@ export default async function DashboardHero({ overview }: { overview: DashboardO
                 </span>
             </div>
 
-            {/* 跑道：未来 90 天时间轴，7 天内的催化剂点亮为琥珀色 */}
+            {/* 跑道：未来 90 天时间轴，7 天内的催化剂点亮为琥珀色；区间指引（"下半年"）画成空心点、落在窗口起点 */}
             <div className="mt-4">
                 <svg viewBox="0 0 800 46" className="w-full h-12" role="img" aria-label={t('runwayLabel')}>
                     <line x1="16" y1="14" x2="784" y2="14" stroke="#1f2937" strokeWidth="2" />
@@ -57,16 +58,28 @@ export default async function DashboardHero({ overview }: { overview: DashboardO
                         </g>
                     ))}
                     {runway.map((c, i) => {
-                        const x = 16 + (Math.min(c.days, RUNWAY_DAYS) / RUNWAY_DAYS) * 760;
-                        const near = c.days <= 7;
+                        const ranged = c.precision !== 'day';
+                        // 区间指引：位置取窗口起点（已进入窗口则贴在今天），没有可倒数的天数
+                        const startDays = ranged
+                            ? Math.max(0, Math.ceil((Date.parse(windowOf(c.date, c.precision).start) - Date.now()) / 86_400_000))
+                            : c.days;
+                        const x = 16 + (Math.min(startDays, RUNWAY_DAYS) / RUNWAY_DAYS) * 760;
+                        const near = !ranged && c.days <= 7;
+                        const label = ranged ? describeWindow(c.date, c.precision, locale) : `T-${c.days}`;
                         return (
                             <g key={`${c.symbol}-${c.date}-${i}`}>
-                                <circle cx={x} cy="14" r={near ? 5 : 4} fill={near ? '#fbbf24' : '#2dd4bf'} stroke="#000" strokeWidth="2">
-                                    <title>{`${c.symbol} ${c.title} · ${c.date}（T-${c.days}）`}</title>
-                                </circle>
+                                {ranged ? (
+                                    <circle cx={x} cy="14" r="4" fill="#000" stroke="#d97706" strokeWidth="2" strokeDasharray="2,1.5">
+                                        <title>{`${c.symbol} ${c.title} · ${label}（${t('windowTbd')}）`}</title>
+                                    </circle>
+                                ) : (
+                                    <circle cx={x} cy="14" r={near ? 5 : 4} fill={near ? '#fbbf24' : '#2dd4bf'} stroke="#000" strokeWidth="2">
+                                        <title>{`${c.symbol} ${c.title} · ${c.date}（T-${c.days}）`}</title>
+                                    </circle>
+                                )}
                                 {i < 3 && (
-                                    <text x={x} y={i % 2 === 0 ? 42 : 6} textAnchor="middle" fontSize="9" fill="#9ca3af">
-                                        {c.symbol} T-{c.days}
+                                    <text x={x} y={i % 2 === 0 ? 42 : 6} textAnchor="middle" fontSize="9" fill={ranged ? '#b45309' : '#9ca3af'}>
+                                        {c.symbol} {label}
                                     </text>
                                 )}
                             </g>

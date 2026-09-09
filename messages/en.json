@@ -494,6 +494,7 @@
       "marketBody": "Every 2 minutes during market hours, checks whether your stocks move abnormally (beyond their own history, on heavy volume, not sector-wide). On trigger, your phone rings with an AI briefing — and if there's no public news matching the move, it warns about possible undisclosed information: the real-time catch for \"the price moved early\"."
     },
     "hero": {
+      "windowTbd": "exact date TBD",
       "eyebrow": "Next catalyst",
       "days": "days",
       "empty": "No catalysts in the next 90 days — add a company or a custom catalyst; the AI also extracts dates from filings",
@@ -568,6 +569,10 @@
       "addFailed": "Failed to add. Please retry."
     },
     "calendar": {
+      "inWindow": "Open",
+      "tbd": "TBD",
+      "windowChip": "Window",
+      "monthWindows": "Guidance windows touching this month (company gave a period, no exact date)",
       "title": "Catalyst Calendar",
       "hint": "Custom catalysts above are most reliable (incl. AI-extracted company guidance); registry dates below lag by weeks-months and interim/topline data can come earlier — rough reference only",
       "empty": "No trials archived yet. They appear after the daemon's first run.",

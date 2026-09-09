@@ -3,6 +3,7 @@ import { getKv, listUpcomingCustomEvents, listTrials, setKv } from '../store';
 import { pushOrDefer } from '../focus-gate';
 import { recordSignal } from '../signals';
 import type { MonitorConfig, NewEvent } from '../types';
+import { describeWindow, windowOf, type DatePrecision } from '../guidance-dates';
 
 const REMIND_DAYS = [7, 1]; // 催化剂前 7 天和前 1 天各提醒一次
 
@@ -24,9 +25,11 @@ function daysUntil(date: string): number {
 /**
  * 催化剂临近提醒：自定义催化剂 + 试验主要完成日期，
  * T-7 / T-1 各推送一次（kv 去重）。不产生时间线事件。
+ * 只有月份/季度/半年这类区间指引没有"第几天"可倒数，只在区间开始当天提醒一次
+ * （"进入 2026 下半年窗口"），不按硬编的锚点日期假装精确。
  */
 export async function collectReminders(config: MonitorConfig): Promise<NewEvent[]> {
-  const candidates: Array<{ id: string; symbol: string; label: string; date: string }> = [];
+  const candidates: Array<{ id: string; symbol: string; label: string; date: string; precision: DatePrecision }> = [];
 
   try {
     for (const ev of await listUpcomingCustomEvents()) {
@@ -35,6 +38,7 @@ export async function collectReminders(config: MonitorConfig): Promise<NewEvent[
         symbol: ev.symbol,
         label: `${KIND_ZH[ev.kind] ?? ev.kind}：${ev.title}`,
         date: ev.date,
+        precision: ev.precision ?? 'day',
       });
     }
     const watched = new Set(config.watchlist.map((w) => w.symbol));
@@ -45,24 +49,43 @@ export async function collectReminders(config: MonitorConfig): Promise<NewEvent[
         symbol: t.symbol,
         label: `试验主要完成日期：${t.nctId}`,
         date: t.primaryCompletionDate,
+        precision: 'day',
       });
     }
 
     let sent = 0;
     for (const c of candidates) {
-      const days = daysUntil(c.date);
-      if (!REMIND_DAYS.includes(days)) continue;
-      const dedupeKey = `reminded:${c.id}:${days}`;
+      let days: number;
+      let tag: string;
+      let title: string;
+      let when: string;
+      if (c.precision === 'day') {
+        days = daysUntil(c.date);
+        if (!REMIND_DAYS.includes(days)) continue;
+        tag = `t${days}`;
+        title = `催化剂提醒｜${c.symbol} ${days} 天后`;
+        when = `日期: ${c.date}`;
+      } else {
+        // 区间指引：进入窗口当天提醒一次
+        const win = windowOf(c.date, c.precision);
+        if (daysUntil(win.start) !== 0) continue;
+        days = 0;
+        tag = 'window';
+        const label = describeWindow(c.date, c.precision, 'zh');
+        title = `催化剂窗口开启｜${c.symbol} ${label}`;
+        when = `公司指引: ${label}（${win.start} ~ ${win.end}，具体日期未定）`;
+      }
+      const dedupeKey = `reminded:${c.id}:${tag}`;
       if (await getKv(dedupeKey)) continue;
 
       const gate = await pushOrDefer(
         config,
         {
-          title: `催化剂提醒｜${c.symbol} ${days} 天后`,
-          body: `${c.label}\n日期: ${c.date}\n事件前请核对情景预案与仓位（二元事件注意 gap 风险）`,
+          title,
+          body: `${c.label}\n${when}\n事件前请核对情景预案与仓位（二元事件注意 gap 风险）`,
           urgent: false,
         },
-        { symbol: c.symbol, kind: `reminder.t${days}` }
+        { symbol: c.symbol, kind: `reminder.${tag}` }
       );
       const delivered = gate.delivered;
       if (delivered || gate.deferred) {
@@ -71,11 +94,11 @@ export async function collectReminders(config: MonitorConfig): Promise<NewEvent[
       }
       // 账本：提醒无方向，只用来量化"催化剂前 N 天"这段时间的实际波动
       await recordSignal({
-        kind: `reminder.t${days}`,
+        kind: `reminder.${tag}`,
         symbol: c.symbol,
         dedupeKey: c.id,
         direction: 'none',
-        title: `${c.label} ${c.date}`,
+        title: `${c.label} ${c.precision === 'day' ? c.date : describeWindow(c.date, c.precision, 'zh')}`,
         benchmark: config.market.benchmark,
         delivered,
       });

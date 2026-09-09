@@ -24,7 +24,8 @@ import { collectThesis } from './collectors/thesis';
 import { eventDirection, recordSignal } from './signals';
 import { COLLECTOR_SPECS, collectorIntervals, type CollectorName } from './collector-registry';
 import { recordSourceCall } from '@/lib/source-calls';
-import { upsertCustomEvent } from './store';
+import { migrateCustomEventPrecision, supersedeCustomEvents, upsertCustomEvent } from './store';
+import { describeWindow } from './guidance-dates';
 import type { AnalysisResult } from './analyze';
 import type { MonitorConfig, NewEvent, StoredEvent } from './types';
 
@@ -58,23 +59,30 @@ const RUNNERS = {
   thesis: collectThesis,
 } satisfies Record<CollectorName, Runner>;
 
-/** 公告里给了催化剂时间指引 → 自动补进催化剂日历 */
+/** 公告里给了催化剂时间指引 → 自动补进催化剂日历；宣告旧预期已发生/改期的 → 作废旧条目 */
 async function saveGuidance(
   scope: string,
-  stored: { symbol?: string },
+  stored: { id: string; symbol?: string },
   result: AnalysisResult
 ): Promise<void> {
   if (!stored.symbol) return;
+  // 先作废再新增：同一事件的"新时间"作为新条目落地，旧条目退出日历
+  if (result.supersedes.length > 0) {
+    const gone = await supersedeCustomEvents(stored.symbol, result.supersedes, stored.id);
+    for (const g of gone) log(scope, `日历作废催化剂: ${stored.symbol} ${g.date} ${g.title}`);
+  }
   for (const g of result.guidances) {
     const isNew = await upsertCustomEvent({
       symbol: stored.symbol,
       title: g.title,
       date: g.date,
+      precision: g.precision,
+      dateText: g.dateText,
       kind: g.kind,
       note: `AI 从公告中抽取（原文: ${g.dateText}）`,
       source: 'auto',
     });
-    if (isNew) log(scope, `日历新增催化剂: ${stored.symbol} ${g.date} ${g.title}`);
+    if (isNew) log(scope, `日历新增催化剂: ${stored.symbol} ${describeWindow(g.date, g.precision, 'zh')} ${g.title}`);
   }
 }
 
@@ -223,6 +231,14 @@ async function main(): Promise<void> {
     await seedWatchItems(config.watchlist);
     watchItems = config.watchlist;
     log('daemon', `监控清单已从 config.yaml 迁移入库（${watchItems.length} 条）`);
+  }
+
+  // 旧版把"下半年"等区间硬编成某一天；补上精度字段并把锚点挪到区间末尾（幂等）
+  try {
+    const migrated = await migrateCustomEventPrecision();
+    if (migrated > 0) log('daemon', `催化剂日历精度迁移：${migrated} 条 AI 抽取条目已归一化`);
+  } catch (err) {
+    logError('daemon', err);
   }
 
   log(

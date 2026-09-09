@@ -11,6 +11,7 @@ import {
 } from '@/database/models/catalyst.model';
 import { log } from './config';
 import type { NewEvent, StoredEvent, WatchItem } from './types';
+import { anchorDate, inferPrecision, parseLegacyNote, type DatePrecision } from './guidance-dates';
 
 export function sha256(input: unknown): string {
   return createHash('sha256').update(JSON.stringify(input)).digest('hex');
@@ -182,9 +183,45 @@ export interface CustomEventInput {
   symbol: string;
   title: string;
   date: string;
+  precision?: DatePrecision;
+  dateText?: string;
   kind: 'data-readout' | 'pdufa' | 'adcom' | 'earnings' | 'conference' | 'other';
   note?: string;
   source: 'manual' | 'auto';
+}
+
+export interface StoredCustomEvent extends CustomEventInput {
+  id: string;
+  status: 'active' | 'superseded';
+}
+
+/** 未作废的条目：旧数据没有 status 字段，也算 active */
+const ACTIVE_FILTER = { status: { $ne: 'superseded' } } as const;
+
+function toStoredCustomEvent(d: {
+  _id: unknown;
+  symbol: string;
+  title: string;
+  date: string;
+  precision?: DatePrecision;
+  dateText?: string;
+  kind: CustomEventInput['kind'];
+  note?: string;
+  source: CustomEventInput['source'];
+  status?: 'active' | 'superseded';
+}): StoredCustomEvent {
+  return {
+    id: String(d._id),
+    symbol: d.symbol,
+    title: d.title,
+    date: d.date,
+    precision: d.precision ?? 'day',
+    dateText: d.dateText ?? undefined,
+    kind: d.kind,
+    note: d.note ?? undefined,
+    source: d.source,
+    status: d.status ?? 'active',
+  };
 }
 
 /** 幂等：同 (symbol, title, date) 只存一条；返回是否为新增 */
@@ -192,25 +229,73 @@ export async function upsertCustomEvent(ev: CustomEventInput): Promise<boolean> 
   await connectToDatabase();
   const res = await CatalystCustomEvent.findOneAndUpdate(
     { symbol: ev.symbol, title: ev.title, date: ev.date },
-    { $setOnInsert: ev },
+    { $setOnInsert: { ...ev, status: 'active' } },
     { upsert: true, includeResultMetadata: true }
   );
   return !res.value;
 }
 
-export async function listUpcomingCustomEvents(): Promise<Array<CustomEventInput & { id: string }>> {
+/** 未作废且未过期的自定义催化剂（含手动与 AI 抽取），按锚点日期升序 */
+export async function listUpcomingCustomEvents(): Promise<StoredCustomEvent[]> {
   await connectToDatabase();
   const today = new Date().toISOString().slice(0, 10);
-  const docs = await CatalystCustomEvent.find({ date: { $gte: today } }).sort({ date: 1 }).lean();
-  return docs.map((d) => ({
-    id: String(d._id),
-    symbol: d.symbol,
-    title: d.title,
-    date: d.date,
-    kind: d.kind,
-    note: d.note ?? undefined,
-    source: d.source,
-  }));
+  const docs = await CatalystCustomEvent.find({ date: { $gte: today }, ...ACTIVE_FILTER }).sort({ date: 1 }).lean();
+  return docs.map(toStoredCustomEvent);
+}
+
+/** 某标的未作废的 AI 抽取条目（含已过锚点日期的——"已发生"正是要让 LLM 判定的） */
+export async function listAutoCustomEvents(symbol: string): Promise<StoredCustomEvent[]> {
+  await connectToDatabase();
+  const docs = await CatalystCustomEvent.find({ symbol, source: 'auto', ...ACTIVE_FILTER }).sort({ date: 1 }).lean();
+  return docs.map(toStoredCustomEvent);
+}
+
+/**
+ * 把 AI 抽取的条目标为作废（后续公告表明已发生 / 时间已更新）。
+ * 只动 source=auto 且属于该标的的行——手动条目是用户的判断，机器不改；
+ * 限定标的是为了防 LLM 把别家的 id 混进来。返回实际作废的条目。
+ */
+export async function supersedeCustomEvents(
+  symbol: string,
+  ids: string[],
+  byEventId: string
+): Promise<StoredCustomEvent[]> {
+  const valid = ids.filter((id) => mongoose.isValidObjectId(id));
+  if (valid.length === 0) return [];
+  await connectToDatabase();
+  const docs = await CatalystCustomEvent.find({ _id: { $in: valid }, symbol, source: 'auto', ...ACTIVE_FILTER }).lean();
+  if (docs.length === 0) return [];
+  await CatalystCustomEvent.updateMany(
+    { _id: { $in: docs.map((d) => d._id) } },
+    { $set: { status: 'superseded', supersededBy: byEventId, supersededAt: new Date() } }
+  );
+  return docs.map(toStoredCustomEvent);
+}
+
+/**
+ * 一次性迁移：旧版把"下半年"等区间硬编成某一天且没有 precision 字段。
+ * 从 note 里的原文推断精度并把日期归一化到区间末尾；已迁移过的行（有 precision）跳过。
+ * 幂等，daemon 启动时调用。返回改动条数。
+ */
+export async function migrateCustomEventPrecision(): Promise<number> {
+  await connectToDatabase();
+  const docs = await CatalystCustomEvent.find({ source: 'auto', precision: { $exists: false } }).lean();
+  let changed = 0;
+  for (const d of docs) {
+    const dateText = d.dateText ?? parseLegacyNote(d.note) ?? '';
+    const precision = inferPrecision(dateText);
+    const date = anchorDate(d.date, precision);
+    const $set: Record<string, unknown> = { precision };
+    if (dateText && !d.dateText) $set.dateText = dateText;
+    if (date !== d.date) {
+      // 唯一索引 (symbol,title,date)：目标日期已有同名条目就只补精度、不挪日期
+      const clash = await CatalystCustomEvent.exists({ symbol: d.symbol, title: d.title, date, _id: { $ne: d._id } });
+      if (!clash) $set.date = date;
+    }
+    await CatalystCustomEvent.updateOne({ _id: d._id }, { $set });
+    if (precision !== 'day' || $set.date) changed++;
+  }
+  return changed;
 }
 
 export interface Bar {

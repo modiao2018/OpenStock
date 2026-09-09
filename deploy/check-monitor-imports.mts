@@ -5,7 +5,7 @@
 const modules = [
     'env', 'config', 'types', 'http', 'market-math',
     'store', 'notify', 'analyze', 'alpaca-daily',
-    'form-parse', 'insider-alert', 'collector-registry',
+    'form-parse', 'insider-alert', 'collector-registry', 'guidance-dates',
     'collectors/clinicaltrials', 'collectors/edgar', 'collectors/halts',
     'collectors/rss', 'collectors/market', 'collectors/reminders',
     'collectors/weekly', 'collectors/discovery', 'collectors/aidips',
