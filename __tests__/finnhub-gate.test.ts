@@ -112,3 +112,16 @@ describe('retryAfterMs', () => {
         expect(ms).toBeLessThanOrEqual(5000);
     });
 });
+
+describe('pickWithinBudget', () => {
+    it('keeps zero-cost items and skips over items that overflow instead of stopping', async () => {
+        const { pickWithinBudget } = await import('@/lib/finnhub-gate');
+        const cost: Record<string, number> = { A: 2, B: 0, C: 2, D: 1, E: 0 };
+        expect(pickWithinBudget(['A', 'B', 'C', 'D', 'E'], (s) => cost[s], 3)).toEqual(['A', 'B', 'D', 'E']);
+    });
+
+    it('returns only free items when the budget is exhausted', async () => {
+        const { pickWithinBudget } = await import('@/lib/finnhub-gate');
+        expect(pickWithinBudget(['A', 'B'], (s) => (s === 'B' ? 0 : 1), 0)).toEqual(['B']);
+    });
+});

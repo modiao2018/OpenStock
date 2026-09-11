@@ -99,6 +99,7 @@ const AiDipsBoard = ({ initialData }: AiDipsBoardProps) => {
         const issues: string[] = [];
         if (data?.barsError) issues.push(t('health.barsError'));
         if (data?.quotesError) issues.push(t('health.quotesError'));
+        else if (data?.quotesStale) issues.push(t('health.quotesStale', { n: data.quotesStale }));
         if (health) {
             const now = Date.now();
             if (health.insiderErrorCount >= 3) {

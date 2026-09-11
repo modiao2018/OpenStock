@@ -158,3 +158,26 @@ export const finnhubGate = new FinnhubGate({
     maxWaitMs: 20_000,
     cooldownMs: 15_000,
 });
+
+// ---------------------------------------------------------------------------
+// Budgeted fan-out: which of `items` can be fetched right now
+// ---------------------------------------------------------------------------
+
+/**
+ * Leading `items` whose combined upstream cost fits `budget`. Zero-cost items
+ * (memo hits, profiles fresh in Mongo) always pass. Callers order `items`
+ * stalest-first so a page that needs more calls per minute than the gate
+ * allows rotates through its symbols instead of refreshing the same leading
+ * batch every poll and starving the rest.
+ */
+export function pickWithinBudget<T>(items: T[], costOf: (item: T) => number, budget: number): T[] {
+    const out: T[] = [];
+    let used = 0;
+    for (const item of items) {
+        const cost = costOf(item);
+        if (cost > 0 && used + cost > budget) continue;
+        used += cost;
+        out.push(item);
+    }
+    return out;
+}

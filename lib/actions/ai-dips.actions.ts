@@ -4,6 +4,8 @@ import { fetchJSON } from '@/lib/actions/finnhub.actions';
 import { AI_DIP_CATALOG, type AiSubSector } from '@/lib/ai-dips-catalog';
 import { getAiDipPool, type AiDipMeta } from '@/lib/ai-dips-pool';
 import { completedBars, computeDipStats, type DailyBar } from '@/lib/ai-dips-math';
+import { finnhubGate, isMemoized, pickWithinBudget } from '@/lib/finnhub-gate';
+import { quoteTtlSeconds } from '@/lib/market-hours';
 import { readSnapshot, writeSnapshot } from '@/lib/snapshot';
 import { timed } from '@/lib/source-calls';
 
@@ -27,6 +29,8 @@ export interface AiDipStock {
     // Finnhub live quote; 0 when unavailable
     price: number;
     todayChangePct: number;
+    // Epoch ms when the price was last fetched from Finnhub, 0 when never
+    fetchedAt: number;
     streakDays: number;
     streakCapped: boolean;
     streakDeclinePct: number | null;
@@ -49,6 +53,9 @@ export interface AiDipsPayload {
     barsError?: boolean;
     // Finnhub returned no usable quote for any symbol — likely quota/outage
     quotesError?: boolean;
+    // Symbols whose quote could not be refreshed this round (gate budget or
+    // upstream failure) and show the previous snapshot's price instead
+    quotesStale?: number;
 }
 
 type AlpacaBar = { t: string; c: number };
@@ -130,22 +137,34 @@ async function formingSessionDate(): Promise<string | undefined> {
 
 type Quote = { c?: number; dp?: number };
 
-async function fetchQuotes(symbols: string[]): Promise<Record<string, Quote>> {
-    if (!NEXT_PUBLIC_FINNHUB_API_KEY) return {};
+function quoteUrl(symbol: string): string {
+    return `${FINNHUB_BASE_URL}/quote?symbol=${encodeURIComponent(symbol)}&token=${NEXT_PUBLIC_FINNHUB_API_KEY}`;
+}
+
+// The pool (up to 60 symbols) alone exceeds the gate's 50/min, so a full
+// fan-out every poll left the same tail of symbols rejected each time. Fetch
+// only what fits the free budget, stalest quote first, and let the caller
+// keep the previous snapshot's price for the rest; the next poll rotates on.
+async function fetchQuotes(
+    symbols: string[],
+    previousFetchedAt: Map<string, number>,
+): Promise<{ quotes: Record<string, Quote>; picked: Set<string> }> {
+    if (!NEXT_PUBLIC_FINNHUB_API_KEY) return { quotes: {}, picked: new Set() };
+    const stalestFirst = [...symbols].sort(
+        (a, b) => (previousFetchedAt.get(a) ?? 0) - (previousFetchedAt.get(b) ?? 0),
+    );
+    const picked = pickWithinBudget(stalestFirst, (s) => (isMemoized(quoteUrl(s)) ? 0 : 1), finnhubGate.freeSlots);
     const entries = await Promise.all(
-        symbols.map(async (symbol) => {
+        picked.map(async (symbol) => {
             try {
-                const quote = await fetchJSON<Quote>(
-                    `${FINNHUB_BASE_URL}/quote?symbol=${encodeURIComponent(symbol)}&token=${NEXT_PUBLIC_FINNHUB_API_KEY}`,
-                    60,
-                );
-                return [symbol, quote] as const;
+                return [symbol, await fetchJSON<Quote>(quoteUrl(symbol), quoteTtlSeconds())] as const;
             } catch {
-                return [symbol, {}] as const;
+                return [symbol, {} as Quote] as const;
             }
         }),
     );
-    return Object.fromEntries(entries);
+    const quotes = Object.fromEntries(entries.filter(([, q]) => (q.c ?? 0) > 0));
+    return { quotes, picked: new Set(picked) };
 }
 
 // Last successful getAiDipsData payload; lets SSR paint instantly while the
@@ -182,21 +201,37 @@ export async function getAiDipsData(): Promise<AiDipsPayload> {
             console.error('AI dips bars fetch failed', e);
         }
     }
-    const quotes = await fetchQuotes(symbols);
+    // Quotes the gate could not refresh fall back to the last snapshot's
+    // values rather than a 0 that renders as "—" and then gets persisted
+    const previousRows = new Map(
+        ((await readSnapshot<AiDipsPayload>(SNAPSHOT_KEY))?.data.rows ?? []).map((r) => [r.symbol, r]),
+    );
+    const previousFetchedAt = new Map([...previousRows].map(([s, r]) => [s, r.price > 0 ? r.fetchedAt ?? 0 : 0]));
+    const { quotes, picked } = await fetchQuotes(symbols, previousFetchedAt);
     const quotesError =
         Boolean(process.env.NEXT_PUBLIC_FINNHUB_API_KEY) &&
         symbols.length > 0 &&
-        !symbols.some((s) => (quotes[s]?.c ?? 0) > 0);
+        Object.keys(quotes).length === 0 &&
+        !symbols.some((s) => (previousRows.get(s)?.price ?? 0) > 0);
+    // Rows still showing an earlier price: left out by the budget, or fetched
+    // and refused. A symbol Finnhub has never priced (delisted) is not stale.
+    const quotesStale = symbols.filter(
+        (s) => !quotes[s] && (!picked.has(s) || (previousRows.get(s)?.price ?? 0) > 0),
+    ).length;
+    const fetchedAt = Date.now();
 
     const rows: AiDipStock[] = pool.map(({ symbol, name, subSector }) => {
         const stats = computeDipStats(completedBars(barsBySymbol[symbol] ?? [], excludeDate));
-        const price = quotes[symbol]?.c ?? 0;
+        const live = quotes[symbol];
+        const previous = previousRows.get(symbol);
+        const price = live?.c ?? previous?.price ?? 0;
         return {
             symbol,
             name,
             subSector,
             price,
-            todayChangePct: quotes[symbol]?.dp ?? 0,
+            todayChangePct: live ? live.dp ?? 0 : previous?.todayChangePct ?? 0,
+            fetchedAt: live ? fetchedAt : previous?.fetchedAt ?? 0,
             streakDays: stats?.streakDays ?? 0,
             streakCapped: stats?.streakCapped ?? false,
             streakDeclinePct: stats?.streakDeclinePct ?? null,
@@ -215,7 +250,7 @@ export async function getAiDipsData(): Promise<AiDipsPayload> {
         return (a.streakDeclinePct ?? 0) - (b.streakDeclinePct ?? 0);
     });
 
-    const payload: AiDipsPayload = { configured, updatedAt: Date.now(), rows, barsError, quotesError };
+    const payload: AiDipsPayload = { configured, updatedAt: Date.now(), rows, barsError, quotesError, quotesStale };
     if (rows.some((r) => r.barsOk || r.price > 0)) {
         void writeSnapshot(SNAPSHOT_KEY, payload);
     }

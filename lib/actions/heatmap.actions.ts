@@ -8,8 +8,9 @@ import {
     type RawCompanyProfile,
     type StoredCompanyProfile,
 } from '@/lib/company-profiles';
-import { finnhubGate, isMemoized } from '@/lib/finnhub-gate';
+import { finnhubGate, isMemoized, pickWithinBudget } from '@/lib/finnhub-gate';
 import { marketCapToUsdMillions } from '@/lib/market-cap';
+import { isFetchStale, quoteTtlSeconds } from '@/lib/market-hours';
 import { readSnapshot, snapshotKey, writeSnapshot } from '@/lib/snapshot';
 
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
@@ -45,6 +46,9 @@ export interface HeatmapStock {
     industry: string;
     // Unix seconds of the quote's last trade, 0 when the upstream omits it
     quoteTime: number;
+    // Epoch ms when this tile was last fetched from Finnhub (drives staleness;
+    // absent on snapshots written before this field existed)
+    fetchedAt?: number;
 }
 
 type Quote = { c?: number; d?: number; dp?: number; o?: number; h?: number; l?: number; pc?: number; t?: number };
@@ -69,7 +73,15 @@ export async function getHeatmapSnapshot(symbols?: string[]): Promise<HeatmapSto
 // Every viewer's 60s poll used to fan out quote+profile per symbol; with two
 // dashboards open that alone exceeded Finnhub's 60/min. A snapshot younger
 // than this is served as-is, so N viewers cost one upstream sweep per minute.
+// Outside the extended session quotes cannot move, so the window stretches to
+// the closed-hours quote TTL — unless a tile still predates the last close.
 const SNAPSHOT_FRESH_MS = 45_000;
+
+function snapshotIsFresh(data: HeatmapStock[], updatedAt: Date): boolean {
+    const age = Date.now() - updatedAt.getTime();
+    const window = Math.max(SNAPSHOT_FRESH_MS, quoteTtlSeconds() * 1000);
+    return age < window && !data.some((s) => isFetchStale(s.fetchedAt));
+}
 
 function quoteUrl(symbol: string, token: string): string {
     return `${FINNHUB_BASE_URL}/quote?symbol=${encodeURIComponent(symbol)}&token=${token}`;
@@ -92,17 +104,20 @@ function upstreamCallsNeeded(list: string[], token: string, stored: Profiles): n
     return list.reduce((n, symbol) => n + callsFor(symbol, token, stored), 0);
 }
 
-// Leading symbols (dashboard order) whose combined upstream calls fit `budget`
-function withinBudget(list: string[], token: string, stored: Profiles, budget: number): string[] {
-    const out: string[] = [];
-    let used = 0;
-    for (const symbol of list) {
-        const cost = callsFor(symbol, token, stored);
-        if (used + cost > budget) break;
-        used += cost;
-        out.push(symbol);
-    }
-    return out;
+// Symbols whose combined upstream calls fit `budget`, stalest tile first.
+// The gate rejects whatever overflows, and it used to reject the same tail
+// of the list every poll: those tiles sat on the previous day's close for
+// hours while the head of the list refreshed every minute.
+function withinBudget(
+    list: string[],
+    token: string,
+    stored: Profiles,
+    budget: number,
+    previous: HeatmapStock[] | null,
+): string[] {
+    const fetchedAt = new Map((previous ?? []).map((s) => [s.symbol, s.fetchedAt ?? 0]));
+    const stalestFirst = [...list].sort((a, b) => (fetchedAt.get(a) ?? 0) - (fetchedAt.get(b) ?? 0));
+    return pickWithinBudget(stalestFirst, (symbol) => callsFor(symbol, token, stored), budget);
 }
 
 // One live sweep per symbol set at a time: concurrent viewers (and a foreground
@@ -148,7 +163,7 @@ export async function getHeatmapData(symbols?: string[]): Promise<HeatmapStock[]
     const key = snapshotKey('heatmap', list);
     const snapshot = await readSnapshot<HeatmapStock[]>(key);
     const previous = snapshot && snapshot.data.length > 0 ? snapshot.data : null;
-    if (previous && Date.now() - new Date(snapshot!.updatedAt).getTime() < SNAPSHOT_FRESH_MS) {
+    if (previous && snapshotIsFresh(previous, new Date(snapshot!.updatedAt))) {
         return previous;
     }
 
@@ -162,19 +177,12 @@ export async function getHeatmapData(symbols?: string[]): Promise<HeatmapStock[]
     const budget = finnhubGate.freeSlots;
     if (needed <= budget) return sweep(key, list, token, stored, previous);
 
-    // Over budget with a snapshot: hand the snapshot back right away and let
-    // the sweep run in the background; the client's 60s poll picks it up.
-    if (previous) {
-        void sweep(key, list, token, stored, previous).catch((e) => console.error('Heatmap background sweep failed', e));
-        return previous;
-    }
-
-    // Over budget on the very first visit for this symbol set: paint whatever
-    // fits the budget now instead of holding the whole heatmap behind the
-    // gate's queue. The poll fetches the rest once the window has slid.
-    const partial = withinBudget(list, token, stored, budget);
-    if (partial.length === 0) return [];
-    return sweep(key, list, token, stored, null, partial);
+    // Over budget: fetch only what fits, stalest tiles first, and merge over
+    // the snapshot. Nothing queues behind the gate, so this answers in one
+    // round trip; the next poll rotates to the tiles left out this time.
+    const partial = withinBudget(list, token, stored, budget, previous);
+    if (partial.length === 0) return previous ?? [];
+    return sweep(key, list, token, stored, previous, partial);
 }
 
 async function fetchLive(list: string[], token: string, stored: Profiles): Promise<HeatmapStock[]> {
@@ -189,10 +197,10 @@ async function fetchLive(list: string[], token: string, stored: Profiles): Promi
     const quotes = await Promise.all(
         list.map(async (symbol) => {
             try {
-                // Short cache: Next serves stale-while-revalidate, so a longer
-                // TTL means infrequent visits keep seeing the previous visit's
-                // data. 60s still dedupes concurrent renders and client polls.
-                return await fetchJSON<Quote>(quoteUrl(symbol, token), 60);
+                // 60s in session (dedupes concurrent renders and client polls
+                // without serving a visit the previous visit's data); 30 min
+                // once after-hours ends, when the quote cannot move anyway
+                return await fetchJSON<Quote>(quoteUrl(symbol, token), quoteTtlSeconds());
             } catch (e) {
                 console.error('Heatmap fetch failed for', symbol, e);
                 return null;
@@ -201,8 +209,9 @@ async function fetchLive(list: string[], token: string, stored: Profiles): Promi
     );
     const profiles = await profilesPromise;
 
+    const fetchedAt = Date.now();
     const results = await Promise.all(
-        list.map(async (symbol, i) => {
+        list.map(async (symbol, i): Promise<HeatmapStock | null> => {
             const quote = quotes[i];
             const profile = profiles.get(symbol);
             if (!quote || !profile) return null;
@@ -225,7 +234,8 @@ async function fetchLive(list: string[], token: string, stored: Profiles): Promi
                 marketCap: marketCapMillions * 1e6,
                 industry: profile.finnhubIndustry,
                 quoteTime: quote.t ?? 0,
-            } satisfies HeatmapStock;
+                fetchedAt,
+            };
         }),
     );
 

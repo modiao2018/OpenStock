@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useTranslations } from 'next-intl';
-import { Check, Loader2, Maximize2, Minimize2, Settings2, SlidersHorizontal } from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
+import { Check, Loader2, Maximize2, Minimize2, Settings2, SlidersHorizontal, TriangleAlert } from 'lucide-react';
 import DashboardConfigDialog from '@/components/DashboardConfigDialog';
 import {
     DropdownMenu,
@@ -15,6 +15,8 @@ import {
 import { Button } from '@/components/ui/button';
 import StockHeatmap from '@/components/StockHeatmap';
 import { getHeatmapData, type HeatmapStock } from '@/lib/actions/heatmap.actions';
+import { formatClock } from '@/lib/format-time';
+import { isFetchStale } from '@/lib/market-hours';
 
 type HeatmapSource = 'popular' | 'watchlist';
 
@@ -58,6 +60,7 @@ const HeatmapSection = ({ initialData, watchlistSymbols, configuredSymbols, heig
     const t = useTranslations('heatmap');
     const tHome = useTranslations('home');
     const tSectors = useTranslations('sectors');
+    const locale = useLocale();
 
     const [prefs, setPrefs] = useState<HeatmapPrefs>(DEFAULT_PREFS);
     const [popularData, setPopularData] = useState<HeatmapStock[]>(initialData);
@@ -133,7 +136,10 @@ const HeatmapSection = ({ initialData, watchlistSymbols, configuredSymbols, heig
     };
 
     const usingWatchlist = prefs.source === 'watchlist';
-    const data = usingWatchlist ? (watchlistData ?? []) : popularData;
+    const data = useMemo(
+        () => (usingWatchlist ? (watchlistData ?? []) : popularData),
+        [usingWatchlist, watchlistData, popularData],
+    );
 
     // Popular sectors of the active dataset, biggest total market cap first
     const industries = useMemo(() => {
@@ -156,6 +162,20 @@ const HeatmapSection = ({ initialData, watchlistSymbols, configuredSymbols, heig
     const sectorLabel = (industry: string) =>
         tSectors.has(industry) ? tSectors(industry) : industry;
 
+    // "Data as of" line: the newest and oldest quote in the active dataset.
+    // Tiles the Finnhub gate could not refresh keep their previous quote, so
+    // an oldest tile predating the last close is flagged instead of passing
+    // for live data (it looked like this all afternoon before the tooltip
+    // gave it away).
+    const freshness = useMemo(() => {
+        const times = data.map((s) => s.quoteTime).filter((t) => t > 0);
+        if (times.length === 0) return null;
+        const newest = Math.max(...times);
+        const oldest = Math.min(...times);
+        const staleCount = data.filter((s) => isFetchStale(s.fetchedAt)).length;
+        return { newest, oldest, staleCount };
+    }, [data]);
+
     const chipClass = (active: boolean) =>
         `rounded-full border px-3 py-1 text-xs transition-colors cursor-pointer ${
             active
@@ -172,7 +192,24 @@ const HeatmapSection = ({ initialData, watchlistSymbols, configuredSymbols, heig
     return (
         <div className={isFullscreen ? 'fixed inset-0 z-[9999] overflow-y-auto bg-black p-4 md:p-6' : undefined}>
             <div className="mb-5 flex items-center justify-between">
-                <h3 className="font-semibold text-2xl text-gray-100">{tHome('stockHeatmap')}</h3>
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <h3 className="font-semibold text-2xl text-gray-100">{tHome('stockHeatmap')}</h3>
+                    {freshness && (
+                        freshness.staleCount > 0 ? (
+                            <span className="inline-flex items-center gap-1 text-xs text-amber-400" title={t('staleHint')}>
+                                <TriangleAlert className="h-3.5 w-3.5" />
+                                {t('staleAsOf', {
+                                    count: freshness.staleCount,
+                                    oldest: formatClock(freshness.oldest * 1000, locale),
+                                })}
+                            </span>
+                        ) : (
+                            <span className="text-xs text-gray-500">
+                                {t('dataAsOf', { time: formatClock(freshness.newest * 1000, locale) })}
+                            </span>
+                        )
+                    )}
+                </div>
                 <div className="flex items-center gap-1">
                 <Button
                     variant="ghost"

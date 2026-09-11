@@ -9,6 +9,7 @@ import { recordSourceCall } from '@/lib/source-calls';
 import { finnhubGate, retryAfterMs, throughFinnhubGate } from '@/lib/finnhub-gate';
 import { resolveProfiles } from '@/lib/company-profiles';
 import { inferSourceByHost } from '@/lib/sources-registry';
+import { quoteTtlSeconds } from '@/lib/market-hours';
 
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
 const NEXT_PUBLIC_FINNHUB_API_KEY = process.env.NEXT_PUBLIC_FINNHUB_API_KEY ?? '';
@@ -89,8 +90,9 @@ export async function getQuote(symbol: string) {
     try {
         const token = NEXT_PUBLIC_FINNHUB_API_KEY;
         const url = `${FINNHUB_BASE_URL}/quote?symbol=${encodeURIComponent(symbol)}&token=${token}`;
-        // Short server-side cache so concurrent renders/polls share one Finnhub call per symbol
-        return await fetchJSON<FinnhubQuote>(url, 30);
+        // Short server-side cache so concurrent renders/polls share one Finnhub
+        // call per symbol; stretches to 30 min once after-hours ends
+        return await fetchJSON<FinnhubQuote>(url, quoteTtlSeconds());
     } catch (e) {
         console.error('Error fetching quote for', symbol, e);
         return null;

@@ -9,10 +9,22 @@ const upstream = vi.hoisted(() => ({ calls: [] as string[] }));
 // Stand-in for the Mongo-backed profile store: symbol -> stored row
 const profileStore = vi.hoisted(() => new Map<string, { symbol: string; name: string; ticker: string; currency: string; exchange: string; logo: string; marketCapitalization: number; finnhubIndustry: string; fetchedAt: Date }>());
 
-vi.mock('@/lib/finnhub-gate', () => ({
+vi.mock('@/lib/finnhub-gate', async (importOriginal) => ({
+    pickWithinBudget: (await importOriginal<typeof import('@/lib/finnhub-gate')>()).pickWithinBudget,
     finnhubGate: { get freeSlots() { return gateState.freeSlots; } },
     isMemoized: (key: string) => gateState.memoized.has(key),
 }));
+
+// Pin the clock inside a regular session so quote TTLs are the live 60s and
+// snapshot freshness follows SNAPSHOT_FRESH_MS regardless of when tests run
+vi.mock('@/lib/market-hours', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('@/lib/market-hours')>();
+    return {
+        ...actual,
+        quoteTtlSeconds: () => actual.LIVE_QUOTE_TTL_S,
+        isFetchStale: () => false,
+    };
+});
 
 vi.mock('@/lib/snapshot', () => ({
     snapshotKey: (prefix: string, symbols: string[]) => `${prefix}:${[...symbols].sort().join(',')}`,
@@ -146,20 +158,34 @@ describe('getHeatmapData rate-limit fallback', () => {
         expect(upstream.calls).toHaveLength(0);
     });
 
-    it('over budget with a stale snapshot: returns the snapshot at once and sweeps in the background', async () => {
+    it('over budget with a stale snapshot: refreshes the stalest tiles that fit and keeps the rest', async () => {
+        snapshotStore.set('heatmap:AAPL,MSFT', {
+            data: [tile('AAPL', { fetchedAt: 200 }), tile('MSFT', { fetchedAt: 100 })],
+            updatedAt: new Date(Date.now() - 10 * 60_000),
+        });
+        profileStore.set('AAPL', storedProfile('AAPL'));
+        profileStore.set('MSFT', storedProfile('MSFT'));
+        gateState.freeSlots = 1; // sweep needs 2 quotes
+        const getHeatmapData = await load();
+        const data = await getHeatmapData(['AAPL', 'MSFT']);
+        // MSFT had the older quote, so it is the one refreshed this round
+        expect(data.map((s) => `${s.symbol}:${s.name}`).sort()).toEqual(['AAPL:AAPL old', 'MSFT:MSFT stored']);
+        expect(upstream.calls).toEqual(['https://finnhub.io/api/v1/quote?symbol=MSFT&token=test-token']);
+        await flush();
+        const refreshed = snapshotStore.get('heatmap:AAPL,MSFT')?.data as HeatmapStock[];
+        expect(refreshed.find((s) => s.symbol === 'MSFT')?.name).toBe('MSFT stored');
+    });
+
+    it('over budget with nothing affordable: returns the snapshot untouched', async () => {
         snapshotStore.set('heatmap:AAPL,MSFT', {
             data: [tile('AAPL'), tile('MSFT')],
             updatedAt: new Date(Date.now() - 10 * 60_000),
         });
-        gateState.freeSlots = 1; // sweep needs 4
+        gateState.freeSlots = 0;
         const getHeatmapData = await load();
         const data = await getHeatmapData(['AAPL', 'MSFT']);
         expect(data.map((s) => s.name)).toEqual(['AAPL old', 'MSFT old']);
-        // The background sweep still ran and refreshed the snapshot
-        await flush();
-        expect(upstream.calls).toHaveLength(4);
-        const refreshed = snapshotStore.get('heatmap:AAPL,MSFT')?.data as HeatmapStock[];
-        expect(refreshed.map((s) => s.name).sort()).toEqual(['AAPL Inc', 'MSFT Inc']);
+        expect(upstream.calls).toHaveLength(0);
     });
 
     it('over budget with no snapshot: paints the symbols that fit and leaves the rest to the next poll', async () => {
@@ -186,7 +212,7 @@ describe('getHeatmapData rate-limit fallback', () => {
             data: [tile('AAPL'), tile('MSFT')],
             updatedAt: new Date(Date.now() - 10 * 60_000),
         });
-        gateState.freeSlots = 1;
+        gateState.freeSlots = 100;
         // Make MSFT fail live so the merge has something to fall back to
         const mod = await import('@/lib/actions/finnhub.actions');
         vi.spyOn(mod, 'fetchJSON').mockImplementation(async (url: string) => {

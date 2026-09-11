@@ -41,7 +41,10 @@
     "dayRange": "Day range",
     "quoteTime": "Quote time",
     "clearFilter": "Clear filter",
-    "watchlistEmpty": "Your watchlist is empty — add some stocks first."
+    "watchlistEmpty": "Your watchlist is empty — add some stocks first.",
+    "dataAsOf": "Data as of {time}",
+    "staleAsOf": "{count} not refreshed, oldest {oldest}",
+    "staleHint": "When the Finnhub free quota runs out some tiles keep their last quote; they are refreshed in turn every minute"
   },
   "sectors": {
     "Technology": "Technology",
@@ -470,7 +473,8 @@
       "insiderNever": "Insider collection has never run — check that the monitor process is up",
       "insiderStale": "Insider collection hasn't run for {hours}h — data may lag",
       "aidipsFailing": "Streak collection (Bark alerts) failing repeatedly — check the monitor process",
-      "aidipsStale": "Streak collection hasn't run for {hours}h — Bark alerts may be down"
+      "aidipsStale": "Streak collection hasn't run for {hours}h — Bark alerts may be down",
+      "quotesStale": "{n} prices not refreshed this round (Finnhub quota) — showing the previous values, catching up shortly"
     }
   },
   "catalyst": {
