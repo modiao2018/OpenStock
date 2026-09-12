@@ -80,7 +80,7 @@ const SNAPSHOT_FRESH_MS = 45_000;
 function snapshotIsFresh(data: HeatmapStock[], updatedAt: Date): boolean {
     const age = Date.now() - updatedAt.getTime();
     const window = Math.max(SNAPSHOT_FRESH_MS, quoteTtlSeconds() * 1000);
-    return age < window && !data.some((s) => isFetchStale(s.fetchedAt));
+    return age < window && !data.some((s) => isFetchStale(s.fetchedAt, s.quoteTime));
 }
 
 function quoteUrl(symbol: string, token: string): string {
@@ -115,7 +115,10 @@ function withinBudget(
     budget: number,
     previous: HeatmapStock[] | null,
 ): string[] {
-    const fetchedAt = new Map((previous ?? []).map((s) => [s.symbol, s.fetchedAt ?? 0]));
+    // A tile whose quote is two sessions behind is treated as never fetched
+    const fetchedAt = new Map(
+        (previous ?? []).map((s) => [s.symbol, isFetchStale(s.fetchedAt, s.quoteTime) ? 0 : s.fetchedAt ?? 0]),
+    );
     const stalestFirst = [...list].sort((a, b) => (fetchedAt.get(a) ?? 0) - (fetchedAt.get(b) ?? 0));
     return pickWithinBudget(stalestFirst, (symbol) => callsFor(symbol, token, stored), budget);
 }

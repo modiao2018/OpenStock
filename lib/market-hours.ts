@@ -89,15 +89,22 @@ export function lastSessionCloseMs(now: Date = new Date()): number {
 
 export const LIVE_STALE_MS = 10 * 60_000;
 
+/** The weekday close before the latest one (two sessions back) */
+export function previousSessionCloseMs(now: Date = new Date()): number {
+    return lastSessionCloseMs(new Date(lastSessionCloseMs(now) - 1));
+}
+
 /**
- * True when a quote fetched at `fetchedAtMs` should have been refreshed by
- * now: during the extended session when older than 10 minutes, otherwise when
- * it was fetched before the latest close (so it cannot contain that close —
- * the previous day's price still showing the morning after). Keyed on fetch
- * time rather than last-trade time because thinly traded names legitimately
- * go long stretches without a print.
+ * True when a tile should be refreshed: fetched more than 10 minutes ago
+ * during the extended session, fetched before the latest close outside it
+ * (so it cannot contain that close), or — whatever the fetch time says —
+ * carrying a last-trade time from two sessions back. The last rule caught
+ * a cache layer handing out Thursday's close on Saturday as a fresh fetch.
+ * Keyed on fetch time first because thinly traded names legitimately go
+ * long stretches without a print.
  */
-export function isFetchStale(fetchedAtMs: number | undefined, now: Date = new Date()): boolean {
+export function isFetchStale(fetchedAtMs: number | undefined, quoteTimeSec = 0, now: Date = new Date()): boolean {
+    if (quoteTimeSec > 0 && quoteTimeSec * 1000 <= previousSessionCloseMs(now)) return true;
     const t = fetchedAtMs ?? 0;
     if (isExtendedSession(now)) return now.getTime() - t > LIVE_STALE_MS;
     return t < lastSessionCloseMs(now);

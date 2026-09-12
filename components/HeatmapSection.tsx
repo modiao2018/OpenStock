@@ -172,7 +172,7 @@ const HeatmapSection = ({ initialData, watchlistSymbols, configuredSymbols, heig
         if (times.length === 0) return null;
         const newest = Math.max(...times);
         const oldest = Math.min(...times);
-        const staleCount = data.filter((s) => isFetchStale(s.fetchedAt)).length;
+        const staleCount = data.filter((s) => isFetchStale(s.fetchedAt, s.quoteTime)).length;
         return { newest, oldest, staleCount };
     }, [data]);
 

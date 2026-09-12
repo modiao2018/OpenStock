@@ -43,17 +43,20 @@ const FINNHUB_EXCHANGE_SUFFIXES = new Set([
 // Shared upstream fetcher for every Finnhub call in the web app. Requests go
 // through the process-wide gate (memo + 50/min pacing + 429 cooldown, see
 // lib/finnhub-gate.ts) and every real upstream call lands in the per-source
-// ledger for the /status page. `revalidateSeconds` doubles as the memo TTL.
+// ledger for the /status page. `revalidateSeconds` is the memo TTL.
+//
+// The memo is the only cache: Next's data cache (`force-cache` + revalidate)
+// is deliberately bypassed. It serves stale-while-revalidate, so the first
+// request after a quiet stretch got the previous visit's response — on a
+// Saturday morning that was Thursday's close, stamped as freshly fetched and,
+// once the memo TTL grew to 30 min off-hours, pinned there for half an hour.
 async function fetchJSON<T>(url: string, revalidateSeconds?: number, source?: string): Promise<T> {
     const sourceId = source ?? inferSourceByHost(url) ?? '';
     return throughFinnhubGate<T>(finnhubGate, url, (revalidateSeconds ?? 0) * 1000, async () => {
-        const options: RequestInit & { next?: { revalidate?: number } } = revalidateSeconds
-            ? { cache: 'force-cache', next: { revalidate: revalidateSeconds } }
-            : { cache: 'no-store' };
         const start = Date.now();
         try {
             // Bound every upstream call — a hanging Finnhub connection must not stall SSR
-            const res = await fetch(url, { ...options, signal: AbortSignal.timeout(8000) });
+            const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(8000) });
             if (!res.ok) {
                 if (res.status === 429) finnhubGate.reportRateLimited(retryAfterMs(res.headers.get('retry-after')));
                 const text = await res.text().catch(() => '');

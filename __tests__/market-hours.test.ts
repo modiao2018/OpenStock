@@ -5,6 +5,7 @@ import {
     isFetchStale,
     isRegularSession,
     lastSessionCloseMs,
+    previousSessionCloseMs,
     LIVE_QUOTE_TTL_S,
     quoteTtlSeconds,
 } from '@/lib/market-hours';
@@ -64,32 +65,41 @@ describe('isFetchStale', () => {
     const ms = (d: Date) => d.getTime();
 
     it('a never-fetched tile is stale', () => {
-        expect(isFetchStale(undefined, FRI_NIGHT_ET)).toBe(true);
-        expect(isFetchStale(0, FRI_NOON_ET)).toBe(true);
+        expect(isFetchStale(undefined, 0, FRI_NIGHT_ET)).toBe(true);
+        expect(isFetchStale(0, 0, FRI_NOON_ET)).toBe(true);
     });
 
     it('in session: stale after 10 minutes', () => {
-        expect(isFetchStale(ms(FRI_NOON_ET) - 5 * 60_000, FRI_NOON_ET)).toBe(false);
-        expect(isFetchStale(ms(FRI_NOON_ET) - 12 * 60_000, FRI_NOON_ET)).toBe(true);
+        expect(isFetchStale(ms(FRI_NOON_ET) - 5 * 60_000, 0, FRI_NOON_ET)).toBe(false);
+        expect(isFetchStale(ms(FRI_NOON_ET) - 12 * 60_000, 0, FRI_NOON_ET)).toBe(true);
         // after-hours still counts as live
-        expect(isFetchStale(ms(FRI_EVENING_ET) - 12 * 60_000, FRI_EVENING_ET)).toBe(true);
+        expect(isFetchStale(ms(FRI_EVENING_ET) - 12 * 60_000, 0, FRI_EVENING_ET)).toBe(true);
     });
 
     it('after the extended session: anything fetched before the last close is stale', () => {
-        expect(isFetchStale(ms(FRI_CLOSE_ET) - 60_000, FRI_NIGHT_ET)).toBe(true);
-        expect(isFetchStale(ms(FRI_CLOSE_ET) + 60_000, FRI_NIGHT_ET)).toBe(false);
+        expect(isFetchStale(ms(FRI_CLOSE_ET) - 60_000, 0, FRI_NIGHT_ET)).toBe(true);
+        expect(isFetchStale(ms(FRI_CLOSE_ET) + 60_000, 0, FRI_NIGHT_ET)).toBe(false);
         // a fetch hours ago is fine as long as it happened after the bell
-        expect(isFetchStale(ms(FRI_CLOSE_ET) + 3 * 3600_000, FRI_NIGHT_ET)).toBe(false);
+        expect(isFetchStale(ms(FRI_CLOSE_ET) + 3 * 3600_000, 0, FRI_NIGHT_ET)).toBe(false);
     });
 
     it('over the weekend a Friday-evening fetch stays fresh, a Thursday one does not', () => {
-        expect(isFetchStale(ms(FRI_EVENING_ET), SAT_ET)).toBe(false);
-        expect(isFetchStale(ms(THU_CLOSE_ET) + 3600_000, SAT_ET)).toBe(true);
+        expect(isFetchStale(ms(FRI_EVENING_ET), 0, SAT_ET)).toBe(false);
+        expect(isFetchStale(ms(THU_CLOSE_ET) + 3600_000, 0, SAT_ET)).toBe(true);
+    });
+
+    it('a quote two sessions behind is stale no matter when it was fetched', () => {
+        // Saturday: latest close is Friday, Thursday's close is what a stale cache hands out
+        expect(previousSessionCloseMs(SAT_ET)).toBe(THU_CLOSE_ET.getTime());
+        expect(isFetchStale(ms(SAT_ET), THU_CLOSE_ET.getTime() / 1000, SAT_ET)).toBe(true);
+        expect(isFetchStale(ms(SAT_ET), FRI_CLOSE_ET.getTime() / 1000, SAT_ET)).toBe(false);
+        // Friday mid-session: Thursday's close is only one session back, fetch time decides
+        expect(isFetchStale(ms(FRI_NOON_ET), THU_CLOSE_ET.getTime() / 1000, FRI_NOON_ET)).toBe(false);
     });
 
     it('before the open a fetch made after the previous close is still fresh', () => {
         const friPreOpen = new Date('2026-09-11T07:00:00Z'); // 03:00 ET, before pre-market
-        expect(isFetchStale(ms(THU_CLOSE_ET) + 3600_000, friPreOpen)).toBe(false);
-        expect(isFetchStale(ms(THU_CLOSE_ET) - 3600_000, friPreOpen)).toBe(true);
+        expect(isFetchStale(ms(THU_CLOSE_ET) + 3600_000, 0, friPreOpen)).toBe(false);
+        expect(isFetchStale(ms(THU_CLOSE_ET) - 3600_000, 0, friPreOpen)).toBe(true);
     });
 });
