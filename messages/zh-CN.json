@@ -360,7 +360,7 @@
     },
     "xcheck": {
       "title": "多源交叉验证",
-      "hint": "行情：每个交易日收盘后从股票池轮换抽样，Alpaca 日线 vs Twelve Data（偏差 >1% 或日期不符即为不一致，Finnhub 作第三参考）；内部人：EDGAR Form 4 vs Finnhub 交易表（超过 2 天仍无对应记录即为缺失，缺失的申报会从 EDGAR 原文回填到页面）。不一致集合变化时推送 Bark。",
+      "hint": "行情：每个交易日收盘后从股票池轮换抽样，Alpaca 日线 vs Twelve Data（偏差 >1% 或日期不符即为不一致，Finnhub 作第三参考）；内部人：EDGAR Form 4 vs 内部人交易表（EDGAR 通道与 Finnhub 两个来源都算，超过 2 天仍无对应买卖记录的申报会从 EDGAR 原文回填到页面，回填后仍缺的才算缺失）。不一致集合变化时推送 Bark。",
       "quotesTitle": "行情收盘价",
       "insiderTitle": "内部人申报",
       "lastCheck": "核对于 {time}",
@@ -375,9 +375,9 @@
       "dateMismatch": "日期不符",
       "window": "窗口 {from} ~ {to}",
       "checkedFilings": "核对 {n} 份申报",
-      "noMissing": "Finnhub 无缺失",
+      "noMissing": "交易表无缺失",
       "openInEdgar": "EDGAR 原文",
-      "backfilled": "已从 EDGAR 原文回填 {n} 笔到内部人表"
+      "backfilled": "本次从 EDGAR 原文回填 {n} 笔到内部人表"
     }
   },
   "aiDips": {

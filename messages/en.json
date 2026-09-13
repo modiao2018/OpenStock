@@ -360,7 +360,7 @@
     },
     "xcheck": {
       "title": "Multi-source cross-check",
-      "hint": "Quotes: after each close a rotating sample of the pool is compared, Alpaca daily bars vs Twelve Data (>1% deviation or date mismatch = inconsistent; Finnhub is a third reference). Insiders: EDGAR Form 4 vs Finnhub trades (missing after a 2-day grace). Bark alert fires when the mismatch set changes.",
+      "hint": "Quotes: after each close a rotating sample of the pool is compared, Alpaca daily bars vs Twelve Data (>1% deviation or date mismatch = inconsistent; Finnhub is a third reference). Insiders: EDGAR Form 4 vs the insider trades table (either source counts; filings still without a matching trade after a 2-day grace are backfilled from the EDGAR filing, and only those still missing afterwards are reported). Bark alert fires when the mismatch set changes.",
       "quotesTitle": "Closing prices",
       "insiderTitle": "Insider filings",
       "lastCheck": "Checked {time}",
@@ -375,9 +375,9 @@
       "dateMismatch": "date mismatch",
       "window": "Window {from} – {to}",
       "checkedFilings": "{n} filings checked",
-      "noMissing": "Nothing missing on Finnhub",
+      "noMissing": "Nothing missing from the trades table",
       "openInEdgar": "Open on EDGAR",
-      "backfilled": "{n} trades backfilled from EDGAR filings into the insider table"
+      "backfilled": "{n} trades backfilled from EDGAR filings into the insider table this run"
     }
   },
   "aiDips": {

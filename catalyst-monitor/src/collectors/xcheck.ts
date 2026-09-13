@@ -44,9 +44,12 @@ export interface InsiderXcheckResult {
   windowFrom: string;
   windowTo: string;
   checkedFilings: number;
+  /** 回填之后交易表仍然没有对应买卖的申报——页面真正缺的 */
   missing: Array<{ symbol: string; filingDate: string; accessionNumber: string; url: string }>;
-  /** 本次从 EDGAR 原文回填进交易表的行数（Finnhub 漏掉的） */
+  /** 本次从 EDGAR 原文回填进交易表的行数 */
   backfilledTrades?: number;
+  /** 本次核对时交易表缺、回填后补上的申报数 */
+  backfilledFilings?: number;
 }
 
 export const XCHECK_QUOTES_KEY = 'source_xcheck:quotes';
@@ -159,6 +162,18 @@ async function checkQuotes(config: MonitorConfig): Promise<void> {
   );
 }
 
+type MissingFiling = InsiderXcheckResult['missing'][number];
+
+/** 窗口内交易表已有的行（任一来源），供 findMissingFilings 按申报日 ±1 天匹配 */
+async function tradeKeysInWindow(symbols: string[], from: string, to: string, toleranceDays: number) {
+  if (symbols.length === 0) return [];
+  const docs = await InsiderTrade.find(
+    { symbol: { $in: symbols }, filingDate: { $gte: shiftDate(from, -toleranceDays), $lte: shiftDate(to, toleranceDays) } },
+    { symbol: 1, filingDate: 1 }
+  ).lean();
+  return docs.map((d) => ({ symbol: d.symbol, filingDate: d.filingDate }));
+}
+
 async function checkInsiders(config: MonitorConfig): Promise<void> {
   const today = new Date().toISOString().slice(0, 10);
   if ((await getKv('xcheck_insider_date')) === today) return;
@@ -169,14 +184,11 @@ async function checkInsiders(config: MonitorConfig): Promise<void> {
   const to = shiftDate(today, -opts.graceDays);
   const filingDocs = await InsiderFiling.find({ form: '4', filingDate: { $gte: from, $lte: to } }).lean();
   const symbols = [...new Set(filingDocs.map((d) => d.symbol))];
-  // 只看 Finnhub 来源的行：这里核对的是"Finnhub 有没有跟上 EDGAR"，
-  // EDGAR 通道自己写的行不算 Finnhub 的功劳
-  const tradeDocs = symbols.length
-    ? await InsiderTrade.find(
-        { symbol: { $in: symbols }, source: { $ne: 'edgar' }, filingDate: { $gte: shiftDate(from, -opts.toleranceDays), $lte: shiftDate(to, opts.toleranceDays) } },
-        { symbol: 1, filingDate: 1 }
-      ).lean()
-    : [];
+  // 核对的是"页面读的交易表有没有这份申报的买卖"，不分来源。以前只认 Finnhub
+  // 来源的行，但 EDGAR 通道当天就写交易表之后，Finnhub 晚两天送到的同一笔会撞
+  // 去重键被丢掉，永远不会有 Finnhub 行——于是 EDGAR 抢先的每一份都被误判成缺失
+  // （2026-09-13：80 份"缺失"全部已在表里，回填 0 笔，天天推送）。
+  let trades = await tradeKeysInWindow(symbols, from, to, opts.toleranceDays);
 
   const filings: FilingKey[] = filingDocs.map((d) => ({
     symbol: d.symbol,
@@ -184,7 +196,6 @@ async function checkInsiders(config: MonitorConfig): Promise<void> {
     accessionNumber: d.accessionNumber,
     txCodes: d.txCodes ?? null,
   }));
-  const trades = tradeDocs.map((d) => ({ symbol: d.symbol, filingDate: d.filingDate }));
   let candidates = findMissingFilings(filings, trades, today, opts);
 
   // 建档路径没拉过 XML 的候选：补解析交易代码，剔除纯期权/授予类申报
@@ -209,23 +220,22 @@ async function checkInsiders(config: MonitorConfig): Promise<void> {
     candidates = findMissingFilings(candidates, trades, today, opts);
   }
 
-  const missing = candidates
-    .filter((c) => c.txCodes !== null)
-    .map((c) => {
-      const doc = filingDocs.find((d) => d.accessionNumber === c.accessionNumber);
-      return { symbol: c.symbol, filingDate: c.filingDate, accessionNumber: c.accessionNumber, url: doc?.url ?? '' };
-    });
+  const toMissing = (c: FilingKey): MissingFiling => {
+    const doc = filingDocs.find((d) => d.accessionNumber === c.accessionNumber);
+    return { symbol: c.symbol, filingDate: c.filingDate, accessionNumber: c.accessionNumber, url: doc?.url ?? '' };
+  };
+  const lacking = candidates.filter((c) => c.txCodes !== null).map(toMissing);
 
-  // Finnhub 漏掉的申报不能只列在状态页——从 EDGAR 原文把买卖回填进页面读的交易表，
-  // 页面才不会停在 Finnhub 最后一次跟上的那笔（RXRX 2026-09：页面停在 8 月，EDGAR 早有 9 月的）
+  // 交易表缺的申报不能只列在状态页——从 EDGAR 原文把买卖回填进页面读的交易表，
+  // 页面才不会停在最后一次跟上的那笔（RXRX 2026-09：页面停在 8 月，EDGAR 早有 9 月的）
   let backfilledTrades = 0;
-  if (missing.length > 0) {
+  if (lacking.length > 0) {
     const cikMap = await getCikMap(config);
     // 已经由 EDGAR 通道写过的申报不用再拉
     const already = new Set(
-      (await InsiderTrade.find({ accessionNumber: { $in: missing.map((m) => m.accessionNumber) } }, { accessionNumber: 1 }).lean()).map((d) => d.accessionNumber)
+      (await InsiderTrade.find({ accessionNumber: { $in: lacking.map((m) => m.accessionNumber) } }, { accessionNumber: 1 }).lean()).map((d) => d.accessionNumber)
     );
-    for (const m of missing.slice(0, MAX_BACKFILL)) {
+    for (const m of lacking.slice(0, MAX_BACKFILL)) {
       const cik = cikMap[m.symbol];
       if (!cik || !m.url || already.has(m.accessionNumber)) continue;
       try {
@@ -235,8 +245,17 @@ async function checkInsiders(config: MonitorConfig): Promise<void> {
       }
       await sleep(SEC_MIN_REQUEST_GAP_MS);
     }
-    if (backfilledTrades > 0) log('xcheck', `从 EDGAR 回填 ${backfilledTrades} 笔 Finnhub 缺失的交易`);
+    if (backfilledTrades > 0) log('xcheck', `从 EDGAR 回填 ${backfilledTrades} 笔交易表缺失的交易`);
   }
+
+  // 回填之后再核对一次：只有仍然缺的才算问题（回填失败、CIK 未知、原文拉不到）
+  let missing = lacking;
+  if (backfilledTrades > 0) {
+    trades = await tradeKeysInWindow(symbols, from, to, opts.toleranceDays);
+    missing = findMissingFilings(candidates.filter((c) => c.txCodes !== null), trades, today, opts).map(toMissing);
+  }
+  const backfilledFilings = lacking.length - missing.length;
+
   const result: InsiderXcheckResult = {
     checkedAt: new Date().toISOString(),
     windowFrom: from,
@@ -244,17 +263,18 @@ async function checkInsiders(config: MonitorConfig): Promise<void> {
     checkedFilings: filings.length,
     missing,
     backfilledTrades,
+    backfilledFilings,
   };
   await setKv(XCHECK_INSIDER_KEY, JSON.stringify(result));
   await setKv('xcheck_insider_date', today);
-  log('xcheck', `内部人核对 ${from}~${to}：EDGAR ${filings.length} 份，Finnhub 缺失 ${missing.length}`);
+  log('xcheck', `内部人核对 ${from}~${to}：EDGAR ${filings.length} 份，回填 ${backfilledFilings} 份 / ${backfilledTrades} 笔，仍缺 ${missing.length}`);
 
   await pushIfChanged(
     config,
     'source_xcheck:insider:sig',
     alertSignature(missing.map((m) => m.accessionNumber)),
-    `内部人数据交叉验证｜Finnhub 缺失 ${missing.length} 份申报`,
-    `EDGAR 有 Form 4 但 Finnhub 超过 ${opts.graceDays} 天仍无对应交易（已从 EDGAR 回填 ${backfilledTrades} 笔到页面）：\n` +
+    `内部人数据交叉验证｜交易表缺失 ${missing.length} 份申报`,
+    `EDGAR 有含买卖的 Form 4，但超过 ${opts.graceDays} 天内部人交易表仍无对应记录，从原文回填也没补上（本次回填 ${backfilledTrades} 笔）：\n` +
       missing.slice(0, 10).map((m) => `${m.symbol} ${m.filingDate}`).join('\n') +
       (missing.length > 10 ? `\n…共 ${missing.length} 份` : '') +
       '\n请到数据源状态页查看'
@@ -263,7 +283,8 @@ async function checkInsiders(config: MonitorConfig): Promise<void> {
 
 /**
  * 多源交叉验证：行情（Alpaca 日线 vs Twelve Data，Finnhub 作第三参考）每个
- * 交易日收盘后抽样核对一次；内部人（EDGAR Form 4 vs Finnhub 交易表）每日一次。
+ * 交易日收盘后抽样核对一次；内部人（EDGAR Form 4 vs 页面读的内部人交易表，
+ * 不分来源，缺的从原文回填）每日一次。
  * 结果写 KV 供 /status 展示，不一致集合变化时推 Bark。不产生时间线事件。
  */
 export async function collectXcheck(config: MonitorConfig): Promise<NewEvent[]> {
