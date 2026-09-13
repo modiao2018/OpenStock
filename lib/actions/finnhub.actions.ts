@@ -6,10 +6,10 @@ import { POPULAR_STOCK_SYMBOLS } from '@/lib/constants';
 import { cache } from 'react';
 import { readSnapshot, snapshotKey, writeSnapshot } from '@/lib/snapshot';
 import { recordSourceCall } from '@/lib/source-calls';
-import { finnhubGate, retryAfterMs, throughFinnhubGate } from '@/lib/finnhub-gate';
-import { resolveProfiles } from '@/lib/company-profiles';
+import { finnhubGate, isMemoized, pickWithinBudget, retryAfterMs, throughFinnhubGate } from '@/lib/finnhub-gate';
+import { isProfileFresh, readStoredProfiles, resolveProfiles, type StoredCompanyProfile } from '@/lib/company-profiles';
 import { inferSourceByHost } from '@/lib/sources-registry';
-import { quoteTtlSeconds } from '@/lib/market-hours';
+import { isFetchStale, quoteTtlSeconds } from '@/lib/market-hours';
 
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
 const NEXT_PUBLIC_FINNHUB_API_KEY = process.env.NEXT_PUBLIC_FINNHUB_API_KEY ?? '';
@@ -18,6 +18,8 @@ type FinnhubQuote = {
     c?: number;
     d?: number;
     dp?: number;
+    // Unix seconds of the last trade
+    t?: number;
 };
 
 type FinnhubCompanyProfile = {
@@ -116,67 +118,216 @@ export async function getCompanyProfile(symbol: string): Promise<FinnhubCompanyP
     }
 }
 
+// ---------------------------------------------------------------------------
+// Watchlist table rows
+// ---------------------------------------------------------------------------
+
+export interface WatchlistRow {
+    symbol: string;
+    // null (not 0) when no quote has ever arrived, so the UI can keep stale values
+    price: number | null;
+    change: number | null;
+    changePercent: number | null;
+    currency: string;
+    name: string;
+    logo?: string;
+    // USD millions, null when unknown
+    marketCap: number | null;
+    peRatio: number;
+    // Unix seconds of the quote's last trade, 0 when unknown
+    quoteTime?: number;
+    // Epoch ms when the quote was last fetched from Finnhub; absent on rows
+    // written before the budgeted sweep existed (treated as never fetched)
+    fetchedAt?: number;
+}
+
+function quoteUrl(symbol: string): string {
+    return `${FINNHUB_BASE_URL}/quote?symbol=${encodeURIComponent(symbol)}&token=${NEXT_PUBLIC_FINNHUB_API_KEY}`;
+}
+
+function profileUrl(symbol: string): string {
+    return `${FINNHUB_BASE_URL}/stock/profile2?symbol=${encodeURIComponent(symbol)}&token=${NEXT_PUBLIC_FINNHUB_API_KEY}`;
+}
+
 // Serve the last-known table rows instantly at SSR; the table's mount refresh
 // fetches live data and writes the snapshot back. Falls back to a live fetch
 // on the very first visit (no snapshot yet).
-export async function getWatchlistDataCached(symbols: string[]) {
+export async function getWatchlistDataCached(symbols: string[]): Promise<WatchlistRow[]> {
     if (!symbols || symbols.length === 0) return [];
-    type Rows = Awaited<ReturnType<typeof getWatchlistData>>;
-    const snapshot = await readSnapshot<Rows>(snapshotKey('watchlist', symbols));
+    const snapshot = await readSnapshot<WatchlistRow[]>(snapshotKey('watchlist', symbols));
     if (snapshot) return snapshot.data;
     return getWatchlistData(symbols);
 }
 
-export async function getWatchlistData(symbols: string[]) {
+// Full rows: quotes plus profiles (name / logo / market cap)
+export async function getWatchlistData(symbols: string[]): Promise<WatchlistRow[]> {
+    return refreshWatchlistRows(symbols, true);
+}
+
+// Variant for the client's 30s poll: never spends Finnhub budget on profiles
+// (name / logo / market cap barely change); they come from Mongo or the snapshot
+export async function getWatchlistQuotes(symbols: string[]): Promise<WatchlistRow[]> {
+    return refreshWatchlistRows(symbols, false);
+}
+
+// Upstream calls fetching this symbol would make right now: memo hits and
+// profiles already fresh in Mongo are free
+function watchlistCallsFor(symbol: string, withProfiles: boolean, stored: Map<string, StoredCompanyProfile>): number {
+    const quote = isMemoized(quoteUrl(symbol)) ? 0 : 1;
+    if (!withProfiles) return quote;
+    const known = stored.get(symbol);
+    const profile = (known && isProfileFresh(known)) || isMemoized(profileUrl(symbol)) ? 0 : 1;
+    return quote + profile;
+}
+
+// The watchlist used to fan out quote + profile (+ news, see getNews) per
+// symbol on every load, and 17 symbols alone blew through the gate's 50/min
+// on a cold page: the overflow failed, those rows painted empty, and the same
+// tail of the list was rejected on every poll. Same recipe as the heatmap now:
+// fetch only what fits the free budget, stalest quote first, and keep the
+// snapshot's values for the rest so the next poll rotates on to them.
+async function refreshWatchlistRows(symbols: string[], withProfiles: boolean): Promise<WatchlistRow[]> {
     if (!symbols || symbols.length === 0) return [];
 
-    // Fetch quotes and profiles in parallel
-    const promises = symbols.map(async (sym) => {
-        const [quote, profile] = await Promise.all([
-            getQuote(sym),
-            getCompanyProfile(sym)
-        ]);
+    const key = snapshotKey('watchlist', symbols);
+    const [snapshot, stored] = await Promise.all([
+        readSnapshot<WatchlistRow[]>(key),
+        readStoredProfiles(symbols),
+    ]);
+    const previous = new Map((snapshot?.data ?? []).map((r) => [r.symbol, r]));
 
-        return {
-            symbol: sym,
-            // null (not 0) when the fetch failed or Finnhub has no data, so the UI can keep stale values
-            price: quote?.c ? quote.c : null,
-            change: quote?.d ?? null,
-            changePercent: quote?.dp ?? null,
-            currency: profile?.currency || 'USD',
-            name: profile?.name || sym,
-            logo: profile?.logo,
+    // A row that never got a price, or whose quote is two sessions behind,
+    // counts as never fetched so it goes to the front of the queue
+    const lastFetched = (symbol: string): number => {
+        const row = previous.get(symbol);
+        if (!row || row.price === null) return 0;
+        return isFetchStale(row.fetchedAt, row.quoteTime) ? 0 : row.fetchedAt ?? 0;
+    };
+    const stalestFirst = [...symbols].sort((a, b) => lastFetched(a) - lastFetched(b));
+    const picked = pickWithinBudget(
+        stalestFirst,
+        (symbol) => watchlistCallsFor(symbol, withProfiles, stored),
+        finnhubGate.freeSlots,
+    );
+
+    // Profiles: Mongo when fresh, Finnhub otherwise (persisted for next time),
+    // stale Mongo row when Finnhub refuses. Runs alongside the quote fan-out.
+    const profilesPromise = withProfiles
+        ? resolveProfiles(picked, (symbol) => fetchJSON<FinnhubCompanyProfile>(profileUrl(symbol), 86400), stored)
+        : Promise.resolve(new Map<string, StoredCompanyProfile>());
+    const quotes = new Map<string, FinnhubQuote>();
+    await Promise.all(
+        picked.map(async (symbol) => {
+            try {
+                const quote = await fetchJSON<FinnhubQuote>(quoteUrl(symbol), quoteTtlSeconds());
+                if (quote?.c) quotes.set(symbol, quote);
+            } catch (e) {
+                console.error('Error fetching quote for', symbol, e);
+            }
+        }),
+    );
+    const profiles = await profilesPromise;
+    const fetchedAt = Date.now();
+
+    const rows = await Promise.all(
+        symbols.map(async (symbol): Promise<WatchlistRow> => {
+            const old = previous.get(symbol);
+            const quote = quotes.get(symbol);
+            // A stale stored profile still beats the snapshot's copy of it
+            const profile = profiles.get(symbol) ?? stored.get(symbol);
             // Normalized to USD millions — Finnhub reports in the primary listing's currency
-            marketCap: profile?.marketCapitalization
+            const marketCap = profile?.marketCapitalization
                 ? await marketCapToUsdMillions(profile.marketCapitalization, profile.currency)
-                : null,
-            peRatio: 0 // Finnhub 'quote' and 'profile2' don't easily give real-time PE. Might need 'metric' endpoint, but skipping for now to save rate limits.
-        };
-    });
+                : old?.marketCap ?? null;
+            return {
+                symbol,
+                price: quote ? quote.c! : old?.price ?? null,
+                change: quote ? quote.d ?? null : old?.change ?? null,
+                changePercent: quote ? quote.dp ?? null : old?.changePercent ?? null,
+                currency: profile?.currency || old?.currency || 'USD',
+                name: profile?.name || old?.name || symbol,
+                logo: profile?.logo || old?.logo,
+                marketCap,
+                // Finnhub 'quote' and 'profile2' don't give PE; the 'metric' endpoint would cost another call per symbol
+                peRatio: 0,
+                quoteTime: quote ? quote.t ?? 0 : old?.quoteTime ?? 0,
+                fetchedAt: quote ? fetchedAt : old?.fetchedAt,
+            };
+        }),
+    );
 
-    const rows = await Promise.all(promises);
-    if (rows.some((r) => r.price !== null)) {
-        void writeSnapshot(snapshotKey('watchlist', symbols), rows);
-    }
+    if (quotes.size > 0) void writeSnapshot(key, rows);
     return rows;
 }
 
-// Lightweight variant for client-side polling: quotes only, no profile calls
-// (name/logo/market cap barely change — refetching them per poll wastes rate limit).
-export async function getWatchlistQuotes(symbols: string[]) {
-    if (!symbols || symbols.length === 0) return [];
+// ---------------------------------------------------------------------------
+// News
+// ---------------------------------------------------------------------------
 
-    return await Promise.all(symbols.map(async (sym) => {
-        const quote = await getQuote(sym);
-        return {
-            symbol: sym,
-            price: quote?.c ? quote.c : null,
-            change: quote?.d ?? null,
-            changePercent: quote?.dp ?? null,
-        };
-    }));
+const NEWS_MEMO_S = 300;
+// A cold watchlist used to fan out one company-news call per symbol on top of
+// the quotes. Per-symbol news now lives in a snapshot: each render refreshes at
+// most this many symbols (stalest first, within the gate's free budget) and
+// serves the rest from the snapshot, so the grid fills in over a couple of
+// visits instead of eating the budget the quotes need.
+const NEWS_CALLS_PER_RENDER = 8;
+const NEWS_KEPT_PER_SYMBOL = 10;
+
+type NewsSnapshot = Record<string, { fetchedAt: number; articles: RawNewsArticle[] }>;
+
+function companyNewsUrl(symbol: string, range: { from: string; to: string }, token: string): string {
+    return `${FINNHUB_BASE_URL}/company-news?symbol=${encodeURIComponent(symbol)}&from=${range.from}&to=${range.to}&token=${token}`;
 }
 
+// Validated articles per symbol, newest first: live for the symbols refreshed
+// this render, the snapshot's copy for the others
+async function companyNewsBySymbol(
+    symbols: string[],
+    range: { from: string; to: string },
+    token: string,
+): Promise<Record<string, RawNewsArticle[]>> {
+    const key = snapshotKey('news', symbols);
+    const previous = (await readSnapshot<NewsSnapshot>(key))?.data ?? {};
+    const now = Date.now();
+    const url = (symbol: string) => companyNewsUrl(symbol, range, token);
+    const age = (symbol: string) => now - (previous[symbol]?.fetchedAt ?? 0);
+
+    // A snapshot entry younger than the memo TTL is as good as a memo hit;
+    // skip it so a process restart does not buy the same news again
+    const candidates = symbols
+        .filter((symbol) => isMemoized(url(symbol)) || age(symbol) >= NEWS_MEMO_S * 1000)
+        .sort((a, b) => age(b) - age(a));
+    const picked = pickWithinBudget(
+        candidates,
+        (symbol) => (isMemoized(url(symbol)) ? 0 : 1),
+        Math.min(NEWS_CALLS_PER_RENDER, finnhubGate.freeSlots),
+    );
+
+    const next: NewsSnapshot = { ...previous };
+    let refreshed = 0;
+    await Promise.all(
+        picked.map(async (symbol) => {
+            try {
+                const articles = await fetchJSON<RawNewsArticle[]>(url(symbol), NEWS_MEMO_S);
+                const kept = (articles || [])
+                    .filter(validateArticle)
+                    .sort((a, b) => (b.datetime ?? 0) - (a.datetime ?? 0))
+                    .slice(0, NEWS_KEPT_PER_SYMBOL);
+                next[symbol] = { fetchedAt: now, articles: kept };
+                refreshed++;
+            } catch (e) {
+                console.error('Error fetching company news for', symbol, e);
+            }
+        }),
+    );
+    if (refreshed > 0) void writeSnapshot(key, next);
+
+    // Snapshot entries can be older than the query window; drop what fell out of it
+    const cutoff = Date.parse(range.from) / 1000;
+    return Object.fromEntries(
+        symbols.map((symbol) => [symbol, (next[symbol]?.articles ?? []).filter((a) => (a.datetime ?? 0) >= cutoff)]),
+    );
+}
 
 export async function getNews(symbols?: string[]): Promise<MarketNewsArticle[]> {
     try {
@@ -193,20 +344,7 @@ export async function getNews(symbols?: string[]): Promise<MarketNewsArticle[]> 
 
         // If we have symbols, try to fetch company news per symbol and round-robin select
         if (cleanSymbols.length > 0) {
-            const perSymbolArticles: Record<string, RawNewsArticle[]> = {};
-
-            await Promise.all(
-                cleanSymbols.map(async (sym) => {
-                    try {
-                        const url = `${FINNHUB_BASE_URL}/company-news?symbol=${encodeURIComponent(sym)}&from=${range.from}&to=${range.to}&token=${token}`;
-                        const articles = await fetchJSON<RawNewsArticle[]>(url, 300);
-                        perSymbolArticles[sym] = (articles || []).filter(validateArticle);
-                    } catch (e) {
-                        console.error('Error fetching company news for', sym, e);
-                        perSymbolArticles[sym] = [];
-                    }
-                })
-            );
+            const perSymbolArticles = await companyNewsBySymbol(cleanSymbols, range, token);
 
             const collected: MarketNewsArticle[] = [];
             // Round-robin up to 6 picks
@@ -233,7 +371,7 @@ export async function getNews(symbols?: string[]): Promise<MarketNewsArticle[]> 
 
         // General market news fallback or when no symbols provided
         const generalUrl = `${FINNHUB_BASE_URL}/news?category=general&token=${token}`;
-        const general = await fetchJSON<RawNewsArticle[]>(generalUrl, 300);
+        const general = await fetchJSON<RawNewsArticle[]>(generalUrl, NEWS_MEMO_S);
 
         const seen = new Set<string>();
         const unique: RawNewsArticle[] = [];
