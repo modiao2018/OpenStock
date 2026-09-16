@@ -34,8 +34,7 @@ const HEATMAP_SYMBOLS = DEFAULT_DASHBOARD_SYMBOLS;
 type Profiles = Map<string, StoredCompanyProfile>;
 
 // Tile shape lives in lib/heatmap-tile.ts (shared with the monitor's sweep);
-// re-exported so existing importers keep working
-export type { HeatmapStock };
+// a 'use server' file may only export async functions, so import it from there
 
 function normalizeSymbols(symbols?: string[]): string[] {
     return normalizeHeatmapSymbols(symbols, HEATMAP_SYMBOLS);
