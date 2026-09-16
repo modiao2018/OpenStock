@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { Minus, Plus, RotateCcw } from 'lucide-react';
 import { formatMarketCapValue, isRedUpLocale } from '@/lib/utils';
-import type { HeatmapStock } from '@/lib/actions/heatmap.actions';
+import type { HeatmapStock } from '@/lib/heatmap-tile';
 
 // Intensity ramps, weakest → strongest; both poles validated against the dark
 // surface (contrast >= 3:1, CVD ΔE 11.1). The signed % label on every tile is

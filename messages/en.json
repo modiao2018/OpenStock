@@ -707,7 +707,8 @@
         "outcomes": "Signal outcomes",
         "focus": "Focus scoring",
         "digest": "Daily digest",
-        "thesis": "Thesis follow-ups"
+        "thesis": "Thesis follow-ups",
+        "heatmap": "Heatmap snapshot refresh"
       }
     }
   },

@@ -8,7 +8,15 @@ import {
     type RawCompanyProfile,
     type StoredCompanyProfile,
 } from '@/lib/company-profiles';
+import { DEFAULT_DASHBOARD_SYMBOLS } from '@/lib/dashboard-catalog';
 import { finnhubGate, isMemoized, pickWithinBudget } from '@/lib/finnhub-gate';
+import {
+    buildHeatmapTile,
+    mergeHeatmapTiles,
+    normalizeHeatmapSymbols,
+    type FinnhubQuote,
+    type HeatmapStock,
+} from '@/lib/heatmap-tile';
 import { marketCapToUsdMillions } from '@/lib/market-cap';
 import { isFetchStale, quoteTtlSeconds } from '@/lib/market-hours';
 import { readSnapshot, snapshotKey, writeSnapshot } from '@/lib/snapshot';
@@ -18,48 +26,19 @@ const NEXT_PUBLIC_FINNHUB_API_KEY = process.env.NEXT_PUBLIC_FINNHUB_API_KEY ?? '
 
 // A cold load costs one quote per symbol (profiles come from Mongo once seen,
 // see lib/company-profiles.ts); getHeatmapData falls back to the snapshot when
-// a sweep would not fit the gate's free budget
-const HEATMAP_SYMBOLS = [
-    'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'META', 'NVDA', 'NFLX', 'ORCL', 'CRM',
-    'ADBE', 'INTC', 'AMD', 'PYPL', 'UBER', 'SPOT', 'SHOP', 'SNOW', 'PLTR', 'COIN',
-    'RBLX', 'DDOG', 'CRWD', 'NET', 'ABNB', 'DASH', 'BABA', 'JD', 'PDD', 'SE',
-];
+// a sweep would not fit the gate's free budget. The default list is the
+// dashboard catalog's default selection so anonymous visitors, users without
+// a saved dashboard and the monitor's sweep all key the same snapshot.
+const HEATMAP_SYMBOLS = DEFAULT_DASHBOARD_SYMBOLS;
 
-// Same rate-limit reasoning for caller-provided lists (watchlist / dashboard config)
-const MAX_CUSTOM_SYMBOLS = 40;
-const SYMBOL_PATTERN = /^[A-Z0-9.\-]{1,12}$/;
-
-export interface HeatmapStock {
-    symbol: string;
-    name: string;
-    price: number;
-    changePercent: number;
-    // Absolute change in USD
-    change: number;
-    open: number;
-    high: number;
-    low: number;
-    prevClose: number;
-    // USD (converted from Finnhub's millions)
-    marketCap: number;
-    // Raw finnhubIndustry value; translated at render time, '' when unknown
-    industry: string;
-    // Unix seconds of the quote's last trade, 0 when the upstream omits it
-    quoteTime: number;
-    // Epoch ms when this tile was last fetched from Finnhub (drives staleness;
-    // absent on snapshots written before this field existed)
-    fetchedAt?: number;
-}
-
-type Quote = { c?: number; d?: number; dp?: number; o?: number; h?: number; l?: number; pc?: number; t?: number };
 type Profiles = Map<string, StoredCompanyProfile>;
 
+// Tile shape lives in lib/heatmap-tile.ts (shared with the monitor's sweep);
+// re-exported so existing importers keep working
+export type { HeatmapStock };
+
 function normalizeSymbols(symbols?: string[]): string[] {
-    return symbols && symbols.length > 0
-        ? [...new Set(symbols.map((s) => s.trim().toUpperCase()))]
-              .filter((s) => SYMBOL_PATTERN.test(s))
-              .slice(0, MAX_CUSTOM_SYMBOLS)
-        : HEATMAP_SYMBOLS;
+    return normalizeHeatmapSymbols(symbols, HEATMAP_SYMBOLS);
 }
 
 // Last successful getHeatmapData payload; lets SSR paint instantly (≤~60s
@@ -143,12 +122,7 @@ function sweep(
     if (pending) return pending;
     const run = fetchLive(fetchList, token, stored)
         .then((fresh) => {
-            const bySymbol = new Map((previous ?? []).map((s) => [s.symbol, s]));
-            for (const s of fresh) bySymbol.set(s.symbol, s);
-            const data = list
-                .map((symbol) => bySymbol.get(symbol))
-                .filter((s): s is HeatmapStock => s !== undefined)
-                .sort((a, b) => b.marketCap - a.marketCap);
+            const data = mergeHeatmapTiles(list, previous, fresh);
             if (fresh.length > 0) void writeSnapshot(key, data);
             return data;
         })
@@ -203,7 +177,7 @@ async function fetchLive(list: string[], token: string, stored: Profiles): Promi
                 // 60s in session (dedupes concurrent renders and client polls
                 // without serving a visit the previous visit's data); 30 min
                 // once after-hours ends, when the quote cannot move anyway
-                return await fetchJSON<Quote>(quoteUrl(symbol, token), quoteTtlSeconds());
+                return await fetchJSON<FinnhubQuote>(quoteUrl(symbol, token), quoteTtlSeconds());
             } catch (e) {
                 console.error('Heatmap fetch failed for', symbol, e);
                 return null;
@@ -219,26 +193,8 @@ async function fetchLive(list: string[], token: string, stored: Profiles): Promi
             const profile = profiles.get(symbol);
             if (!quote || !profile) return null;
 
-            const price = quote.c ?? 0;
             const marketCapMillions = await marketCapToUsdMillions(profile.marketCapitalization, profile.currency);
-            // Delisted/renamed tickers come back with zeroed data — drop them
-            if (price <= 0 || marketCapMillions <= 0) return null;
-
-            return {
-                symbol,
-                name: profile.name || symbol,
-                price,
-                changePercent: quote.dp ?? 0,
-                change: quote.d ?? 0,
-                open: quote.o ?? 0,
-                high: quote.h ?? 0,
-                low: quote.l ?? 0,
-                prevClose: quote.pc ?? 0,
-                marketCap: marketCapMillions * 1e6,
-                industry: profile.finnhubIndustry,
-                quoteTime: quote.t ?? 0,
-                fetchedAt,
-            };
+            return buildHeatmapTile(symbol, quote, profile, marketCapMillions, fetchedAt);
         }),
     );
 

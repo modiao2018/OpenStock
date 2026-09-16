@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { HeatmapStock } from '@/lib/actions/heatmap.actions';
+import type { HeatmapStock } from '@/lib/heatmap-tile';
 
 // The action's rate-limit fallback is what's under test, so the gate, the
 // Finnhub fetch layer and the Mongo snapshot store are all stubbed.

@@ -14,7 +14,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import StockHeatmap from '@/components/StockHeatmap';
-import { getHeatmapData, type HeatmapStock } from '@/lib/actions/heatmap.actions';
+import { getHeatmapData } from '@/lib/actions/heatmap.actions';
+import type { HeatmapStock } from '@/lib/heatmap-tile';
 import { formatClock } from '@/lib/format-time';
 import { isFetchStale } from '@/lib/market-hours';
 
