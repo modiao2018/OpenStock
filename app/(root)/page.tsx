@@ -1,15 +1,18 @@
 import HeatmapSection from "@/components/HeatmapSection";
 import { getHeatmapSnapshot } from "@/lib/actions/heatmap.actions";
-import { getDashboardSymbols } from "@/lib/actions/dashboard.actions";
+import { getDashboardConfig } from "@/lib/actions/dashboard.actions";
 import { getUserWatchlist } from "@/lib/actions/watchlist.actions";
-import { DEFAULT_DASHBOARD_SYMBOLS } from "@/lib/dashboard-catalog";
+import { DEFAULT_DASHBOARD_SYMBOLS, EMPTY_CATALOG_EDITS } from "@/lib/dashboard-catalog";
 import { getSession } from "@/lib/get-session";
 
 const Home = async () => {
     const session = await getSession();
     const userId = session?.user?.id;
 
-    const dashboardSymbols = userId ? await getDashboardSymbols(userId) : DEFAULT_DASHBOARD_SYMBOLS;
+    const dashboard = userId
+        ? await getDashboardConfig(userId)
+        : { symbols: DEFAULT_DASHBOARD_SYMBOLS, edits: EMPTY_CATALOG_EDITS };
+    const dashboardSymbols = dashboard.symbols;
     // SSR serves the last-known snapshot (Mongo only, no Finnhub fan-out);
     // HeatmapSection refreshes live data right after mount
     const [heatmapData, watchlistItems] = await Promise.all([
@@ -26,6 +29,7 @@ const Home = async () => {
                     initialData={heatmapData}
                     watchlistSymbols={watchlistSymbols}
                     configuredSymbols={dashboardSymbols}
+                    catalogEdits={dashboard.edits}
                     height={600}
                 />
             </section>

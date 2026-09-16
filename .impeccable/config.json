@@ -35,6 +35,15 @@
         ],
         "createdAt": "2026-09-01T10:29:50.239Z",
         "reason": "matches existing site-wide h1 pattern (watchlist/page.tsx:52 uses identical gradient heading)"
+      },
+      {
+        "rule": "gray-on-color",
+        "value": "*",
+        "files": [
+          "components/DashboardConfigDialog.tsx"
+        ],
+        "createdAt": "2026-09-16T12:06:01.697Z",
+        "reason": "Claude: pre-existing repo primary-button style (bg-teal-500 text-gray-900), gray-900 is near-black so contrast on teal is high; unchanged from the previous version of this file"
       }
     ]
   }

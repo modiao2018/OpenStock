@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import StockHeatmap from '@/components/StockHeatmap';
 import { getHeatmapData } from '@/lib/actions/heatmap.actions';
 import type { HeatmapStock } from '@/lib/heatmap-tile';
+import { applyIndustryOverrides, type DashboardCatalogEdits } from '@/lib/dashboard-catalog';
 import { formatClock } from '@/lib/format-time';
 import { isFetchStale } from '@/lib/market-hours';
 
@@ -54,10 +55,12 @@ interface HeatmapSectionProps {
     watchlistSymbols: string[];
     // The user's saved dashboard selection (drives the config dialog)
     configuredSymbols: string[];
+    // Stocks the user added to / removed from the picker's catalog
+    catalogEdits: DashboardCatalogEdits;
     height?: number;
 }
 
-const HeatmapSection = ({ initialData, watchlistSymbols, configuredSymbols, height = 600 }: HeatmapSectionProps) => {
+const HeatmapSection = ({ initialData, watchlistSymbols, configuredSymbols, catalogEdits, height = 600 }: HeatmapSectionProps) => {
     const t = useTranslations('heatmap');
     const tHome = useTranslations('home');
     const tSectors = useTranslations('sectors');
@@ -137,9 +140,10 @@ const HeatmapSection = ({ initialData, watchlistSymbols, configuredSymbols, heig
     };
 
     const usingWatchlist = prefs.source === 'watchlist';
+    // Tiles regrouped under the industries the user filed them in (dialog)
     const data = useMemo(
-        () => (usingWatchlist ? (watchlistData ?? []) : popularData),
-        [usingWatchlist, watchlistData, popularData],
+        () => applyIndustryOverrides(usingWatchlist ? (watchlistData ?? []) : popularData, catalogEdits),
+        [usingWatchlist, watchlistData, popularData, catalogEdits],
     );
 
     // Popular sectors of the active dataset, biggest total market cap first
@@ -302,7 +306,12 @@ const HeatmapSection = ({ initialData, watchlistSymbols, configuredSymbols, heig
                 />
             )}
 
-            <DashboardConfigDialog open={configOpen} onOpenChange={setConfigOpen} currentSymbols={configuredSymbols} />
+            <DashboardConfigDialog
+                open={configOpen}
+                onOpenChange={setConfigOpen}
+                currentSymbols={configuredSymbols}
+                currentEdits={catalogEdits}
+            />
         </div>
     );
 };

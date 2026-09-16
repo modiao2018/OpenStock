@@ -15,7 +15,7 @@ import {
   type AiDipsPayload,
 } from '@/lib/ai-dips-rows';
 import { readStoredProfiles, resolveProfiles, type RawCompanyProfile } from '@/lib/company-profiles';
-import { DEFAULT_DASHBOARD_SYMBOLS, sanitizeDashboardSymbols } from '@/lib/dashboard-catalog';
+import { buildCatalog, DEFAULT_DASHBOARD_SYMBOLS, sanitizeCatalogEdits, sanitizeDashboardSymbols } from '@/lib/dashboard-catalog';
 import {
   buildHeatmapTile,
   mergeHeatmapTiles,
@@ -115,12 +115,13 @@ async function loadHeatmapSets(): Promise<SymbolSet[]> {
     if (!sets.has(key)) sets.set(key, { key, list, label });
   };
 
-  // 未登录 / 未保存仪表盘的用户看默认组合（与 getDashboardSymbols 的回退一致）
+  // 未登录 / 未保存仪表盘的用户看默认组合（与 getDashboardConfig 的回退一致）
   add('默认仪表盘', undefined);
 
   const dashboards = await DashboardConfig.find().lean();
   for (const d of dashboards) {
-    const symbols = sanitizeDashboardSymbols(d.symbols);
+    // 选中集合按该用户自己的目录（默认目录 − 移除 + 自行添加）校验，与 getDashboardConfig 一致
+    const symbols = sanitizeDashboardSymbols(d.symbols, buildCatalog(sanitizeCatalogEdits(d)));
     add(`仪表盘 ${d.userId.slice(0, 6)}`, symbols.length > 0 ? symbols : undefined);
   }
 
