@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Loader2, TriangleAlert } from 'lucide-react';
-import { getAiDipsData, type AiDipsPayload } from '@/lib/actions/ai-dips.actions';
+import { getAiDipsData } from '@/lib/actions/ai-dips.actions';
+import type { AiDipsPayload } from '@/lib/ai-dips-rows';
 import {
     getAiDipsHealth,
     getInsiderOverview,

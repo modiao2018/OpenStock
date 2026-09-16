@@ -1,17 +1,24 @@
 'use server';
 
 import { fetchJSON } from '@/lib/actions/finnhub.actions';
-import { AI_DIP_CATALOG, type AiSubSector } from '@/lib/ai-dips-catalog';
+import { AI_DIP_CATALOG } from '@/lib/ai-dips-catalog';
 import { getAiDipPool, type AiDipMeta } from '@/lib/ai-dips-pool';
-import { completedBars, computeDipStats, type DailyBar } from '@/lib/ai-dips-math';
+import type { DailyBar } from '@/lib/ai-dips-math';
+import {
+    AI_DIPS_SNAPSHOT_KEY,
+    aiDipsQuotesError,
+    buildAiDipsRows,
+    type AiDipQuote,
+    type AiDipsPayload,
+} from '@/lib/ai-dips-rows';
 import { finnhubGate, isMemoized, pickWithinBudget } from '@/lib/finnhub-gate';
 import { quoteTtlSeconds } from '@/lib/market-hours';
 import { readSnapshot, writeSnapshot } from '@/lib/snapshot';
 import { timed } from '@/lib/source-calls';
 
-// Fixed snapshot key: the pool is a global, editable set — hashing the symbol
-// list (snapshotKey) would orphan the snapshot on every pool edit
-const SNAPSHOT_KEY = 'ai-dips:pool';
+// Row / payload shapes live in lib/ai-dips-rows.ts (shared with the monitor's
+// quote sweep); a 'use server' file may only export async functions
+const SNAPSHOT_KEY = AI_DIPS_SNAPSHOT_KEY;
 
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
 const NEXT_PUBLIC_FINNHUB_API_KEY = process.env.NEXT_PUBLIC_FINNHUB_API_KEY ?? '';
@@ -21,42 +28,6 @@ const ALPACA_CLOCK_URL = 'https://paper-api.alpaca.markets/v2/clock';
 // 70 calendar days ≈ 47 sessions: 30 for the drawdown window plus streak
 // headroom before capping
 const LOOKBACK_DAYS = 70;
-
-export interface AiDipStock {
-    symbol: string;
-    name: string;
-    subSector: AiSubSector;
-    // Finnhub live quote; 0 when unavailable
-    price: number;
-    todayChangePct: number;
-    // Epoch ms when the price was last fetched from Finnhub, 0 when never
-    fetchedAt: number;
-    streakDays: number;
-    streakCapped: boolean;
-    streakDeclinePct: number | null;
-    drawdownFromHighPct: number | null;
-    // Live price is below the last completed close — today extends the slide
-    provisionalToday: boolean;
-    // Trailing closes for the sparkline, ascending
-    closes: number[];
-    // False when Alpaca returned no usable history for the symbol
-    barsOk: boolean;
-}
-
-export interface AiDipsPayload {
-    // ALPACA_API_KEY/SECRET present — streak columns are meaningful
-    configured: boolean;
-    // Epoch ms of computation
-    updatedAt: number;
-    rows: AiDipStock[];
-    // Alpaca bars fetch threw while configured — streak data is stale/missing
-    barsError?: boolean;
-    // Finnhub returned no usable quote for any symbol — likely quota/outage
-    quotesError?: boolean;
-    // Symbols whose quote could not be refreshed this round (gate budget or
-    // upstream failure) and show the previous snapshot's price instead
-    quotesStale?: number;
-}
 
 type AlpacaBar = { t: string; c: number };
 type AlpacaBarsResponse = { bars?: Record<string, AlpacaBar[]>; next_page_token?: string | null };
@@ -135,8 +106,6 @@ async function formingSessionDate(): Promise<string | undefined> {
     return pastClose ? undefined : today;
 }
 
-type Quote = { c?: number; dp?: number };
-
 function quoteUrl(symbol: string): string {
     return `${FINNHUB_BASE_URL}/quote?symbol=${encodeURIComponent(symbol)}&token=${NEXT_PUBLIC_FINNHUB_API_KEY}`;
 }
@@ -148,7 +117,7 @@ function quoteUrl(symbol: string): string {
 async function fetchQuotes(
     symbols: string[],
     previousFetchedAt: Map<string, number>,
-): Promise<{ quotes: Record<string, Quote>; picked: Set<string> }> {
+): Promise<{ quotes: Record<string, AiDipQuote>; picked: Set<string> }> {
     if (!NEXT_PUBLIC_FINNHUB_API_KEY) return { quotes: {}, picked: new Set() };
     const stalestFirst = [...symbols].sort(
         (a, b) => (previousFetchedAt.get(a) ?? 0) - (previousFetchedAt.get(b) ?? 0),
@@ -157,9 +126,9 @@ async function fetchQuotes(
     const entries = await Promise.all(
         picked.map(async (symbol) => {
             try {
-                return [symbol, await fetchJSON<Quote>(quoteUrl(symbol), quoteTtlSeconds())] as const;
+                return [symbol, await fetchJSON<AiDipQuote>(quoteUrl(symbol), quoteTtlSeconds())] as const;
             } catch {
-                return [symbol, {} as Quote] as const;
+                return [symbol, {} as AiDipQuote] as const;
             }
         }),
     );
@@ -208,46 +177,9 @@ export async function getAiDipsData(): Promise<AiDipsPayload> {
     );
     const previousFetchedAt = new Map([...previousRows].map(([s, r]) => [s, r.price > 0 ? r.fetchedAt ?? 0 : 0]));
     const { quotes, picked } = await fetchQuotes(symbols, previousFetchedAt);
-    const quotesError =
-        Boolean(process.env.NEXT_PUBLIC_FINNHUB_API_KEY) &&
-        symbols.length > 0 &&
-        Object.keys(quotes).length === 0 &&
-        !symbols.some((s) => (previousRows.get(s)?.price ?? 0) > 0);
-    // Rows still showing an earlier price: left out by the budget, or fetched
-    // and refused. A symbol Finnhub has never priced (delisted) is not stale.
-    const quotesStale = symbols.filter(
-        (s) => !quotes[s] && (!picked.has(s) || (previousRows.get(s)?.price ?? 0) > 0),
-    ).length;
-    const fetchedAt = Date.now();
-
-    const rows: AiDipStock[] = pool.map(({ symbol, name, subSector }) => {
-        const stats = computeDipStats(completedBars(barsBySymbol[symbol] ?? [], excludeDate));
-        const live = quotes[symbol];
-        const previous = previousRows.get(symbol);
-        const price = live?.c ?? previous?.price ?? 0;
-        return {
-            symbol,
-            name,
-            subSector,
-            price,
-            todayChangePct: live ? live.dp ?? 0 : previous?.todayChangePct ?? 0,
-            fetchedAt: live ? fetchedAt : previous?.fetchedAt ?? 0,
-            streakDays: stats?.streakDays ?? 0,
-            streakCapped: stats?.streakCapped ?? false,
-            streakDeclinePct: stats?.streakDeclinePct ?? null,
-            drawdownFromHighPct: stats?.drawdownFromHighPct ?? null,
-            provisionalToday: Boolean(stats && price > 0 && price < stats.lastClose),
-            closes: stats?.closes ?? [],
-            barsOk: stats !== null,
-        };
-    });
-
-    // Longest streak first, deepest decline breaking ties; symbols without
-    // history sink to the bottom
-    rows.sort((a, b) => {
-        if (a.barsOk !== b.barsOk) return a.barsOk ? -1 : 1;
-        if (a.streakDays !== b.streakDays) return b.streakDays - a.streakDays;
-        return (a.streakDeclinePct ?? 0) - (b.streakDeclinePct ?? 0);
+    const quotesError = Boolean(process.env.NEXT_PUBLIC_FINNHUB_API_KEY) && aiDipsQuotesError(symbols, quotes, previousRows);
+    const { rows, quotesStale } = buildAiDipsRows({
+        pool, barsBySymbol, excludeDate, quotes, attempted: picked, previousRows, fetchedAt: Date.now(),
     });
 
     const payload: AiDipsPayload = { configured, updatedAt: Date.now(), rows, barsError, quotesError, quotesStale };

@@ -1,6 +1,6 @@
 // Heatmap tile shape and the pure pieces shared by the web action
-// (lib/actions/heatmap.actions.ts) and the monitor's background sweep
-// (catalyst-monitor/src/collectors/heatmap.ts). No I/O, no 'use server',
+// (lib/actions/heatmap.actions.ts) and the monitor's quote sweep
+// (catalyst-monitor/src/collectors/quotes.ts). No I/O, no 'use server',
 // no Next imports — the monitor image ships without Next.
 
 import type { StoredCompanyProfile } from '@/lib/company-profiles';
@@ -98,7 +98,9 @@ export const HEATMAP_VIEWER_ACTIVE_MS = 3 * 60_000;
 export const HEATMAP_SESSION_REFRESH_MS = 5 * 60_000;
 
 /**
- * Whether the monitor should refresh this snapshot now.
+ * Whether the monitor should refresh a quote snapshot now. `data` is whatever
+ * the snapshot holds per symbol, as long as each entry records when its quote
+ * was fetched (heatmap tiles, AI-dips rows).
  *
  * Pull-on-view left snapshots frozen at whatever close the last visitor saw —
  * opening the dashboard on a Wednesday painted Friday's close. The monitor
@@ -107,8 +109,8 @@ export const HEATMAP_SESSION_REFRESH_MS = 5 * 60_000;
  * it. Outside the session quotes cannot move, so a snapshot fully fetched
  * after the close is never re-swept (holidays included).
  */
-export function heatmapSweepDue(
-    snapshot: { data: HeatmapStock[]; updatedAt: Date } | null,
+export function quoteSnapshotSweepDue(
+    snapshot: { data: Array<{ fetchedAt?: number }>; updatedAt: Date } | null,
     now: Date = new Date(),
 ): boolean {
     if (!snapshot || snapshot.data.length === 0) return true;

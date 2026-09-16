@@ -4,7 +4,7 @@ import {
     HEATMAP_VIEWER_ACTIVE_MS,
     MAX_HEATMAP_SYMBOLS,
     buildHeatmapTile,
-    heatmapSweepDue,
+    quoteSnapshotSweepDue,
     mergeHeatmapTiles,
     normalizeHeatmapSymbols,
     type HeatmapStock,
@@ -61,39 +61,39 @@ const SAT = new Date('2026-09-19T15:00:00Z');               // Saturday
 const snap = (updatedAt: Date, data: HeatmapStock[]) => ({ data, updatedAt });
 const minutesBefore = (d: Date, m: number) => new Date(d.getTime() - m * 60_000);
 
-describe('heatmapSweepDue', () => {
+describe('quoteSnapshotSweepDue', () => {
     it('always sweeps a missing or empty snapshot', () => {
-        expect(heatmapSweepDue(null, TUE_NOON)).toBe(true);
-        expect(heatmapSweepDue(snap(TUE_NOON, []), TUE_NOON)).toBe(true);
+        expect(quoteSnapshotSweepDue(null, TUE_NOON)).toBe(true);
+        expect(quoteSnapshotSweepDue(snap(TUE_NOON, []), TUE_NOON)).toBe(true);
     });
 
     it('stays out of the way while a viewer is polling', () => {
         const recent = minutesBefore(TUE_NOON, HEATMAP_VIEWER_ACTIVE_MS / 60_000 - 1);
-        expect(heatmapSweepDue(snap(recent, [tile('A', 1, recent.getTime())]), TUE_NOON)).toBe(false);
+        expect(quoteSnapshotSweepDue(snap(recent, [tile('A', 1, recent.getTime())]), TUE_NOON)).toBe(false);
         const recentNight = minutesBefore(TUE_NIGHT, 1);
-        expect(heatmapSweepDue(snap(recentNight, [tile('A', 1, 0)]), TUE_NIGHT)).toBe(false);
+        expect(quoteSnapshotSweepDue(snap(recentNight, [tile('A', 1, 0)]), TUE_NIGHT)).toBe(false);
     });
 
     it('refreshes an unwatched snapshot every few minutes during the extended session', () => {
         const old = minutesBefore(TUE_AFTER_HOURS, HEATMAP_SESSION_REFRESH_MS / 60_000);
-        expect(heatmapSweepDue(snap(old, [tile('A', 1, old.getTime())]), TUE_AFTER_HOURS)).toBe(true);
+        expect(quoteSnapshotSweepDue(snap(old, [tile('A', 1, old.getTime())]), TUE_AFTER_HOURS)).toBe(true);
         const between = minutesBefore(TUE_NOON, 4);
-        expect(heatmapSweepDue(snap(between, [tile('A', 1, between.getTime())]), TUE_NOON)).toBe(false);
+        expect(quoteSnapshotSweepDue(snap(between, [tile('A', 1, between.getTime())]), TUE_NOON)).toBe(false);
     });
 
     it('after the close, sweeps once when the snapshot or any tile predates it, then rests', () => {
         const beforeClose = TUE_CLOSE - 30 * 60_000;
         const afterClose = TUE_CLOSE + 60 * 60_000;
-        expect(heatmapSweepDue(snap(new Date(beforeClose), [tile('A', 1, beforeClose)]), TUE_NIGHT)).toBe(true);
+        expect(quoteSnapshotSweepDue(snap(new Date(beforeClose), [tile('A', 1, beforeClose)]), TUE_NIGHT)).toBe(true);
         // Written after the close but one tile the web's partial sweep never reached
-        expect(heatmapSweepDue(snap(new Date(afterClose), [tile('A', 1, afterClose), tile('B', 1, beforeClose)]), TUE_NIGHT)).toBe(true);
+        expect(quoteSnapshotSweepDue(snap(new Date(afterClose), [tile('A', 1, afterClose), tile('B', 1, beforeClose)]), TUE_NIGHT)).toBe(true);
         // Legacy tile without fetchedAt counts as never fetched
-        expect(heatmapSweepDue(snap(new Date(afterClose), [tile('A', 1)]), TUE_NIGHT)).toBe(true);
-        expect(heatmapSweepDue(snap(new Date(afterClose), [tile('A', 1, afterClose)]), TUE_NIGHT)).toBe(false);
+        expect(quoteSnapshotSweepDue(snap(new Date(afterClose), [tile('A', 1)]), TUE_NIGHT)).toBe(true);
+        expect(quoteSnapshotSweepDue(snap(new Date(afterClose), [tile('A', 1, afterClose)]), TUE_NIGHT)).toBe(false);
     });
 
     it('does not re-sweep over the weekend once Friday\'s close is in', () => {
         const friEvening = new Date('2026-09-18T23:50:00Z').getTime(); // Fri 19:50 ET
-        expect(heatmapSweepDue(snap(new Date(friEvening), [tile('A', 1, friEvening)]), SAT)).toBe(false);
+        expect(quoteSnapshotSweepDue(snap(new Date(friEvening), [tile('A', 1, friEvening)]), SAT)).toBe(false);
     });
 });

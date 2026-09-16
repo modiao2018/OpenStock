@@ -708,7 +708,7 @@
         "focus": "Focus scoring",
         "digest": "Daily digest",
         "thesis": "Thesis follow-ups",
-        "heatmap": "Heatmap snapshot refresh"
+        "quotes": "Quote snapshot refresh (heatmap / AI dips)"
       }
     }
   },

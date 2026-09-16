@@ -6,7 +6,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { getChangeColorClass, isRedUpLocale } from '@/lib/utils';
 import { formatUsdCompact } from '@/lib/insider-math';
-import type { AiDipStock } from '@/lib/actions/ai-dips.actions';
+import type { AiDipStock } from '@/lib/ai-dips-rows';
 import type { InsiderRowData } from '@/lib/actions/insider.actions';
 import { formatClock } from '@/lib/format-time';
 
