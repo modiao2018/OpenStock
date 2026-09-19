@@ -85,9 +85,15 @@ export function getFallbackProviderName(
 
 // ── Provider call implementations ──────────────────────────────────
 
+export interface CallOptions {
+  /** Override the default 60s upstream timeout for long generations */
+  timeoutMs?: number;
+}
+
 async function callGemini(
   prompt: string,
-  config: AIProviderConfig
+  config: AIProviderConfig,
+  opts: CallOptions = {}
 ): Promise<string> {
   if (!config.apiKey) throw new Error("GEMINI_API_KEY is not set");
 
@@ -100,7 +106,7 @@ async function callGemini(
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
       }),
-      signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
+      signal: AbortSignal.timeout(opts.timeoutMs ?? LLM_TIMEOUT_MS),
     });
 
     if (!res.ok) {
@@ -116,7 +122,8 @@ async function callGemini(
 
 async function callOpenAICompatible(
   prompt: string,
-  config: AIProviderConfig
+  config: AIProviderConfig,
+  opts: CallOptions = {}
 ): Promise<string> {
   if (!config.apiKey) {
     throw new Error(
@@ -138,7 +145,7 @@ async function callOpenAICompatible(
         messages: [{ role: "user", content: prompt }],
         temperature: 0.7,
       }),
-      signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
+      signal: AbortSignal.timeout(opts.timeoutMs ?? LLM_TIMEOUT_MS),
     });
 
     if (!res.ok) {
@@ -249,12 +256,13 @@ export type LlmConfigName = AIProviderName | "custom";
  */
 export async function callAIProviderWithConfig(
   prompt: string,
-  config: { name: LlmConfigName; apiKey: string; baseUrl: string; model: string }
+  config: { name: LlmConfigName; apiKey: string; baseUrl: string; model: string },
+  opts: CallOptions = {}
 ): Promise<string> {
   if (config.name === "gemini") {
-    return callGemini(prompt, config as AIProviderConfig);
+    return callGemini(prompt, config as AIProviderConfig, opts);
   }
-  return callOpenAICompatible(prompt, config as AIProviderConfig);
+  return callOpenAICompatible(prompt, config as AIProviderConfig, opts);
 }
 
 /**

@@ -302,7 +302,8 @@
     "AiDips": "AI Dips",
     "Status": "Data Sources",
     "Signals": "Signals",
-    "Focus": "Focus"
+    "Focus": "Focus",
+    "Research": "Research"
   },
   "status": {
     "page": {
@@ -721,7 +722,8 @@
         "focus": "Focus scoring",
         "digest": "Daily digest",
         "thesis": "Thesis follow-ups",
-        "quotes": "Quote snapshot refresh (heatmap / AI dips)"
+        "quotes": "Quote snapshot refresh (heatmap / AI dips)",
+        "research": "Research note review (weekly)"
       }
     }
   },
@@ -853,6 +855,64 @@
       "removedFrom": "{symbol} removed from watchlist",
       "signInRequired": "Please sign in to modify watchlist",
       "updateFailed": "Failed to update watchlist"
+    },
+    "aiProfile": {
+      "title": "AI Fundamentals",
+      "hint": "AI-generated read on AI density / maturity / potential / results, refreshed about every 30 days; market cap, valuation and trend from Finnhub, refreshed daily. For reference only, not investment advice.",
+      "generating": "Generating {count}…",
+      "expandAll": "Expand all",
+      "collapseAll": "Collapse all",
+      "noLlm": "No LLM is configured, so assessments cannot be generated.",
+      "noLlmLink": "Configure on the Catalyst page",
+      "refresh": "Regenerate",
+      "refreshFailed": "This refresh failed; showing the previous result.",
+      "cardGenerating": "Generating assessment…",
+      "cardFailed": "Generation failed. Retry from the top-right button.",
+      "cardPending": "Waiting to generate…",
+      "more": "Details",
+      "less": "Less",
+      "highlights": "AI results",
+      "capital": "Capital markets",
+      "noMarket": "No market data yet.",
+      "generatedAt": "Assessment generated {date}",
+      "marketAt": "Market data as of {date}",
+      "dimensions": {
+        "density": "AI density",
+        "maturity": "AI maturity",
+        "potential": "AI potential",
+        "results": "AI results"
+      },
+      "levels": {
+        "1": "Almost none",
+        "2": "Weak",
+        "3": "Moderate",
+        "4": "Strong",
+        "5": "Best in class"
+      },
+      "stance": {
+        "bullish": "Market bullish",
+        "neutral": "Market neutral",
+        "bearish": "Market bearish"
+      },
+      "returns": {
+        "ret13w": "13w",
+        "ret26w": "26w",
+        "retYtd": "YTD",
+        "ret52w": "52w"
+      },
+      "metrics": {
+        "marketCap": "Market cap",
+        "pe": "P/E (TTM)",
+        "ps": "P/S (TTM)",
+        "beta": "Beta",
+        "revenueGrowth": "Revenue growth (TTM)",
+        "netMargin": "Net margin (TTM)"
+      },
+      "range52": {
+        "low": "52w low",
+        "high": "52w high",
+        "position": "Price at {pct}% of the range"
+      }
     }
   },
   "search": {
@@ -1139,6 +1199,75 @@
         "self": "Reviewer accounts can't be rejected here.",
         "generic": "Something went wrong. Try again."
       }
+    }
+  },
+  "research": {
+    "page": {
+      "title": "Research",
+      "subtitle": "Tiered fundamentals notes on companies: delivered progress, future upside and main risks. The system re-checks them against fresh market data and news.",
+      "empty": "No themes yet."
+    },
+    "meta": {
+      "version": "v{n}",
+      "updatedAt": "updated {date}",
+      "checkedAt": "last checked {date}",
+      "by": {
+        "seed": "initial note",
+        "llm": "automatic review",
+        "admin": "admin-triggered review"
+      }
+    },
+    "refresh": "AI review",
+    "refreshing": "Reviewing…",
+    "refreshResult": {
+      "updated": "Updated with {n} changes",
+      "unchanged": "Reviewed, nothing material changed",
+      "noLlm": "No LLM configured",
+      "failed": "Review failed: {reason}"
+    },
+    "changes": {
+      "title": "What changed in this version"
+    },
+    "shortlist": {
+      "title": "Shortlist",
+      "hint": "Only the names most worth following, grouped by style; click a name for its stock page."
+    },
+    "labels": {
+      "company": "Company",
+      "thesis": "Why follow",
+      "risk": "Main risks"
+    },
+    "caveats": "Notes",
+    "history": {
+      "title": "History ({n})",
+      "noDetail": "No change notes"
+    },
+    "momentum": {
+      "title": "Two-month momentum",
+      "window": "{start} to {end}, {n} sessions",
+      "benchmark": "{symbol} over the same window",
+      "computedAt": "numbers recomputed at the {date} close",
+      "seedNumbers": "numbers from the initial note, pending daily recompute",
+      "beat": "beat",
+      "cols": {
+        "return": "2-month return",
+        "drawdown": "Max drawdown",
+        "technical": "Technical state",
+        "verdict": "Verdict"
+      },
+      "ranking": "Overall ranking",
+      "rankingHint": "Growth, recent momentum and drawdown control considered together.",
+      "spotlight": "Spotlight"
+    },
+    "cards": {
+      "title": "Company tracking cards",
+      "hint": "For each company: what evidence keeps it on the list and what would break the thesis. Progress and catalysts are updated by the system review.",
+      "coreAsset": "Core asset",
+      "progress": "Latest progress",
+      "noProgress": "No progress recorded yet",
+      "catalysts": "Upcoming catalysts",
+      "failConditions": "Fail conditions",
+      "verdict": "Verdict"
     }
   }
 }

@@ -8,7 +8,7 @@ import type { MonitorConfig } from './types';
 export const COLLECTOR_NAMES = [
   'market', 'halts', 'edgar', 'rss', 'clinicaltrials', 'discovery',
   'reminders', 'weekly', 'aidips', 'insider', 'insider-edgar',
-  'sources', 'xcheck', 'outcomes', 'focus', 'digest', 'thesis', 'quotes',
+  'sources', 'xcheck', 'outcomes', 'focus', 'digest', 'thesis', 'quotes', 'research',
 ] as const;
 export type CollectorName = (typeof COLLECTOR_NAMES)[number];
 
@@ -53,6 +53,8 @@ export const COLLECTOR_SPECS: CollectorSpec[] = [
   { name: 'thesis', fixedMinutes: 15, needsWatchlist: false },
   // 报价快照后台刷新（热力图 / AI 低吸现价）：盘中无人看时每 5 分钟一轮，收盘后补一轮，休市不动
   { name: 'quotes', fixedMinutes: 5, needsWatchlist: false },
+  // 主题研究笔记复核：内部以 kv 时间戳做门闩，实际每周跑一次 LLM
+  { name: 'research', fixedMinutes: 60, needsWatchlist: false },
 ];
 
 export const DEFAULT_POLL: MonitorConfig['poll'] = {

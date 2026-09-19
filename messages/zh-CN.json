@@ -302,7 +302,8 @@
     "AiDips": "AI 低吸",
     "Status": "数据源状态",
     "Signals": "信号记分卡",
-    "Focus": "关注队列"
+    "Focus": "关注队列",
+    "Research": "主题研究"
   },
   "status": {
     "page": {
@@ -721,7 +722,8 @@
         "focus": "关注队列打分",
         "digest": "每日摘要",
         "thesis": "洞察跟进",
-        "quotes": "报价快照刷新（热力图 / AI 低吸）"
+        "quotes": "报价快照刷新（热力图 / AI 低吸）",
+        "research": "主题研究复核（每周）"
       }
     }
   },
@@ -853,6 +855,64 @@
       "removedFrom": "已将 {symbol} 移出自选",
       "signInRequired": "请先登录后再修改自选股",
       "updateFailed": "更新自选股失败"
+    },
+    "aiProfile": {
+      "title": "AI 基本面",
+      "hint": "AI 生成的 AI 密度 / 成熟度 / 潜力 / 成果评估，约每 30 天更新一次；市值、估值与走势来自 Finnhub，每日更新。仅供参考，不构成投资建议。",
+      "generating": "正在生成 {count} 张…",
+      "expandAll": "全部展开",
+      "collapseAll": "全部收起",
+      "noLlm": "未配置 LLM，无法生成评估。",
+      "noLlmLink": "去催化剂页面配置",
+      "refresh": "重新生成",
+      "refreshFailed": "本次刷新失败，显示的是上次结果。",
+      "cardGenerating": "正在生成评估…",
+      "cardFailed": "生成失败，点右上角重试。",
+      "cardPending": "等待生成…",
+      "more": "详情",
+      "less": "收起",
+      "highlights": "AI 成果",
+      "capital": "资本市场",
+      "noMarket": "暂无市场数据。",
+      "generatedAt": "评估生成于 {date}",
+      "marketAt": "市场数据截至 {date}",
+      "dimensions": {
+        "density": "AI 密度",
+        "maturity": "AI 成熟度",
+        "potential": "AI 潜力",
+        "results": "AI 成果"
+      },
+      "levels": {
+        "1": "几乎没有",
+        "2": "弱",
+        "3": "中等",
+        "4": "强",
+        "5": "顶尖"
+      },
+      "stance": {
+        "bullish": "市场偏多",
+        "neutral": "市场中性",
+        "bearish": "市场偏空"
+      },
+      "returns": {
+        "ret13w": "13 周",
+        "ret26w": "26 周",
+        "retYtd": "年初至今",
+        "ret52w": "52 周"
+      },
+      "metrics": {
+        "marketCap": "市值",
+        "pe": "PE (TTM)",
+        "ps": "PS (TTM)",
+        "beta": "Beta",
+        "revenueGrowth": "营收增速 (TTM)",
+        "netMargin": "净利率 (TTM)"
+      },
+      "range52": {
+        "low": "52 周低",
+        "high": "52 周高",
+        "position": "现价处于区间 {pct}% 位置"
+      }
     }
   },
   "search": {
@@ -1139,6 +1199,75 @@
         "self": "审核员账号不能在这里被拒绝。",
         "generic": "操作失败，请重试。"
       }
+    }
+  },
+  "research": {
+    "page": {
+      "title": "主题研究",
+      "subtitle": "按梯队整理的公司基本面观察笔记：已兑现的进展、未来弹性与主要风险。系统会结合最新行情与新闻定期复核。",
+      "empty": "暂无主题。"
+    },
+    "meta": {
+      "version": "第 {n} 版",
+      "updatedAt": "更新于 {date}",
+      "checkedAt": "最近复核 {date}",
+      "by": {
+        "seed": "初始整理",
+        "llm": "系统自动复核",
+        "admin": "管理员触发复核"
+      }
+    },
+    "refresh": "AI 复核更新",
+    "refreshing": "复核中…",
+    "refreshResult": {
+      "updated": "已更新，{n} 处变化",
+      "unchanged": "已复核，无实质变化",
+      "noLlm": "未配置 LLM，无法复核",
+      "failed": "复核失败：{reason}"
+    },
+    "changes": {
+      "title": "本版变化"
+    },
+    "shortlist": {
+      "title": "重点观察名单",
+      "hint": "只保留最值得跟的公司，按风格分组；点公司名进入个股页。"
+    },
+    "labels": {
+      "company": "公司",
+      "thesis": "关注理由",
+      "risk": "主要风险"
+    },
+    "caveats": "注意",
+    "history": {
+      "title": "历史版本（{n}）",
+      "noDetail": "无变更说明"
+    },
+    "momentum": {
+      "title": "近两个月走势",
+      "window": "窗口 {start} 至 {end}，共 {n} 个交易日",
+      "benchmark": "同期 {symbol}",
+      "computedAt": "数字按 {date} 收盘重算",
+      "seedNumbers": "数字为初始整理，待系统按日线重算",
+      "beat": "跑赢",
+      "cols": {
+        "return": "近两月涨跌",
+        "drawdown": "最大回撤",
+        "technical": "技术状态",
+        "verdict": "判断"
+      },
+      "ranking": "综合排序",
+      "rankingHint": "同时考虑成长性、近期动量和回撤控制。",
+      "spotlight": "重点关注"
+    },
+    "cards": {
+      "title": "公司级跟踪卡片",
+      "hint": "每家公司提前写下：什么证据支持继续跟踪，什么证据证明判断失效。最新进展与后续催化剂由系统复核时更新。",
+      "coreAsset": "核心资产",
+      "progress": "最新进展",
+      "noProgress": "暂无新进展记录",
+      "catalysts": "后续催化剂",
+      "failConditions": "失效条件",
+      "verdict": "判断"
     }
   }
 }

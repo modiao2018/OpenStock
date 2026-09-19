@@ -22,6 +22,7 @@ import { collectFocus } from './collectors/focus';
 import { collectDigest } from './collectors/digest';
 import { collectThesis } from './collectors/thesis';
 import { collectQuotes } from './collectors/quotes';
+import { collectResearch } from './collectors/research';
 import { eventDirection, recordSignal } from './signals';
 import { COLLECTOR_SPECS, collectorIntervals, type CollectorName } from './collector-registry';
 import { recordSourceCall } from '@/lib/source-calls';
@@ -59,6 +60,7 @@ const RUNNERS = {
   digest: collectDigest,
   thesis: collectThesis,
   quotes: collectQuotes,
+  research: collectResearch,
 } satisfies Record<CollectorName, Runner>;
 
 /** 公告里给了催化剂时间指引 → 自动补进催化剂日历；宣告旧预期已发生/改期的 → 作废旧条目 */
