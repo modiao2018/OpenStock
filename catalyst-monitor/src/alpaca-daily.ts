@@ -23,7 +23,11 @@ export function formingSessionDate(): string | undefined {
   return etClock.format(now) >= '16:05' ? undefined : etDate.format(now);
 }
 
-export async function fetchDailyBars(config: MonitorConfig, symbols: string[], lookbackDays = LOOKBACK_DAYS): Promise<Record<string, DailyBar[]>> {
+export async function fetchDailyBars(
+  config: MonitorConfig,
+  symbols: string[],
+  lookbackDays: number = LOOKBACK_DAYS
+): Promise<Record<string, DailyBar[]>> {
   const headers = {
     'APCA-API-KEY-ID': config.env.alpacaKey ?? '',
     'APCA-API-SECRET-KEY': config.env.alpacaSecret ?? '',

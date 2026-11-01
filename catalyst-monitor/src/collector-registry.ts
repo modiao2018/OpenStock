@@ -9,6 +9,7 @@ export const COLLECTOR_NAMES = [
   'market', 'halts', 'edgar', 'rss', 'clinicaltrials', 'discovery',
   'reminders', 'weekly', 'aidips', 'insider', 'insider-edgar',
   'sources', 'xcheck', 'outcomes', 'focus', 'digest', 'thesis', 'quotes', 'research',
+  'frontier-ingest', 'frontier-brain', 'frontier-weekly',
 ] as const;
 export type CollectorName = (typeof COLLECTOR_NAMES)[number];
 
@@ -55,6 +56,12 @@ export const COLLECTOR_SPECS: CollectorSpec[] = [
   { name: 'quotes', fixedMinutes: 5, needsWatchlist: false },
   // 主题研究笔记复核：内部以 kv 时间戳做门闩，实际每周跑一次 LLM
   { name: 'research', fixedMinutes: 60, needsWatchlist: false },
+  // 生物科技前沿：采集入口每 30 分钟，各数据源内部按自己的节奏（新闻 30 分钟 ~ 13F 每天）
+  { name: 'frontier-ingest', fixedMinutes: 30, needsWatchlist: false },
+  // 合并 / 分拣 / 深度分析 / 推送；LLM 用量受每日额度约束
+  { name: 'frontier-brain', fixedMinutes: 15, needsWatchlist: false },
+  // 周一北京时间上午发周报，内部按 ISO 周去重
+  { name: 'frontier-weekly', fixedMinutes: 60, needsWatchlist: false },
 ];
 
 export const DEFAULT_POLL: MonitorConfig['poll'] = {

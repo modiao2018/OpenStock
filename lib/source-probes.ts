@@ -17,7 +17,7 @@ export interface ProbeResult {
 export interface ProbeContext {
     edgarContact: string;
     // config.yaml feeds for rss:<slug> probes
-    feeds?: Array<{ name: string; url: string }>;
+    feeds?: Array<{ name: string; url: string; userAgent?: string }>;
 }
 
 const PROBE_TIMEOUT_MS = 10_000;
@@ -34,6 +34,15 @@ async function getJson<T>(url: string, init: RequestInit = {}): Promise<{ status
     const data = res.ok ? ((await res.json().catch(() => null)) as T | null) : null;
     if (!res.ok) await res.body?.cancel().catch(() => undefined);
     return { status: res.status, ok: res.ok, data };
+}
+
+// 部分站点（Endpoints）拒绝脚本 UA，config.yaml 里标 user_agent: browser
+export const BROWSER_UA =
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
+
+export function feedUserAgent(setting?: string): string {
+    if (setting === 'browser') return BROWSER_UA;
+    return setting || 'catalyst-monitor/0.1';
 }
 
 type Probe = (ctx: ProbeContext, rawId: string) => Promise<{ ok: boolean; status?: number; error?: string }>;
@@ -93,7 +102,37 @@ const PROBES: Record<Exclude<SourceId, 'bark' | 'healthcheck'>, Probe> = {
         const feed = (ctx.feeds ?? []).find((f) => rssSourceId(f.name) === rawId);
         if (!feed) return { ok: false, error: 'feed not found in config' };
         const r = await head(feed.url, {
-            headers: { Accept: 'application/rss+xml, application/xml, text/xml', 'User-Agent': 'catalyst-monitor/0.1' },
+            headers: { Accept: 'application/rss+xml, application/xml, text/xml', 'User-Agent': feedUserAgent(feed.userAgent) },
+        });
+        return { ok: r.ok, status: r.status };
+    },
+    fda: async () => {
+        const r = await head('https://api.fda.gov/drug/drugsfda.json?limit=1');
+        return { ok: r.ok, status: r.status };
+    },
+    federalregister: async () => {
+        const r = await head('https://www.federalregister.gov/api/v1/documents.json?per_page=1&fields%5B%5D=title');
+        return { ok: r.ok, status: r.status };
+    },
+    'sec-efts': async (ctx) => {
+        const r = await head('https://efts.sec.gov/LATEST/search-index?q=%22license%20agreement%22&forms=8-K', {
+            headers: edgarHeaders(ctx.edgarContact),
+        });
+        return { ok: r.ok, status: r.status };
+    },
+    pubmed: async () => {
+        const r = await head('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=drug&retmax=1&retmode=json');
+        return { ok: r.ok, status: r.status };
+    },
+    biorxiv: async () => {
+        const r = await head('https://api.biorxiv.org/details/biorxiv/2025-01-01/2025-01-01/0');
+        return { ok: r.ok, status: r.status };
+    },
+    openfigi: async () => {
+        const r = await head('https://api.openfigi.com/v3/mapping', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify([{ idType: 'ID_CUSIP', idValue: '532457108' }]),
         });
         return { ok: r.ok, status: r.status };
     },

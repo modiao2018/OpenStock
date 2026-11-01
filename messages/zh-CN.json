@@ -299,6 +299,7 @@
     "Search": "搜索",
     "Watchlist": "自选股",
     "Catalyst": "催化剂监控",
+    "Frontier": "生物科技前沿",
     "AiDips": "AI 低吸",
     "Status": "数据源状态",
     "Signals": "信号记分卡",
@@ -349,6 +350,7 @@
         "quotes": "行情与汇率",
         "filings": "监管申报",
         "clinical": "临床试验",
+        "research": "科研与行业",
         "ai": "AI 与情绪",
         "other": "推送与其他"
       }
@@ -370,7 +372,8 @@
       "xcheck": "交叉验证",
       "sentiment": "情绪",
       "fx": "汇率",
-      "monitor": "监控心跳"
+      "monitor": "监控心跳",
+      "frontier": "生物科技前沿"
     },
     "xcheck": {
       "title": "多源交叉验证",
@@ -723,7 +726,10 @@
         "digest": "每日摘要",
         "thesis": "洞察跟进",
         "quotes": "报价快照刷新（热力图 / AI 低吸）",
-        "research": "主题研究复核（每周）"
+        "research": "主题研究复核（每周）",
+        "frontier-ingest": "生物科技前沿·采集",
+        "frontier-brain": "生物科技前沿·分拣分析",
+        "frontier-weekly": "生物科技前沿·周报"
       }
     }
   },
@@ -967,21 +973,46 @@
     "notDelivered": "推送未送达（仅记录）",
     "empty": "暂无数据——监控进程推送信号后会在这里累计；T+1 结果需等入场日的下一个交易日收盘",
     "kinds": {
-      "aidips.streak5": "AI 低吸 · 连跌 5 天",
-      "aidips.streak7": "AI 低吸 · 连跌 7 天",
-      "aidips.streak10": "AI 低吸 · 连跌 10 天",
-      "insider.buy": "内部人买入",
-      "insider.largeSell": "内部人大额卖出",
-      "insider.clusterSell": "内部人集中卖出",
-      "insider.intentSell": "内部人拟卖出（144）",
-      "event.edgar": "SEC 申报",
-      "event.halts": "停牌",
-      "event.market": "盘面异动",
-      "event.rss": "新闻",
-      "event.clinicaltrials": "临床试验变更",
-      "reminder.t7": "催化剂提醒 T-7",
-      "reminder.t1": "催化剂提醒 T-1",
-      "thesis.open": "我的洞察"
+      "aidips": {
+        "streak5": "AI 低吸 · 连跌 5 天",
+        "streak7": "AI 低吸 · 连跌 7 天",
+        "streak10": "AI 低吸 · 连跌 10 天"
+      },
+      "insider": {
+        "buy": "内部人买入",
+        "largeSell": "内部人大额卖出",
+        "clusterSell": "内部人集中卖出",
+        "intentSell": "内部人拟卖出（144）"
+      },
+      "event": {
+        "edgar": "SEC 申报",
+        "halts": "停牌",
+        "market": "盘面异动",
+        "rss": "新闻",
+        "clinicaltrials": "临床试验变更"
+      },
+      "reminder": {
+        "t7": "催化剂提醒 T-7",
+        "t1": "催化剂提醒 T-1"
+      },
+      "thesis": {
+        "open": "我的洞察"
+      },
+      "frontier": {
+        "approval": "前沿·FDA 批准",
+        "rejection": "前沿·FDA 拒绝",
+        "adcom": "前沿·专家委员会",
+        "deal": "前沿·授权/合作",
+        "acquisition": "前沿·并购",
+        "financing": "前沿·融资",
+        "trial-start": "前沿·新试验",
+        "data": "前沿·临床数据",
+        "ai-milestone": "前沿·AI 里程碑",
+        "regulatory": "前沿·监管动态",
+        "policy": "前沿·政策",
+        "research": "前沿·科研",
+        "other": "前沿·其他"
+      }
     }
   },
   "focus": {
@@ -1268,6 +1299,314 @@
       "catalysts": "后续催化剂",
       "failConditions": "失效条件",
       "verdict": "判断"
+    }
+  },
+  "frontier": {
+    "page": {
+      "title": "生物科技前沿",
+      "subtitle": "跟踪 AI × 生物医药的全球进展：监管、交易、临床、资金与论文，帮你看清趋势、找到标的",
+      "llmChip": "AI 今日 {used}/{budget} 次",
+      "llmOff": "AI 未配置（规则模式）"
+    },
+    "tabs": {
+      "feed": "动态",
+      "milestones": "AI 药物记分板",
+      "deals": "交易追踪",
+      "themes": "主题与篮子",
+      "funds": "机构动向",
+      "papers": "论文",
+      "report": "周报"
+    },
+    "guide": {
+      "title": "新手指南：这个页面怎么用",
+      "whyTitle": "为什么要看这个页面",
+      "whyBody": "新闻一出来几分钟就被市场消化，「看得快」没有优势。这里帮你做三件事：看得早（监管、试验登记、交易申报这些一手数据往往早于媒体）；连得上（一条消息影响哪些公司，谁受益谁受损）；记得住（把「AI 会颠覆制药」拆成可量化的里程碑，按季度看它是否在兑现）。",
+      "flowTitle": "信息是怎么来的",
+      "flowBody": "后台每 30 分钟从 FDA、SEC 申报、ClinicalTrials.gov、行业媒体、PubMed/bioRxiv、13F 季报等免费公开来源抓取 → 先用关键词和标的规则过滤掉大部分无关内容 → 同一件事的多篇报道合并成一个事件 → AI 批量打标签（主题、类型、重要度）→ 只有 4–5 星事件才让 AI 读原文写解读。",
+      "glossaryTitle": "常见术语",
+      "glossaryBody": "FDA：美国药监局，新药必须它批准才能上市。\nPDUFA 日期：FDA 承诺给出审批结论的截止日。\n完全回复函（CRL）：FDA 拒绝批准的正式通知。\n专家委员会（AdCom）：FDA 请外部专家投票评议新药，结果常影响审批。\n临床 1/2/3 期：1 期看安全，2 期初步看疗效，3 期大规模验证；3 期成功后才能申请上市。\n头对头试验：两种药直接对比，而不是各自和安慰剂比。\n授权交易（BD/licensing）：一家公司把药的开发销售权卖给另一家，常见结构是首付款 + 里程碑付款。\n首付款：签约就付的钱，比「总额」更能说明买方的诚意。\n13F：管理超过 1 亿美元的美国机构每季度必须公开的持仓报告，有 45 天延迟。\nXBI：生物科技行业 ETF，用来衡量整个板块的涨跌。",
+      "starsTitle": "星级怎么理解",
+      "starsBody": "★★★★★ 可能改变行业格局（首个获批、十亿美元级交易、AI 药物进入三期），会即时推送到手机。\n★★★★ 对主题内具体公司有实质影响，AI 会读原文写解读。\n★★★ 值得知道，进每日摘要。\n★★ / ★ 常规或噪音，默认隐藏。",
+      "verifyTitle": "怎么防止 AI 胡说",
+      "verifyBody": "AI 写的每条「事实」都必须附上原文引文，系统会到原文里逐字核对；对不上、或者数字不在引文里的，标「未核实」。交易金额也必须在原文里原样出现。「解读」和「受益链」是 AI 的推演，不是事实，请结合原文自行判断。",
+      "nextTitle": "看到机会之后",
+      "nextBody": "事件卡片上可以一键「加入催化剂监控」，系统会自动盯这家公司的申报、试验和盘面异动；点股票代码进个股页，可以写下自己的判断（洞察跟进）。重要事件的受益/受损标的会自动记入信号记分卡，事后统计这些判断准不准。"
+    },
+    "themes": {
+      "weekCount": "本周 {n} 条",
+      "hotCount": "重要 {n}",
+      "vsBenchmark20": "20 日 vs {benchmark}"
+    },
+    "eventType": {
+      "approval": "FDA 批准",
+      "rejection": "FDA 拒绝",
+      "adcom": "专家委员会",
+      "deal": "授权/合作",
+      "acquisition": "并购",
+      "financing": "融资",
+      "trial-start": "新试验",
+      "data": "临床数据",
+      "ai-milestone": "AI 里程碑",
+      "regulatory": "监管动态",
+      "policy": "政策",
+      "research": "科研",
+      "other": "其他"
+    },
+    "feed": {
+      "title": "行业动态",
+      "titleTheme": "行业动态 · {theme}",
+      "hint": "近 14 天，按北京日期分组。标题点开是原文；★ 越多越重要，默认只显示 3 星以上。",
+      "level": {
+        "important": "只看重要（4–5★）",
+        "notable": "3★ 以上",
+        "all": "全部"
+      },
+      "allTypes": "全部类型",
+      "emptyNoData": "还没有数据。后台监控进程启动后约 30 分钟内会出现第一批事件。",
+      "emptyFiltered": "当前筛选下没有事件，试试放宽星级或切换类型。",
+      "rule": "规则分拣",
+      "ruleHint": "这条没有经过 AI 分拣（未配置 AI 或当日额度已用完），中文标题和星级由规则给出",
+      "pushed": "已推送",
+      "snippetOnly": "未能抓到原文全文（可能有付费墙），以下分析只基于标题和摘要",
+      "facts": "关键事实",
+      "verifiedHint": "引文已在原文中逐字核对",
+      "unverified": "未核实",
+      "interpretation": "AI 解读（推演，非事实）",
+      "stance": {
+        "bullish": "利好主题",
+        "bearish": "利空主题",
+        "mixed": "多空交织",
+        "neutral": "中性"
+      },
+      "chain": "受益链（AI 推演）",
+      "relation": {
+        "direct": "直接受益",
+        "indirect": "间接受益",
+        "hurt": "受损"
+      },
+      "tickerHint": "进个股页，可写下你的判断",
+      "sources": "{n} 个来源",
+      "collapse": "收起",
+      "expand": "展开解读",
+      "addWatch": "加入催化剂监控",
+      "watchAdded": "{symbol} 已加入催化剂监控",
+      "watchExists": "{symbol} 已在催化剂监控清单里",
+      "actionFailed": "操作失败，请重试",
+      "dismiss": "不相关",
+      "dismissHint": "隐藏这条事件"
+    },
+    "readouts": {
+      "title": "近期可能读出",
+      "hint": "AI 药物记分板中，按登记库「主要完成日」排序——这是试验预计收集完主要数据的时间，结果通常在之后几个月公布。",
+      "empty": "暂无数据，等待登记库首次刷新",
+      "inDays": "{n} 天后",
+      "thisMonth": "本月",
+      "more": "查看完整记分板 →"
+    },
+    "conferences": {
+      "title": "行业会议",
+      "hint": "重磅数据常在大会上集中发布，会前股价容易提前反应。",
+      "add": "添加会议",
+      "edit": "编辑会议",
+      "delete": "删除",
+      "empty": "暂无会议",
+      "ongoing": "进行中",
+      "inDays": "{n} 天后",
+      "unverified": "日期待核实",
+      "confirmDelete": "确定删除这个会议？",
+      "saveFailed": "保存失败",
+      "name": "会议名称",
+      "startDate": "开始日期",
+      "precision": "日期精度",
+      "precisionDay": "具体日期",
+      "precisionMonth": "只知道月份",
+      "dateText": "日期说明（如：1 月第二周）",
+      "note": "备注",
+      "verified": "已在官网核对日期",
+      "cancel": "取消",
+      "save": "保存"
+    },
+    "status": {
+      "title": "运行状态",
+      "llmToday": "今日 AI 调用",
+      "llmOff": "未配置",
+      "llmBreakdown": "分拣 {triage} · 深度分析 {deep} · 周报 {weekly}",
+      "budget": "每日上限",
+      "save": "保存",
+      "budgetHint": "超出后分拣改用规则、深度分析顺延到第二天。AI 配置与催化剂监控页共用。",
+      "budgetSaved": "已保存",
+      "budgetInvalid": "请输入 1–500 之间的整数",
+      "sources": "数据源",
+      "source": {
+        "news": "行业新闻 / FDA RSS",
+        "deals": "SEC 交易申报",
+        "fda": "FDA 批准 / 拒绝 / 专家会",
+        "baskets": "主题篮子行情",
+        "trials": "临床试验登记",
+        "papers": "论文（PubMed / bioRxiv）",
+        "funds": "13F 机构持仓"
+      },
+      "never": "未运行",
+      "daemonHint": "监控进程尚未运行过前沿采集。本地开发用 npm run dev 会自动拉起；也可手动执行 npm run monitor:frontier -- ingest。"
+    },
+    "milestones": {
+      "countTotal": "跟踪中的 AI 药物",
+      "proposedTitle": "AI 发现的新候选",
+      "proposedHint": "AI 在新闻里读到这些药物被描述为 AI 设计/发现、且已进入临床。确认后会加入记分板并自动查询登记库；拒绝则不再提议。",
+      "accept": "采纳",
+      "reject": "不要",
+      "title": "AI 药物记分板",
+      "hint": "AI 设计或发现、已进入临床的药物。临床阶段和下次读出时间直接来自 ClinicalTrials.gov（每 12 小时刷新），不经过 AI。判断「AI 制药是否在兑现」，就看这里的药能不能一个个走进三期、拿到好数据。",
+      "add": "添加药物",
+      "edit": "编辑",
+      "delete": "删除",
+      "col": {
+        "drug": "药物",
+        "company": "公司",
+        "approach": "AI 用在哪",
+        "indication": "适应症",
+        "phase": "最高阶段",
+        "readout": "预计读出"
+      },
+      "proposalCount": "{n} 条提议",
+      "private": "未上市",
+      "status": {
+        "RECRUITING": "招募中",
+        "ACTIVE_NOT_RECRUITING": "进行中（已停止招募）",
+        "COMPLETED": "已完成",
+        "NOT_YET_RECRUITING": "尚未开始招募",
+        "ENROLLING_BY_INVITATION": "邀请入组中",
+        "TERMINATED": "已终止",
+        "WITHDRAWN": "已撤回",
+        "SUSPENDED": "已暂停",
+        "UNKNOWN": "状态未知"
+      },
+      "notChecked": "等待查询登记库",
+      "confirmDelete": "确定从记分板删除 {drug}？",
+      "aiProposal": "AI 提议",
+      "ignore": "忽略",
+      "registry": "登记库",
+      "registryLine": "共 {n} 个试验，最近查询 {time}",
+      "aliases": "检索名",
+      "history": "动态",
+      "noHistory": "暂无动态",
+      "footnote": "种子名单由 AI 于 2026-11 整理，「AI 用在哪」可能不准确，可点编辑修改。检索名用于在登记库和新闻里识别这个药，改了之后下一轮会重新建档。",
+      "form": {
+        "drug": "药物名（通用名或代号）",
+        "aliasesInput": "其他名称（逗号分隔：旧代号、通用名）",
+        "company": "公司",
+        "symbol": "美股代码（未上市留空）",
+        "indication": "适应症",
+        "approach": "AI 用在哪一步",
+        "hint": "保存后下一轮（12 小时内）会按全部名称查询 ClinicalTrials.gov，自动填入阶段与读出时间。"
+      },
+      "cancel": "取消",
+      "save": "保存",
+      "failed": "操作失败，请重试"
+    },
+    "deals": {
+      "title": "交易追踪",
+      "hint": "授权、合作、并购——大药企把钱花在哪个方向，是比新闻更硬的趋势信号。来源是公司提交给 SEC 的 8-K 和新闻稿；金额必须在原文里出现过才算核实。",
+      "allThemes": "全部",
+      "totals": "{n} 笔 · 已核实首付合计 {upfront} · 已核实总额合计 {total}",
+      "empty": "暂无交易记录。重要度 4 星以上的交易类事件经 AI 读原文后会出现在这里。",
+      "col": {
+        "date": "日期",
+        "type": "类型",
+        "buyer": "买方 / 付款方",
+        "seller": "卖方 / 出让方",
+        "asset": "标的资产",
+        "upfront": "首付款",
+        "total": "总额（含里程碑）"
+      },
+      "type": {
+        "license": "授权",
+        "collaboration": "合作",
+        "acquisition": "并购",
+        "option": "期权",
+        "other": "其他"
+      },
+      "unverified": "未核实"
+    },
+    "baskets": {
+      "title": "主题与篮子",
+      "hint": "每个主题的标的按等权组合，与 {benchmark}（生物科技行业 ETF）对比。消息很热但篮子不涨，往往说明预期早已打满或市场不信。",
+      "computedAt": "更新于 {time}",
+      "window": "{n} 日",
+      "excessHint": "相对 {benchmark} 的超额收益",
+      "tier": {
+        "pure": "纯概念股",
+        "pharma": "大药企",
+        "tools": "工具 / 算力"
+      },
+      "footnote": "每格：绝对收益 / 相对 XBI 超额。行情为 Alpaca IEX 日线收盘价，每个交易日收盘后更新。标的清单可在右上角「管理主题」里修改。"
+    },
+    "themeManager": {
+      "button": "管理主题",
+      "title": "主题管理",
+      "hint": "关键词决定哪些新闻会被收进来（初筛），标的决定篮子和受益股识别。改动在下一轮采集生效。",
+      "summary": "{k} 个关键词 · {n} 只标的",
+      "edit": "编辑",
+      "delete": "删除",
+      "add": "添加主题",
+      "back": "返回",
+      "editTitle": "编辑主题",
+      "addTitle": "添加主题",
+      "confirmDelete": "确定删除主题「{name}」？已收录的事件不会删除。",
+      "saved": "已保存",
+      "saveFailed": "保存失败",
+      "form": {
+        "key": "标识（英文）",
+        "name": "中文名",
+        "nameEn": "英文名",
+        "description": "一句话解释（给小白看）",
+        "keywords": "关键词（逗号或换行分隔）",
+        "keywordsHint": "全大写的短词（如 ADC、AI）区分大小写；其他词不区分。",
+        "tickers": "标的（每行一个：代码 | 公司名 | 分层 | 别名1, 别名2）",
+        "tickersHint": "分层填 pure（纯概念股）/ pharma（大药企）/ tools（工具算力）。只有纯概念股的名字出现就能把新闻归入该主题，大药企要配合关键词。",
+        "trialField": "临床试验检索字段",
+        "trialIntr": "按药物/疗法",
+        "trialCond": "按疾病",
+        "trialTerm": "临床试验检索词（留空则不检索）",
+        "enabled": "启用"
+      },
+      "cancel": "取消",
+      "save": "保存"
+    },
+    "funds": {
+      "consensusTitle": "多家机构同向操作",
+      "consensusHint": "同一只股票被两家以上专业基金在同一季度同时买入或卖出，比单家动作更值得注意。",
+      "empty": "还没有 13F 数据，后台每天检查一次。",
+      "noConsensus": "本季没有两家以上同向操作的标的",
+      "buyers": "{n} 家买入：{names}",
+      "sellers": "{n} 家卖出：{names}",
+      "title": "生物医药专业基金 13F",
+      "hint": "这些基金由懂医药的人管理，持仓变化是「聪明钱」的方向。注意：13F 在季度结束后 45 天才公开，看的是三个月前的动作。",
+      "onlyThemes": "只看主题标的",
+      "period": "{period} 季末 · {filed} 公开",
+      "size": "多头持仓 {value} · {n} 只",
+      "change": {
+        "new": "新建仓",
+        "add": "加仓",
+        "trim": "减仓",
+        "exit": "清仓"
+      },
+      "noChanges": "无显著变动",
+      "footnote": "按持仓市值变化排序，股数变动 20% 以上才算加减仓；期权仓位不计。代码由 OpenFIGI 按 CUSIP 映射，个别可能缺失。"
+    },
+    "papers": {
+      "picksTitle": "本周论文精选",
+      "picksHint": "{week}，AI 从本周候选中挑出最可能影响产业的几篇",
+      "picksPending": "每周一随周报生成",
+      "noPicks": "还没有精选，第一份周报生成后出现。",
+      "recentTitle": "最近候选",
+      "recentHint": "PubMed / bioRxiv 上「AI × 药物/蛋白设计」的新论文，按关键词初筛，未经 AI。",
+      "noRecent": "暂无"
+    },
+    "report": {
+      "title": "生物科技前沿周报",
+      "hint": "每周一北京时间上午生成，汇总各主题要闻、交易、记分板变化、篮子表现、机构动向和论文精选；配置了邮箱会发邮件，否则推送到手机。",
+      "empty": "还没有周报。第一份会在下个周一上午生成，也可以手动执行 npm run monitor:frontier -- weekly 预览。"
     }
   }
 }

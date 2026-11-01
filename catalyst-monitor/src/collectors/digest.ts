@@ -3,6 +3,7 @@ import { getKv, setKv } from '../store';
 import { pushMessage } from '../notify';
 import { connectToDatabase } from '@/database/mongoose';
 import { FocusDigestItem, FocusEntry } from '@/database/models/focus.model';
+import { frontierDigestSection, markFrontierDigested } from '../frontier/digest';
 import type { MonitorConfig, NewEvent } from '../types';
 
 const MAX_DEFERRED_LINES = 15;
@@ -26,7 +27,8 @@ export async function collectDigest(config: MonitorConfig): Promise<NewEvent[]> 
   await connectToDatabase();
   const deferred = await FocusDigestItem.find({ sentAt: null }).sort({ scoreAtDefer: -1, createdAt: 1 }).lean();
   const top = await FocusEntry.find({ score: { $gt: 0 } }).sort({ score: -1 }).limit(TOP_N).lean();
-  if (deferred.length === 0 && top.length === 0) {
+  const frontier = await frontierDigestSection(now);
+  if (deferred.length === 0 && top.length === 0 && !frontier.text) {
     await setKv('focus_digest_sent', date);
     return [];
   }
@@ -50,16 +52,18 @@ export async function collectDigest(config: MonitorConfig): Promise<NewEvent[]> 
     const more = bySymbol.size > lines.length ? `\n…另有 ${bySymbol.size - lines.length} 只标的，见关注队列页` : '';
     sections.push(`【昨日低优先级提醒 ${deferred.length} 条】\n${lines.join('\n')}${more}`);
   }
+  if (frontier.text) sections.push(frontier.text);
 
   const siteUrl = process.env.BETTER_AUTH_URL;
   const delivered = await pushMessage(config.env, {
-    title: `每日摘要 ${date}｜关注 ${top.length} 只，低优先级 ${deferred.length} 条`,
+    title: `每日摘要 ${date}｜关注 ${top.length} 只，低优先级 ${deferred.length} 条${frontier.eventIds.length ? `，前沿 ${frontier.eventIds.length} 条` : ''}`,
     body: sections.join('\n\n'),
     urgent: false,
     url: siteUrl ? `${siteUrl}/focus` : undefined,
   });
   if (delivered || !config.env.barkUrl) {
     await FocusDigestItem.updateMany({ _id: { $in: deferred.map((d) => d._id) } }, { $set: { sentAt: now } });
+    await markFrontierDigested(frontier.eventIds);
     await setKv('focus_digest_sent', date);
   }
   log('digest', `${date} 摘要：队列 ${top.length}，被拦提醒 ${deferred.length}（推送${delivered ? '成功' : '未送达'}）`);

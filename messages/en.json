@@ -299,6 +299,7 @@
     "Search": "Search",
     "Watchlist": "Watchlist",
     "Catalyst": "Catalyst",
+    "Frontier": "Biotech Frontier",
     "AiDips": "AI Dips",
     "Status": "Data Sources",
     "Signals": "Signals",
@@ -349,6 +350,7 @@
         "quotes": "Quotes & FX",
         "filings": "Regulatory filings",
         "clinical": "Clinical trials",
+        "research": "Research & industry",
         "ai": "AI & sentiment",
         "other": "Push & other"
       }
@@ -370,7 +372,8 @@
       "xcheck": "Cross-check",
       "sentiment": "Sentiment",
       "fx": "FX",
-      "monitor": "Monitor heartbeat"
+      "monitor": "Monitor heartbeat",
+      "frontier": "Biotech frontier"
     },
     "xcheck": {
       "title": "Multi-source cross-check",
@@ -723,7 +726,10 @@
         "digest": "Daily digest",
         "thesis": "Thesis follow-ups",
         "quotes": "Quote snapshot refresh (heatmap / AI dips)",
-        "research": "Research note review (weekly)"
+        "research": "Research note review (weekly)",
+        "frontier-ingest": "Biotech frontier · ingest",
+        "frontier-brain": "Biotech frontier · triage & analysis",
+        "frontier-weekly": "Biotech frontier · weekly"
       }
     }
   },
@@ -967,21 +973,46 @@
     "notDelivered": "Push not delivered (booked only)",
     "empty": "Nothing yet — signals accrue here once the monitor pushes them; T+1 needs the session after entry to close",
     "kinds": {
-      "aidips.streak5": "AI dips · 5-day streak",
-      "aidips.streak7": "AI dips · 7-day streak",
-      "aidips.streak10": "AI dips · 10-day streak",
-      "insider.buy": "Insider buy",
-      "insider.largeSell": "Insider large sell",
-      "insider.clusterSell": "Insider cluster sell",
-      "insider.intentSell": "Insider intent to sell (144)",
-      "event.edgar": "SEC filing",
-      "event.halts": "Trading halt",
-      "event.market": "Market anomaly",
-      "event.rss": "News",
-      "event.clinicaltrials": "Trial update",
-      "reminder.t7": "Catalyst reminder T-7",
-      "reminder.t1": "Catalyst reminder T-1",
-      "thesis.open": "My thesis"
+      "aidips": {
+        "streak5": "AI dips · 5-day streak",
+        "streak7": "AI dips · 7-day streak",
+        "streak10": "AI dips · 10-day streak"
+      },
+      "insider": {
+        "buy": "Insider buy",
+        "largeSell": "Insider large sell",
+        "clusterSell": "Insider cluster sell",
+        "intentSell": "Insider intent to sell (144)"
+      },
+      "event": {
+        "edgar": "SEC filing",
+        "halts": "Trading halt",
+        "market": "Market anomaly",
+        "rss": "News",
+        "clinicaltrials": "Trial update"
+      },
+      "reminder": {
+        "t7": "Catalyst reminder T-7",
+        "t1": "Catalyst reminder T-1"
+      },
+      "thesis": {
+        "open": "My thesis"
+      },
+      "frontier": {
+        "approval": "Frontier · FDA approval",
+        "rejection": "Frontier · FDA rejection",
+        "adcom": "Frontier · Advisory committee",
+        "deal": "Frontier · Licensing/partnership",
+        "acquisition": "Frontier · M&A",
+        "financing": "Frontier · Financing",
+        "trial-start": "Frontier · New trial",
+        "data": "Frontier · Clinical data",
+        "ai-milestone": "Frontier · AI milestone",
+        "regulatory": "Frontier · Regulatory",
+        "policy": "Frontier · Policy",
+        "research": "Frontier · Research",
+        "other": "Frontier · Other"
+      }
     }
   },
   "focus": {
@@ -1268,6 +1299,314 @@
       "catalysts": "Upcoming catalysts",
       "failConditions": "Fail conditions",
       "verdict": "Verdict"
+    }
+  },
+  "frontier": {
+    "page": {
+      "title": "Biotech Frontier",
+      "subtitle": "Track how AI is reshaping biotech worldwide: regulators, deals, trials, money and papers — see the trend, find the names",
+      "llmChip": "AI today {used}/{budget}",
+      "llmOff": "AI not configured (rule mode)"
+    },
+    "tabs": {
+      "feed": "Feed",
+      "milestones": "AI drug scoreboard",
+      "deals": "Deals",
+      "themes": "Themes & baskets",
+      "funds": "Smart money",
+      "papers": "Papers",
+      "report": "Weekly"
+    },
+    "guide": {
+      "title": "Getting started",
+      "whyTitle": "Why this page",
+      "whyBody": "News is priced in within minutes, so reading fast is no edge. This page helps you see early (regulatory actions, trial registrations and SEC filings often precede the press), connect the dots (who benefits, who loses) and keep score (turn \"AI will transform drug discovery\" into measurable milestones and check each quarter whether they are being hit).",
+      "flowTitle": "Where the data comes from",
+      "flowBody": "Every 30 minutes the monitor pulls free public sources — FDA, SEC filings, ClinicalTrials.gov, trade press, PubMed/bioRxiv, 13F reports → keyword and ticker rules drop most irrelevant items → multiple reports of the same story merge into one event → AI tags them in batches (theme, type, importance) → only 4–5 star events get a full-text AI analysis.",
+      "glossaryTitle": "Glossary",
+      "glossaryBody": "FDA: the US drug regulator; new drugs need its approval.\nPDUFA date: the FDA's deadline to decide on an application.\nComplete response letter (CRL): the FDA's formal rejection.\nAdvisory committee (AdCom): outside experts vote on a drug; often sways the decision.\nPhase 1/2/3: safety → early efficacy → large confirmatory trial; approval filings follow Phase 3.\nHead-to-head: two drugs compared directly instead of each vs placebo.\nLicensing deal: rights sold to another company, usually upfront + milestones.\nUpfront: cash paid at signing — a better signal of conviction than the headline total.\n13F: quarterly holdings report from US managers above $100M, published with a 45-day lag.\nXBI: biotech sector ETF, the benchmark for the group.",
+      "starsTitle": "Reading the stars",
+      "starsBody": "★★★★★ could reshape the field (first approval, $1B+ deal, an AI drug entering Phase 3) — pushed to your phone.\n★★★★ material for specific companies — AI reads the source and writes an analysis.\n★★★ worth knowing — goes into the daily digest.\n★★ / ★ routine or noise — hidden by default.",
+      "verifyTitle": "Keeping the AI honest",
+      "verifyBody": "Every fact the AI states must carry a verbatim quote that is matched against the source text; anything that does not match, or contains numbers absent from the quote, is marked unverified. Deal amounts must appear verbatim in the source. The interpretation and beneficiary chain are inference, not fact.",
+      "nextTitle": "When you spot an opportunity",
+      "nextBody": "Add a company to catalyst monitoring straight from an event card; click a ticker to open the stock page and write down your thesis. Beneficiaries of important events are logged to the signal scorecard so you can later check how good these calls were."
+    },
+    "themes": {
+      "weekCount": "{n} this week",
+      "hotCount": "{n} major",
+      "vsBenchmark20": "20d vs {benchmark}"
+    },
+    "eventType": {
+      "approval": "FDA approval",
+      "rejection": "FDA rejection",
+      "adcom": "Advisory committee",
+      "deal": "Licensing/partnership",
+      "acquisition": "M&A",
+      "financing": "Financing",
+      "trial-start": "New trial",
+      "data": "Clinical data",
+      "ai-milestone": "AI milestone",
+      "regulatory": "Regulatory",
+      "policy": "Policy",
+      "research": "Research",
+      "other": "Other"
+    },
+    "feed": {
+      "title": "Industry feed",
+      "titleTheme": "Industry feed · {theme}",
+      "hint": "Last 14 days grouped by Beijing date. Titles link to the source; more stars = more important. 3★ and above by default.",
+      "level": {
+        "important": "Major only (4–5★)",
+        "notable": "3★ and up",
+        "all": "All"
+      },
+      "allTypes": "All types",
+      "emptyNoData": "No data yet. The first events appear within about 30 minutes of the monitor starting.",
+      "emptyFiltered": "Nothing matches the current filters — try a lower star level or another type.",
+      "rule": "rule-tagged",
+      "ruleHint": "Not triaged by AI (AI not configured or today's budget used up); title and stars come from rules",
+      "pushed": "pushed",
+      "snippetOnly": "Could not fetch the full text (possibly paywalled); this analysis uses only headlines and snippets",
+      "facts": "Key facts",
+      "verifiedHint": "Quote verified verbatim against the source",
+      "unverified": "unverified",
+      "interpretation": "AI interpretation (inference, not fact)",
+      "stance": {
+        "bullish": "bullish for theme",
+        "bearish": "bearish for theme",
+        "mixed": "mixed",
+        "neutral": "neutral"
+      },
+      "chain": "Beneficiary chain (AI inference)",
+      "relation": {
+        "direct": "Direct winner",
+        "indirect": "Indirect winner",
+        "hurt": "Loser"
+      },
+      "tickerHint": "Open the stock page to write your thesis",
+      "sources": "{n} sources",
+      "collapse": "Collapse",
+      "expand": "Show analysis",
+      "addWatch": "Add to catalyst monitor",
+      "watchAdded": "{symbol} added to catalyst monitoring",
+      "watchExists": "{symbol} is already being monitored",
+      "actionFailed": "Action failed, please retry",
+      "dismiss": "Not relevant",
+      "dismissHint": "Hide this event"
+    },
+    "readouts": {
+      "title": "Upcoming readouts",
+      "hint": "From the AI drug scoreboard, ordered by registry primary completion date — when the main data is expected to be collected; results usually follow within months.",
+      "empty": "No data yet — waiting for the first registry refresh",
+      "inDays": "in {n} d",
+      "thisMonth": "this month",
+      "more": "Full scoreboard →"
+    },
+    "conferences": {
+      "title": "Conferences",
+      "hint": "Major data tends to drop at medical meetings, and stocks often move ahead of them.",
+      "add": "Add conference",
+      "edit": "Edit conference",
+      "delete": "Delete",
+      "empty": "No conferences",
+      "ongoing": "ongoing",
+      "inDays": "in {n} d",
+      "unverified": "date unverified",
+      "confirmDelete": "Delete this conference?",
+      "saveFailed": "Save failed",
+      "name": "Name",
+      "startDate": "Start date",
+      "precision": "Date precision",
+      "precisionDay": "Exact date",
+      "precisionMonth": "Month only",
+      "dateText": "Date note (e.g. 2nd week of January)",
+      "note": "Note",
+      "verified": "Date checked against the official site",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "status": {
+      "title": "Status",
+      "llmToday": "AI calls today",
+      "llmOff": "not configured",
+      "llmBreakdown": "triage {triage} · analysis {deep} · weekly {weekly}",
+      "budget": "Daily cap",
+      "save": "Save",
+      "budgetHint": "Beyond the cap, triage falls back to rules and analysis waits until tomorrow. The AI provider is shared with the catalyst page.",
+      "budgetSaved": "Saved",
+      "budgetInvalid": "Enter an integer between 1 and 500",
+      "sources": "Sources",
+      "source": {
+        "news": "Trade press / FDA RSS",
+        "deals": "SEC deal filings",
+        "fda": "FDA approvals / CRLs / AdComs",
+        "baskets": "Theme basket prices",
+        "trials": "Trial registry",
+        "papers": "Papers (PubMed / bioRxiv)",
+        "funds": "13F holdings"
+      },
+      "never": "never",
+      "daemonHint": "The monitor has not run the frontier collectors yet. npm run dev starts it locally; or run npm run monitor:frontier -- ingest."
+    },
+    "milestones": {
+      "countTotal": "AI drugs tracked",
+      "proposedTitle": "New candidates found by AI",
+      "proposedHint": "The AI read that these clinical-stage drugs were AI-designed or AI-discovered. Accept to add them (the registry is queried automatically); reject to stop proposing them.",
+      "accept": "Accept",
+      "reject": "Reject",
+      "title": "AI drug scoreboard",
+      "hint": "Clinical-stage drugs designed or discovered with AI. Phase and next readout come straight from ClinicalTrials.gov (refreshed every 12 h), not from the AI. Whether AI drug discovery is delivering shows up here: can these drugs reach Phase 3 and read out well?",
+      "add": "Add drug",
+      "edit": "Edit",
+      "delete": "Delete",
+      "col": {
+        "drug": "Drug",
+        "company": "Company",
+        "approach": "Where AI is used",
+        "indication": "Indication",
+        "phase": "Highest phase",
+        "readout": "Expected readout"
+      },
+      "proposalCount": "{n} proposals",
+      "private": "private",
+      "status": {
+        "RECRUITING": "Recruiting",
+        "ACTIVE_NOT_RECRUITING": "Active, not recruiting",
+        "COMPLETED": "Completed",
+        "NOT_YET_RECRUITING": "Not yet recruiting",
+        "ENROLLING_BY_INVITATION": "Enrolling by invitation",
+        "TERMINATED": "Terminated",
+        "WITHDRAWN": "Withdrawn",
+        "SUSPENDED": "Suspended",
+        "UNKNOWN": "Unknown"
+      },
+      "notChecked": "Waiting for registry",
+      "confirmDelete": "Remove {drug} from the scoreboard?",
+      "aiProposal": "AI proposal",
+      "ignore": "Ignore",
+      "registry": "Registry",
+      "registryLine": "{n} trials, last checked {time}",
+      "aliases": "Search names",
+      "history": "Activity",
+      "noHistory": "No activity yet",
+      "footnote": "The seed list was compiled by AI in Nov 2026; the \"where AI is used\" notes may be imprecise — edit as needed. Search names identify the drug in the registry and in news; changing them rebuilds the registry snapshot next round.",
+      "form": {
+        "drug": "Drug (INN or code)",
+        "aliasesInput": "Other names (comma-separated)",
+        "company": "Company",
+        "symbol": "US ticker (blank if private)",
+        "indication": "Indication",
+        "approach": "Where AI is used",
+        "hint": "Within 12 hours the registry is queried by all names and phase / readout are filled in automatically."
+      },
+      "cancel": "Cancel",
+      "save": "Save",
+      "failed": "Action failed, please retry"
+    },
+    "deals": {
+      "title": "Deal tracker",
+      "hint": "Licensing, partnerships and M&A — where big pharma spends money is a harder trend signal than headlines. Sourced from SEC 8-Ks and press releases; amounts count as verified only if they appear verbatim in the source.",
+      "allThemes": "All",
+      "totals": "{n} deals · verified upfront {upfront} · verified total {total}",
+      "empty": "No deals yet. Deal events rated 4★+ appear here once the AI has read the source.",
+      "col": {
+        "date": "Date",
+        "type": "Type",
+        "buyer": "Buyer / payer",
+        "seller": "Seller / licensor",
+        "asset": "Asset",
+        "upfront": "Upfront",
+        "total": "Total (incl. milestones)"
+      },
+      "type": {
+        "license": "License",
+        "collaboration": "Collaboration",
+        "acquisition": "Acquisition",
+        "option": "Option",
+        "other": "Other"
+      },
+      "unverified": "unverified"
+    },
+    "baskets": {
+      "title": "Themes & baskets",
+      "hint": "Each theme as an equal-weight basket compared with {benchmark} (biotech sector ETF). Hot news with a flat basket usually means it is priced in — or not believed.",
+      "computedAt": "updated {time}",
+      "window": "{n}d",
+      "excessHint": "Excess return vs {benchmark}",
+      "tier": {
+        "pure": "Pure plays",
+        "pharma": "Big pharma",
+        "tools": "Tools / compute"
+      },
+      "footnote": "Each cell: absolute return / excess vs XBI. Alpaca IEX daily closes, updated after each session. Edit the lists via \"Manage themes\" at the top right."
+    },
+    "themeManager": {
+      "button": "Manage themes",
+      "title": "Themes",
+      "hint": "Keywords decide which news gets in (prefilter); tickers drive baskets and beneficiary detection. Changes apply from the next collection round.",
+      "summary": "{k} keywords · {n} tickers",
+      "edit": "Edit",
+      "delete": "Delete",
+      "add": "Add theme",
+      "back": "Back",
+      "editTitle": "Edit theme",
+      "addTitle": "Add theme",
+      "confirmDelete": "Delete theme \"{name}\"? Events already collected are kept.",
+      "saved": "Saved",
+      "saveFailed": "Save failed",
+      "form": {
+        "key": "Key",
+        "name": "Chinese name",
+        "nameEn": "English name",
+        "description": "One-line explanation",
+        "keywords": "Keywords (comma or newline separated)",
+        "keywordsHint": "Short all-caps words (ADC, AI) are case-sensitive; others are not.",
+        "tickers": "Tickers (one per line: SYMBOL | Company | tier | alias1, alias2)",
+        "tickersHint": "Tier is pure / pharma / tools. A pure play's name alone tags a story with the theme; big pharma needs a keyword too.",
+        "trialField": "Trial search field",
+        "trialIntr": "By intervention",
+        "trialCond": "By condition",
+        "trialTerm": "Trial search terms (blank = skip)",
+        "enabled": "Enabled"
+      },
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "funds": {
+      "consensusTitle": "Crowded moves",
+      "consensusHint": "Stocks bought or sold by two or more specialist funds in the same quarter — more telling than any single fund.",
+      "empty": "No 13F data yet; checked daily.",
+      "noConsensus": "No stock moved by two or more funds this quarter",
+      "buyers": "{n} buying: {names}",
+      "sellers": "{n} selling: {names}",
+      "title": "Specialist biotech funds (13F)",
+      "hint": "These funds are run by domain experts — their position changes show where smart money is going. 13Fs publish 45 days after quarter end, so this is three-month-old activity.",
+      "onlyThemes": "Theme tickers only",
+      "period": "Q-end {period} · filed {filed}",
+      "size": "Long book {value} · {n} names",
+      "change": {
+        "new": "New",
+        "add": "Add",
+        "trim": "Trim",
+        "exit": "Exit"
+      },
+      "noChanges": "No significant changes",
+      "footnote": "Sorted by change in position value; adds/trims need a 20%+ change in shares; options excluded. Tickers mapped from CUSIP via OpenFIGI and may occasionally be missing."
+    },
+    "papers": {
+      "picksTitle": "Papers of the week",
+      "picksHint": "{week}: the AI's pick of the candidates most likely to matter for industry",
+      "picksPending": "Generated each Monday with the weekly report",
+      "noPicks": "No picks yet — they appear with the first weekly report.",
+      "recentTitle": "Recent candidates",
+      "recentHint": "New PubMed / bioRxiv papers on AI × drug/protein design, keyword-filtered, not AI-reviewed.",
+      "noRecent": "None"
+    },
+    "report": {
+      "title": "Biotech Frontier weekly",
+      "hint": "Generated Monday mornings (Beijing time): top stories by theme, deals, scoreboard changes, basket performance, fund moves and paper picks. Emailed if mail is configured, otherwise pushed to your phone.",
+      "empty": "No report yet. The first one is generated next Monday morning; preview anytime with npm run monitor:frontier -- weekly."
     }
   }
 }
