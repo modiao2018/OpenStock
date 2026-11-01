@@ -2,9 +2,18 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
-import type { MonitorConfig, WatchItem } from './types';
+import type { FeedConfig, MonitorConfig, WatchItem } from './types';
 
 export const MODULE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+function parseFeed(f: any): FeedConfig {
+  return {
+    name: String(f.name),
+    url: String(f.url),
+    userAgent: f.user_agent ? String(f.user_agent) : undefined,
+    strict: f.strict === true,
+  };
+}
 
 // 环境变量与主应用共用仓库根目录的 .env，由 env.ts 在入口处加载
 export function loadConfig(): MonitorConfig {
@@ -31,7 +40,11 @@ export function loadConfig(): MonitorConfig {
       forms: (raw.edgar?.forms ?? ['8-K', '6-K']).map(String),
       lookbackDays: Number(raw.edgar?.lookback_days ?? 7),
     },
-    feeds: (raw.feeds ?? []).map((f: any) => ({ name: String(f.name), url: String(f.url) })),
+    feeds: (raw.feeds ?? []).map(parseFeed),
+    frontier: {
+      feeds: (raw.frontier?.feeds ?? []).map(parseFeed),
+      dailyLlmBudget: Number(raw.frontier?.daily_llm_budget ?? 40),
+    },
     poll: {
       clinicaltrialsMinutes: Number(raw.poll?.clinicaltrials_minutes ?? 15),
       edgarMinutes: Number(raw.poll?.edgar_minutes ?? 5),

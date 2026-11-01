@@ -15,14 +15,20 @@ export type SourceId =
     | 'bark'
     | 'er-api'
     | 'adanos'
-    | 'healthcheck';
+    | 'healthcheck'
+    | 'fda'
+    | 'federalregister'
+    | 'sec-efts'
+    | 'pubmed'
+    | 'biorxiv'
+    | 'openfigi';
 
-export type SourceGroup = 'quotes' | 'filings' | 'clinical' | 'ai' | 'other';
+export type SourceGroup = 'quotes' | 'filings' | 'clinical' | 'research' | 'ai' | 'other';
 
 export type SourceFeature =
     | 'watchlist' | 'search' | 'heatmap' | 'news' | 'aiDips' | 'insider'
     | 'catalystMarket' | 'catalystEdgar' | 'catalystTrials' | 'catalystHalts'
-    | 'catalystRss' | 'analysis' | 'push' | 'xcheck' | 'sentiment' | 'fx' | 'monitor';
+    | 'catalystRss' | 'analysis' | 'push' | 'xcheck' | 'sentiment' | 'fx' | 'monitor' | 'frontier';
 
 export interface SourceSpec {
     id: SourceId;
@@ -74,6 +80,30 @@ export const SOURCES: SourceSpec[] = [
     {
         id: 'clinicaltrials', name: 'ClinicalTrials.gov', host: 'clinicaltrials.gov', group: 'clinical',
         keyEnv: [], usedBy: ['catalystTrials'], probe: 'http',
+    },
+    {
+        id: 'fda', name: 'FDA (openFDA + RSS)', host: 'api.fda.gov / www.fda.gov', group: 'research',
+        keyEnv: [], usedBy: ['frontier'], probe: 'http',
+    },
+    {
+        id: 'federalregister', name: 'Federal Register', host: 'www.federalregister.gov', group: 'research',
+        keyEnv: [], usedBy: ['frontier'], probe: 'http',
+    },
+    {
+        id: 'sec-efts', name: 'SEC EDGAR (full-text search)', host: 'efts.sec.gov', group: 'research',
+        keyEnv: [], usedBy: ['frontier'], probe: 'http',
+    },
+    {
+        id: 'pubmed', name: 'PubMed E-utilities', host: 'eutils.ncbi.nlm.nih.gov', group: 'research',
+        keyEnv: [], usedBy: ['frontier'], probe: 'http',
+    },
+    {
+        id: 'biorxiv', name: 'bioRxiv API', host: 'api.biorxiv.org', group: 'research',
+        keyEnv: [], usedBy: ['frontier'], probe: 'http',
+    },
+    {
+        id: 'openfigi', name: 'OpenFIGI', host: 'api.openfigi.com', group: 'research',
+        keyEnv: [], usedBy: ['frontier'], probe: 'http',
     },
     {
         id: 'rss', name: 'News RSS feeds', host: '(config.yaml feeds)', group: 'other',
@@ -129,6 +159,12 @@ const HOST_TO_SOURCE: Array<[RegExp, SourceId]> = [
     [/(^|\.)nasdaqtrader\.com$/, 'nasdaq-halts'],
     [/(^|\.)er-api\.com$/, 'er-api'],
     [/(^|\.)adanos\.org$/, 'adanos'],
+    [/(^|\.)fda\.gov$/, 'fda'],
+    [/(^|\.)federalregister\.gov$/, 'federalregister'],
+    [/^efts\.sec\.gov$/, 'sec-efts'],
+    [/^eutils\.ncbi\.nlm\.nih\.gov$/, 'pubmed'],
+    [/(^|\.)biorxiv\.org$/, 'biorxiv'],
+    [/(^|\.)openfigi\.com$/, 'openfigi'],
 ];
 
 // Lets the shared fetch wrappers attribute a call without every caller

@@ -15,15 +15,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * Bark / healthcheck 为被动资源（不发合成流量），只看真实调用记录。
  */
 export async function collectSources(config: MonitorConfig): Promise<NewEvent[]> {
-  const ctx = { edgarContact: config.env.edgarContact, feeds: config.feeds };
+  // 催化剂与前沿两组 feed 合并探活，同名的只探一次
+  const feeds = [...config.feeds, ...config.frontier.feeds].filter(
+    (f, i, all) => all.findIndex((g) => g.name === f.name) === i,
+  );
+  const ctx = { edgarContact: config.env.edgarContact, feeds };
   let okCount = 0;
   let failCount = 0;
 
   for (const spec of SOURCES) {
     if (spec.probe === 'none') continue;
     if (!(await isSourceConfigured(spec.id))) continue;
-    // rss 按 config.feeds 展开为子源逐个探
-    const rawIds = spec.dynamicPrefix ? config.feeds.map((f) => rssSourceId(f.name)) : [spec.id];
+    // rss 按 feed 展开为子源逐个探
+    const rawIds = spec.dynamicPrefix ? feeds.map((f) => rssSourceId(f.name)) : [spec.id];
     for (const rawId of rawIds) {
       const r = await probeSource(rawId, ctx);
       await recordSourceCall(rawId, r.ok, r.latencyMs, r.error, { probe: true });

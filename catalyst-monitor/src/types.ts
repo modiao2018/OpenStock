@@ -12,6 +12,10 @@ export interface WatchItem {
 export interface FeedConfig {
   name: string;
   url: string;
+  /** 'browser' = 用浏览器 UA 抓取（部分站点拒绝脚本 UA） */
+  userAgent?: string;
+  /** 通稿平台：要求命中主题标的或带交易所代码才算相关（仅 frontier 用） */
+  strict?: boolean;
 }
 
 export interface MonitorConfig {
@@ -21,6 +25,10 @@ export interface MonitorConfig {
     lookbackDays: number;
   };
   feeds: FeedConfig[];
+  frontier: {
+    feeds: FeedConfig[];
+    dailyLlmBudget: number;
+  };
   poll: {
     clinicaltrialsMinutes: number;
     edgarMinutes: number;

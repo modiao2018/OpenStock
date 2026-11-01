@@ -4,6 +4,7 @@ export const NAV_ITEMS = [
     { href: '/search', label: 'Search' },
     { href: '/watchlist', label: 'Watchlist' },
     { href: '/catalyst', label: 'Catalyst' },
+    { href: '/frontier', label: 'Frontier' },
     { href: '/ai-dips', label: 'AiDips' },
     { href: '/focus', label: 'Focus' },
     { href: '/signals', label: 'Signals' },

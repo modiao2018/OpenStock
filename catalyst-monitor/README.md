@@ -63,3 +63,31 @@ sh scripts/install-monitor-daemon.sh  # 可选：装成 launchd 开机自启服�
 db.catalystevents.find({ symbol: 'SRPT' }, { source: 1, title: 1, publishedAt: 1, fetchedAt: 1 })
   .sort({ fetchedAt: 1 })
 ```
+
+## 生物科技前沿（`src/frontier/`，网页 `/frontier`）
+
+与上面"盯已选标的"不同，这部分是行业视角：跟踪 AI × 生物医药的全球进展，帮助发现标的。由 daemon 里的三个采集器驱动：
+
+| 采集器 | 间隔 | 做什么 |
+|---|---|---|
+| `frontier-ingest` | 30 分钟 | 各数据源按自己的节奏到点才跑：行业新闻/FDA RSS 30 分钟、SEC 交易类 8-K 2 小时、openFDA 批准+拒绝信+Federal Register 专家会 6 小时、主题篮子 6 小时（每交易日一次）、ClinicalTrials 主题新试验+AI 药物记分板 12 小时、PubMed/bioRxiv 论文和 13F 每天。失败的源 30 分钟后重试 |
+| `frontier-brain` | 15 分钟 | 合并（标题相似 + LLM 判同一事件）→ 分拣（每 20 条一次 LLM 调用，只出标签）→ 深度分析（4 星以上，或 2 星以上的 SEC 交易申报；抓原文、事实逐字核对引文）→ 5 星且 24 小时内的事件 Bark 即时推送 → 受益/受损标的记入信号账本（`frontier.*`） |
+| `frontier-weekly` | 60 分钟 | 周一北京时间 9–12 点生成周报（一次 LLM 调用：周评 + 论文精选），存 `frontierreports`，有邮箱发邮件否则 Bark |
+
+3 星以上、未即时推送的事件并入每天早上的每日摘要（`collectors/digest.ts`）。
+
+**LLM 用量**：每天上限默认 40 次（`config.yaml` 的 `frontier.daily_llm_budget`，页面可改，存 KV `frontier_llm_budget`）。按北京日期记账在 KV `frontier_llm_usage:<日期>`。超额后分拣改为规则兜底、深度分析顺延；深度分析会给分拣和周报留出余量。实测一轮 50 条新条目约 3 次分拣 + 4 次深度分析。
+
+**防编造**：分拣给出的 ticker 只认原文里出现过的；深度分析的每条事实必须附原文引文，引文要能在原文里找到、事实里的数字必须出现在引文里，否则标"未核实"；交易金额必须在原文里原样出现。
+
+**手动运行**：
+
+```bash
+npm run monitor:frontier -- ingest [news|deals|fda|baskets|trials|papers|funds]   # 立即采集（不受间隔限制）
+npm run monitor:frontier -- brain                                                 # 合并/分拣/分析/推送一轮
+npm run monitor:frontier -- weekly --dry-run                                      # 预览周报（会用一次 LLM）
+```
+
+**配置**：新闻源在 `config.yaml` 的 `frontier.feeds`（`strict: true` 的通稿平台要求命中主题标的或带交易所代码；`user_agent: browser` 给拒绝脚本 UA 的站点）。主题、标的、关键词、AI 药物记分板、会议日历都在网页上管理，种子数据见 `lib/frontier-seed.ts`（首次运行写入，此后以数据库为准）。13F 跟踪的基金列表在 `FRONTIER_FUNDS`。
+
+**数据表**（`database/models/frontier.model.ts`）：`frontierthemes` 主题与标的 / `frontieritems` 原始条目（`(source, externalId)` 唯一）/ `frontierevents` 合并后的事件与分析 / `frontierdeals` 交易表 / `frontiermilestones` AI 药物记分板（阶段来自登记库，AI 只能"提议"，用户确认后才记入）/ `frontierconferences` 会议日历 / `frontierfunds` 13F 变动 / `frontierreports` 周报。

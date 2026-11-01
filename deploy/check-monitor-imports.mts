@@ -13,6 +13,10 @@ const modules = [
     'collectors/sources', 'collectors/xcheck', 'collectors/outcomes',
     'collectors/focus', 'collectors/digest', 'collectors/thesis',
     'collectors/quotes',
+    'frontier/llm', 'frontier/store', 'frontier/triage', 'frontier/analyze', 'frontier/brain',
+    'frontier/ingest', 'frontier/digest', 'frontier/weekly',
+    'frontier/sources/news', 'frontier/sources/fda', 'frontier/sources/deals', 'frontier/sources/trials',
+    'frontier/sources/papers', 'frontier/sources/funds', 'frontier/sources/baskets',
 ];
 for (const m of modules) {
     await import(`../catalyst-monitor/src/${m}.ts`);

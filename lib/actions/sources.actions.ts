@@ -38,12 +38,18 @@ export interface SourceStatusRow {
     children?: SourceStatusRow[];
 }
 
-type FeedConfig = { name: string; url: string };
+type FeedConfig = { name: string; url: string; userAgent?: string };
 
 function readFeeds(): FeedConfig[] {
     try {
         const raw = parseYaml(readFileSync(join(process.cwd(), 'catalyst-monitor', 'config.yaml'), 'utf8')) as any;
-        return (raw?.feeds ?? []).map((f: any) => ({ name: String(f.name), url: String(f.url) }));
+        // 催化剂监控的 feeds + 生物科技前沿的 frontier.feeds，同名的只算一次
+        const all = [...(raw?.feeds ?? []), ...(raw?.frontier?.feeds ?? [])].map((f: any) => ({
+            name: String(f.name),
+            url: String(f.url),
+            userAgent: f.user_agent ? String(f.user_agent) : undefined,
+        }));
+        return all.filter((f, i) => all.findIndex((g) => g.name === f.name) === i);
     } catch {
         return [];
     }

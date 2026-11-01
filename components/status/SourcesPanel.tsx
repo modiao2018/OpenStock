@@ -11,7 +11,7 @@ import type { SourceGroup } from '@/lib/sources-registry';
 import type { SourceLevel } from '@/lib/source-stats-math';
 import { formatClock } from '@/lib/format-time';
 
-const GROUP_ORDER: SourceGroup[] = ['quotes', 'filings', 'clinical', 'ai', 'other'];
+const GROUP_ORDER: SourceGroup[] = ['quotes', 'filings', 'clinical', 'research', 'ai', 'other'];
 
 const DOT: Record<SourceLevel, string> = {
     ok: 'bg-teal-400',

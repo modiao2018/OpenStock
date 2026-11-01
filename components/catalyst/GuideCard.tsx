@@ -4,32 +4,36 @@ import React, { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
 
-const STORAGE_KEY = 'catalyst-guide-collapsed';
+const CATALYST_SECTIONS = ['why', 'watchlist', 'glossary', 'timeline', 'calendar', 'market'];
 
-/** 医药小白友好的页面使用指南——默认展开，收起状态记在 localStorage */
-export default function GuideCard() {
-    const t = useTranslations('catalyst.guide');
+/**
+ * 医药小白友好的页面使用指南——默认展开，收起状态记在 localStorage。
+ * 文案在 `${namespace}.title` 与 `${namespace}.{key}Title/{key}Body`；glossary 一节占三行高。
+ */
+export default function GuideCard({
+    namespace = 'catalyst.guide',
+    sections: sectionKeys = CATALYST_SECTIONS,
+    storageKey = 'catalyst-guide-collapsed',
+}: {
+    namespace?: string;
+    sections?: string[];
+    storageKey?: string;
+}) {
+    const t = useTranslations(namespace);
     const [open, setOpen] = useState(true);
 
     useEffect(() => {
-        if (window.localStorage.getItem(STORAGE_KEY) === '1') setOpen(false);
-    }, []);
+        if (window.localStorage.getItem(storageKey) === '1') setOpen(false);
+    }, [storageKey]);
 
     const toggle = () => {
         setOpen((prev) => {
-            window.localStorage.setItem(STORAGE_KEY, prev ? '1' : '0');
+            window.localStorage.setItem(storageKey, prev ? '1' : '0');
             return !prev;
         });
     };
 
-    const sections: Array<{ key: string }> = [
-        { key: 'why' },
-        { key: 'watchlist' },
-        { key: 'glossary' },
-        { key: 'timeline' },
-        { key: 'calendar' },
-        { key: 'market' },
-    ];
+    const sections = sectionKeys.map((key) => ({ key }));
 
     return (
         <div className="bg-teal-950/30 border border-teal-900/50 rounded-xl mb-8">

@@ -10,7 +10,7 @@ import type { MonitorConfig, StoredEvent } from './types';
 // 时间指引（NEXT STEPS/milestones）往往在末尾，截太短会漏掉
 const MAX_DOC_CHARS = 28_000;
 
-function stripHtml(html: string): string {
+export function stripHtml(html: string): string {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
     .replace(/<style[\s\S]*?<\/style>/gi, ' ')
@@ -22,7 +22,7 @@ function stripHtml(html: string): string {
 }
 
 /** EDGAR 申报原文（SEC 要求 User-Agent 带联系方式） */
-async function fetchEdgarDoc(url: string, contact: string): Promise<string> {
+export async function fetchEdgarDoc(url: string, contact: string): Promise<string> {
   const headers = { 'User-Agent': `catalyst-monitor/0.1 (${contact})` };
   const res = await fetchWithRetry(url, { headers });
   if (!res.ok) throw new Error(`EDGAR doc HTTP ${res.status}`);
