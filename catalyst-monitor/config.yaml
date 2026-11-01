@@ -59,7 +59,7 @@ poll:
 # 与上面的 feeds 不同：这里不按监控清单过滤，而是按 /frontier 的主题关键词和主题标的初筛。
 # strict: true 的源（通稿平台，量大且杂）要求同时命中主题标的或带交易所代码，才算相关。
 # user_agent: browser 用于拒绝脚本 UA 的站点（如 Endpoints）。
-# FierceBiotech / FiercePharma 在国内直连会被 Cloudflare 403，生产机（境外）可用。
+# FierceBiotech / FiercePharma 对脚本请求一律 Cloudflare 403（国内与生产机都一样，2026-11-02 实测），不收。
 frontier:
   feeds:
     - name: FDA Press Releases
@@ -75,8 +75,6 @@ frontier:
       url: https://www.biopharmadive.com/feeds/news/
     - name: GEN
       url: https://www.genengnews.com/feed/
-    - name: FierceBiotech
-      url: https://www.fiercebiotech.com/rss/xml
     - name: PR Newswire Health
       url: https://www.prnewswire.com/rss/health-latest-news/health-latest-news-list.rss
       strict: true
